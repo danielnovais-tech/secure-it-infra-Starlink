@@ -1,6 +1,7 @@
 """Event-driven architecture with queued security events."""
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
@@ -9,6 +10,9 @@ from typing import Any, Callable, Dict, List, Optional
 from uuid import uuid4
 
 from .security_level import SecurityLevel
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 
 class EventType(Enum):
@@ -217,7 +221,12 @@ class SecurityEventQueue:
                     handler(event)
             except Exception as e:
                 # Log error but continue processing
-                print(f"Error in event handler: {e}")
+                logger.error(
+                    "Error in event handler for %s: %s",
+                    event.event_type.name,
+                    str(e),
+                    exc_info=True
+                )
     
     def stop_processing(self) -> None:
         """Stop processing events."""

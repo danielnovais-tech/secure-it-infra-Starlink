@@ -122,6 +122,8 @@ class TestSecurityEventQueue:
     
     def test_queue_with_maxsize(self):
         """Test queue with maximum size."""
+        from queue import Full
+        
         queue = SecurityEventQueue(maxsize=2)
         
         event1 = SecurityEvent(event_type=EventType.SYSTEM_ALERT)
@@ -132,7 +134,7 @@ class TestSecurityEventQueue:
         
         # Third event should not block if we use timeout
         event3 = SecurityEvent(event_type=EventType.SYSTEM_ALERT)
-        with pytest.raises(Exception):  # Full exception
+        with pytest.raises(Full):
             queue.put(event3, block=False)
     
     def test_event_history(self):
