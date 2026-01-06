@@ -15,12 +15,10 @@ import socket
 import subprocess
 import json
 import sys
-import time
 import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-import hashlib
 import ssl
 import ipaddress
 
@@ -318,7 +316,7 @@ class StarlinkSecurityAuditor:
                     timeout=5
                 )
                 return result.returncode == 0
-            except:
+            except (subprocess.SubprocessError, FileNotFoundError, OSError):
                 logger.warning("Could not determine firewall status")
                 return False
     
@@ -335,7 +333,7 @@ class StarlinkSecurityAuditor:
                 
                 if result == 0:
                     open_ports.append(port)
-            except:
+            except (socket.error, OSError):
                 continue
         
         return open_ports
@@ -355,7 +353,7 @@ class StarlinkSecurityAuditor:
             ]
             
             return any(server in resolv_conf for server in secure_dns_servers)
-        except:
+        except (FileNotFoundError, PermissionError, IOError):
             return False
     
     def _validate_network_segmentation(self) -> bool:
@@ -376,7 +374,7 @@ class StarlinkSecurityAuditor:
             ]
             
             return any(ip_obj in network for network in private_ranges)
-        except:
+        except (socket.gaierror, socket.herror, ipaddress.AddressValueError, ValueError):
             return False
     
     def _find_unnecessary_services(self) -> List[str]:
@@ -401,7 +399,7 @@ class StarlinkSecurityAuditor:
             for service in risky_services:
                 if service in result.stdout.lower():
                     unnecessary.append(service)
-        except:
+        except (subprocess.SubprocessError, FileNotFoundError, OSError):
             pass
         
         return unnecessary
@@ -429,7 +427,7 @@ class StarlinkSecurityAuditor:
                 # Parse version (simplified)
                 version_info = result.stderr or result.stdout
                 outdated[service] = version_info[:50]  # Truncate
-            except:
+            except (subprocess.SubprocessError, FileNotFoundError, OSError):
                 continue
         
         return outdated
@@ -456,7 +454,8 @@ class StarlinkSecurityAuditor:
                     root_services += 1
             
             return root_services < 3  # Allow some essential services to run as root
-        except:
+        except (subprocess.SubprocessError, FileNotFoundError, OSError):
+            logger.warning("Could not validate service permissions")
             return True  # Assume OK if we can't check
     
     def _check_tls_configuration(self) -> Dict:
@@ -484,7 +483,7 @@ class StarlinkSecurityAuditor:
                 try:
                     context = ssl.SSLContext(proto)
                     result['secure'] = True
-                except:
+                except (ssl.SSLError, ValueError, OSError):
                     result['issues'].append(f"Protocol {proto} not supported")
             
             # If no protocols could be checked, assume secure
@@ -509,7 +508,7 @@ class StarlinkSecurityAuditor:
             
             # Look for crypto_LUKS in output
             return 'crypto_LUKS' in result.stdout
-        except:
+        except (subprocess.SubprocessError, FileNotFoundError, OSError):
             return False
     
     def _validate_vpn_encryption(self) -> bool:
@@ -532,7 +531,7 @@ class StarlinkSecurityAuditor:
             )
             
             return any(service in result.stdout.lower() for service in vpn_services)
-        except:
+        except (subprocess.SubprocessError, FileNotFoundError, OSError):
             return False
     
     def _validate_vpn_auth(self) -> Dict:
@@ -557,7 +556,7 @@ class StarlinkSecurityAuditor:
                     result['issues'].append("Consider using SHA256 for authentication")
             else:
                 result['issues'].append("No OpenVPN config found")
-        except:
+        except (FileNotFoundError, PermissionError, IOError):
             result['issues'].append("Could not read VPN config")
         
         return result
