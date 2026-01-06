@@ -86,7 +86,8 @@ def main():
     sensitive_data = "Starlink terminal configuration data"
     encrypted_data = encryption_manager.encrypt(sensitive_data)
     print(f"✓ Data encrypted: {len(encrypted_data)} bytes")
-    logger.info("Sensitive data encrypted", {"data_type": "configuration"})\n
+    logger.info("Sensitive data encrypted", {"data_type": "configuration"})
+
 
     # 4. Network Security
     print("\n4. Network Security Monitoring")

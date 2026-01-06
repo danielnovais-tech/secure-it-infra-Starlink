@@ -8,7 +8,7 @@ in Starlink-connected infrastructures.
 
 import os
 import base64
-from typing import Optional, Dict, Any
+from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
@@ -33,7 +33,7 @@ class EncryptionManager:
         """
         self.key = key or Fernet.generate_key()
         self.cipher = Fernet(self.key)
-        self.operations_log: list[Dict[str, Any]] = []
+        self.operations_log: List[Dict[str, Any]] = []
 
     def encrypt(self, data: str) -> str:
         """
@@ -103,7 +103,7 @@ class EncryptionManager:
         
         return self.key.decode()
 
-    def get_operations_log(self, limit: Optional[int] = None) -> list[Dict[str, Any]]:
+    def get_operations_log(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get encryption operations log.
         
@@ -211,7 +211,7 @@ class KeyManager:
             return True
         return False
 
-    def list_keys(self, status: Optional[str] = None) -> list[Dict[str, Any]]:
+    def list_keys(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         List all keys, optionally filtered by status.
         
