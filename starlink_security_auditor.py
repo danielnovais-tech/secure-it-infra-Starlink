@@ -90,11 +90,19 @@ class SecurityAuditor:
             try:
                 with open(config_path, 'r') as f:
                     user_config = json.load(f)
-                    # Merge user config with defaults
-                    default_config.update(user_config)
-                    logging.info(f"Loaded configuration from {config_path}")
+                    # Deep merge user config with defaults
+                    for key, value in user_config.items():
+                        if key in default_config and isinstance(value, dict) and isinstance(default_config[key], dict):
+                            # Merge nested dictionaries
+                            default_config[key].update(value)
+                        else:
+                            # Replace top-level keys
+                            default_config[key] = value
+                    # Note: logging not yet configured, will log after setup
+                    self._config_loaded_from = config_path
             except Exception as e:
-                logging.warning(f"Failed to load config from {config_path}: {e}")
+                # Note: logging not yet configured, will log after setup
+                self._config_error = str(e)
                 
         return default_config
     
@@ -113,6 +121,12 @@ class SecurityAuditor:
             ]
         )
         self.logger = logging.getLogger(__name__)
+        
+        # Log config loading status now that logging is configured
+        if hasattr(self, '_config_loaded_from'):
+            self.logger.info(f"Loaded configuration from {self._config_loaded_from}")
+        if hasattr(self, '_config_error'):
+            self.logger.warning(f"Failed to load config: {self._config_error}")
         
     def _add_result(self, check_name: str, status: str, message: str, 
                    details: Optional[Dict[str, Any]] = None,
@@ -190,7 +204,6 @@ class SecurityAuditor:
         
         # Check open ports
         try:
-            import socket
             common_ports = [21, 22, 23, 25, 80, 443, 3306, 5432, 8080]
             open_ports = []
             
@@ -236,22 +249,31 @@ class SecurityAuditor:
         if os.path.exists(ssh_config):
             try:
                 with open(ssh_config, 'r') as f:
-                    config_content = f.read()
+                    config_lines = f.readlines()
                 
                 issues = []
                 recommendations = []
                 
-                if 'PermitRootLogin yes' in config_content:
-                    issues.append('Root login is permitted')
-                    recommendations.append('Disable root login: PermitRootLogin no')
-                
-                if 'PasswordAuthentication yes' in config_content:
-                    issues.append('Password authentication is enabled')
-                    recommendations.append('Use key-based authentication only')
-                
-                if 'PermitEmptyPasswords yes' in config_content:
-                    issues.append('Empty passwords are permitted')
-                    recommendations.append('Disable empty passwords')
+                # Parse config lines, ignoring comments
+                for line in config_lines:
+                    # Strip whitespace and skip empty lines or comments
+                    stripped = line.strip()
+                    if not stripped or stripped.startswith('#'):
+                        continue
+                    
+                    # Check for security issues (case-insensitive)
+                    line_lower = stripped.lower()
+                    if line_lower.startswith('permitrootlogin') and 'yes' in line_lower:
+                        issues.append('Root login is permitted')
+                        recommendations.append('Disable root login: PermitRootLogin no')
+                    
+                    if line_lower.startswith('passwordauthentication') and 'yes' in line_lower:
+                        issues.append('Password authentication is enabled')
+                        recommendations.append('Use key-based authentication only')
+                    
+                    if line_lower.startswith('permitemptypasswords') and 'yes' in line_lower:
+                        issues.append('Empty passwords are permitted')
+                        recommendations.append('Disable empty passwords')
                 
                 if issues:
                     self._add_result(
