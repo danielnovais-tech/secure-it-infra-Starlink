@@ -1,0 +1,89 @@
+# Threat Detection Configuration
+# This file defines rules and settings for the threat detection system
+
+# Anomaly Detection Settings
+anomaly_detection:
+  enabled: true
+  thresholds:
+    # Failed login attempts threshold
+    failed_login_threshold: 5
+    failed_login_window_minutes: 10
+    
+    # Connection rate threshold
+    connection_rate_threshold: 100
+    connection_rate_window_seconds: 60
+    
+    # Bandwidth usage anomaly (in MB)
+    bandwidth_threshold_mb: 1000
+    bandwidth_window_minutes: 5
+    
+    # Port scan detection
+    port_scan_threshold: 10
+    port_scan_window_seconds: 30
+
+# Brute-force Detection Settings
+brute_force_detection:
+  enabled: true
+  patterns:
+    - name: "SSH Brute-force"
+      pattern: "Failed password for .* from (\\d+\\.\\d+\\.\\d+\\.\\d+)"
+      threshold: 5
+      window_minutes: 10
+      action: "block"
+      
+    - name: "HTTP Auth Brute-force"
+      pattern: "401.*POST.*/login"
+      threshold: 10
+      window_minutes: 5
+      action: "alert"
+      
+    - name: "FTP Brute-force"
+      pattern: "FAIL LOGIN.*from (\\d+\\.\\d+\\.\\d+\\.\\d+)"
+      threshold: 3
+      window_minutes: 5
+      action: "block"
+
+# Threat Intelligence Feeds
+threat_intelligence:
+  enabled: true
+  update_interval_hours: 6
+  
+  feeds:
+    dshield:
+      enabled: true
+      url: "https://www.dshield.org/block.txt"
+      format: "dshield"
+      description: "DShield.org recommended block list"
+      
+    emerging_threats:
+      enabled: true
+      url: "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"
+      format: "plain_ip_list"
+      description: "Emerging Threats compromised IPs"
+
+# Logging Settings
+logging:
+  level: "INFO"
+  log_file: "threat_detection/logs/threat_detection.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+  
+# Alert Settings
+alerts:
+  enabled: true
+  methods:
+    - "log"
+    - "email"
+  
+  email:
+    enabled: false
+    smtp_server: "smtp.example.com"
+    smtp_port: 587
+    from_address: "alerts@example.com"
+    to_addresses:
+      - "security@example.com"
+
+# Blocked IPs Storage
+blocked_ips:
+  storage_file: "threat_detection/config/blocked_ips.txt"
+  auto_unblock_hours: 24
