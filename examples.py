@@ -7,8 +7,8 @@ Demonstrates various features and capabilities
 import sys
 import os
 
-# Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Add threat_detection directory to path
+sys.path.insert(0, os.path.dirname(__file__))
 
 from threat_detection.threat_detection import ThreatDetectionSystem
 

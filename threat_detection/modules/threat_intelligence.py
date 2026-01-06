@@ -227,7 +227,9 @@ class ThreatIntelligenceUpdater:
             file_path: Path to save the threat IPs
         """
         try:
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            dir_path = os.path.dirname(file_path)
+            if dir_path:  # Only create directory if path has a directory component
+                os.makedirs(dir_path, exist_ok=True)
             with open(file_path, 'w') as f:
                 f.write(f"# Threat Intelligence Feed - Updated {datetime.now().isoformat()}\n")
                 f.write(f"# Total IPs: {len(self.threat_ips)}\n")

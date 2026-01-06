@@ -234,14 +234,20 @@ class ThreatDetectionSystem:
             interval_seconds: Interval between checks
         """
         import time
+        from datetime import datetime, timedelta
         
         self.logger.info("Starting continuous threat monitoring...")
         
         # Initial threat intelligence update
         self.update_threat_intelligence()
+        last_threat_update = datetime.now()
         
         if log_files is None:
             log_files = []
+        
+        # Get update interval from config
+        threat_intel_config = self.config.get('threat_intelligence', {})
+        update_interval_hours = threat_intel_config.get('update_interval_hours', 6)
         
         try:
             while True:
@@ -250,8 +256,13 @@ class ThreatDetectionSystem:
                     if os.path.exists(log_file):
                         self.analyze_log_file(log_file)
                 
-                # Periodic threat intelligence update
-                self.update_threat_intelligence()
+                # Periodic threat intelligence update (only if interval has passed)
+                now = datetime.now()
+                hours_since_update = (now - last_threat_update).total_seconds() / 3600
+                
+                if hours_since_update >= update_interval_hours:
+                    self.update_threat_intelligence()
+                    last_threat_update = now
                 
                 # Get and log current blocked IPs
                 blocked_ips = self.get_blocked_ips()
