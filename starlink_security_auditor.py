@@ -17,7 +17,7 @@ import socket
 import os
 import sys
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
@@ -142,7 +142,7 @@ class SecurityAuditor:
         self.results.append(result)
         self.logger.info(f"{check_name}: {status} - {message}")
         
-    def _run_command(self, command: List[str]) -> tuple[int, str, str]:
+    def _run_command(self, command: List[str]) -> Tuple[int, str, str]:
         """Safely run a system command and return output."""
         try:
             result = subprocess.run(
@@ -262,16 +262,23 @@ class SecurityAuditor:
                         continue
                     
                     # Check for security issues (case-insensitive)
-                    line_lower = stripped.lower()
-                    if line_lower.startswith('permitrootlogin') and 'yes' in line_lower:
+                    # Split on whitespace to get key and value
+                    parts = stripped.split()
+                    if len(parts) < 2:
+                        continue
+                    
+                    key = parts[0].lower()
+                    value = parts[1].lower()
+                    
+                    if key == 'permitrootlogin' and value == 'yes':
                         issues.append('Root login is permitted')
                         recommendations.append('Disable root login: PermitRootLogin no')
                     
-                    if line_lower.startswith('passwordauthentication') and 'yes' in line_lower:
+                    if key == 'passwordauthentication' and value == 'yes':
                         issues.append('Password authentication is enabled')
                         recommendations.append('Use key-based authentication only')
                     
-                    if line_lower.startswith('permitemptypasswords') and 'yes' in line_lower:
+                    if key == 'permitemptypasswords' and value == 'yes':
                         issues.append('Empty passwords are permitted')
                         recommendations.append('Disable empty passwords')
                 
@@ -483,10 +490,10 @@ class SecurityAuditor:
                 mode = oct(stat_info.st_mode)[-3:]
                 
                 # Shadow files should be 000 or 400
-                if 'shadow' in file_path and mode not in ['000', '400']:
+                if file_path in ['/etc/shadow', '/etc/gshadow'] and mode not in ['000', '400']:
                     permission_issues.append(f'{file_path}: {mode} (should be 400 or 000)')
                 # SSH config should be 600 or 644
-                elif 'ssh' in file_path and mode not in ['600', '644']:
+                elif file_path == '/etc/ssh/sshd_config' and mode not in ['600', '644']:
                     permission_issues.append(f'{file_path}: {mode} (should be 600 or 644)')
         
         if permission_issues:

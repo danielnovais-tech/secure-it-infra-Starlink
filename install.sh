@@ -115,8 +115,8 @@ if [[ "$response" =~ ^[Yy]$ ]]; then
     # Create cron job
     CRON_CMD="0 2 * * * $INSTALL_DIR/starlink_security_auditor.py -c $CONFIG_DIR/config.json -q"
     
-    # Check if cron job already exists
-    if ! crontab -l 2>/dev/null | grep -q "starlink_security_auditor.py"; then
+    # Check if cron job already exists (use exact path match)
+    if ! crontab -l 2>/dev/null | grep -F "$INSTALL_DIR/starlink_security_auditor.py" > /dev/null 2>&1; then
         (crontab -l 2>/dev/null; echo "$CRON_CMD") | crontab -
         echo -e "${GREEN}✓ Daily audit scheduled${NC}"
     else
