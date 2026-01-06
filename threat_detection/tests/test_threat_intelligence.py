@@ -15,17 +15,17 @@ def test_ip_validation():
     updater = ThreatIntelligenceUpdater(config)
     
     # Valid IPs
-    assert updater._is_valid_ip('192.168.1.1') == True
-    assert updater._is_valid_ip('10.0.0.1') == True
-    assert updater._is_valid_ip('255.255.255.255') == True
-    assert updater._is_valid_ip('0.0.0.0') == True
+    assert updater._is_valid_ip('192.168.1.1')
+    assert updater._is_valid_ip('10.0.0.1')
+    assert updater._is_valid_ip('255.255.255.255')
+    assert updater._is_valid_ip('0.0.0.0')
     
     # Invalid IPs
-    assert updater._is_valid_ip('256.1.1.1') == False
-    assert updater._is_valid_ip('192.168.1') == False
-    assert updater._is_valid_ip('192.168.1.1.1') == False
-    assert updater._is_valid_ip('abc.def.ghi.jkl') == False
-    assert updater._is_valid_ip('') == False
+    assert not updater._is_valid_ip('256.1.1.1')
+    assert not updater._is_valid_ip('192.168.1')
+    assert not updater._is_valid_ip('192.168.1.1.1')
+    assert not updater._is_valid_ip('abc.def.ghi.jkl')
+    assert not updater._is_valid_ip('')
     
     print("✓ IP validation test passed")
 
@@ -88,11 +88,11 @@ def test_threat_ip_checking():
     updater.threat_ips = {'192.168.1.100', '10.0.0.50', '172.16.0.1'}
     
     # Check threat IPs
-    assert updater.is_threat_ip('192.168.1.100') == True
-    assert updater.is_threat_ip('10.0.0.50') == True
+    assert updater.is_threat_ip('192.168.1.100')
+    assert updater.is_threat_ip('10.0.0.50')
     
     # Check non-threat IP
-    assert updater.is_threat_ip('8.8.8.8') == False
+    assert not updater.is_threat_ip('8.8.8.8')
     
     print("✓ Threat IP checking test passed")
 

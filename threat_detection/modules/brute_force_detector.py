@@ -99,7 +99,9 @@ class BruteForceDetector:
                     detections = self.analyze_log_line(line)
                     all_detections.extend(detections)
         except FileNotFoundError:
-            pass  # Log file doesn't exist yet
+            # Log file doesn't exist yet - this is not necessarily an error
+            # in continuous monitoring scenarios
+            pass
         except Exception as e:
             print(f"Error analyzing log file {log_file_path}: {e}")
         

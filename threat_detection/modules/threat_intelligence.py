@@ -228,7 +228,9 @@ class ThreatIntelligenceUpdater:
         """
         try:
             dir_path = os.path.dirname(file_path)
-            if dir_path:  # Only create directory if path has a directory component
+            # Only create directory if path has a directory component
+            # This handles files in current directory where dirname() returns empty string
+            if dir_path:
                 os.makedirs(dir_path, exist_ok=True)
             with open(file_path, 'w') as f:
                 f.write(f"# Threat Intelligence Feed - Updated {datetime.now().isoformat()}\n")

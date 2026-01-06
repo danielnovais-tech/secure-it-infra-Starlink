@@ -53,6 +53,10 @@ class ThreatDetectionSystem:
         
         Returns:
             Configuration dictionary
+            
+        Raises:
+            FileNotFoundError: If configuration file doesn't exist
+            yaml.YAMLError: If configuration file has invalid YAML
         """
         try:
             with open(self.config_path, 'r') as f:
@@ -61,10 +65,10 @@ class ThreatDetectionSystem:
             return config
         except FileNotFoundError:
             print(f"Configuration file not found: {self.config_path}")
-            sys.exit(1)
+            raise
         except yaml.YAMLError as e:
             print(f"Error parsing YAML configuration: {e}")
-            sys.exit(1)
+            raise
     
     def _setup_logging(self) -> logging.Logger:
         """
