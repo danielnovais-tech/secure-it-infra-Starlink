@@ -6,7 +6,7 @@ and bandwidth metrics to inform security policy decisions.
 """
 
 import time
-from typing import Dict, Optional, Callable
+from typing import Dict, Optional, Callable, List
 from dataclasses import dataclass
 from enum import Enum
 
@@ -61,7 +61,7 @@ class ConnectionMonitor:
             'poor': latency_threshold_poor,
         }
         self._current_metrics: Optional[ConnectionMetrics] = None
-        self._callbacks: list[Callable[[ConnectionMetrics], None]] = []
+        self._callbacks: List[Callable[[ConnectionMetrics], None]] = []
         self._monitoring = False
     
     def register_callback(self, callback: Callable[[ConnectionMetrics], None]) -> None:
