@@ -5,7 +5,11 @@ Validates that all security modules work together correctly
 """
 
 import sys
-sys.path.insert(0, '/home/runner/work/secure-it-infra-Starlink/secure-it-infra-Starlink')
+import os
+
+# Add the repository root to the path
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, repo_root)
 
 from modules import (
     FirewallRuleManager,
@@ -60,9 +64,9 @@ def test_encryption():
     tls = encryption.enable_tls_for_starlink()
     assert tls['tls_version'] == '1.3', "TLS configuration failed"
     
-    encrypted = encryption.encrypt_sensitive_data('test_data')
-    assert encrypted['data_hash'] is not None, "Data encryption failed"
-    assert encrypted['timestamp'] > 0, "Timestamp generation failed"
+    fingerprint = encryption.classify_and_fingerprint_data('test_data')
+    assert fingerprint['data_fingerprint'] is not None, "Data fingerprinting failed"
+    assert fingerprint['timestamp'] > 0, "Timestamp generation failed"
     
     print("  ✓ Encryption: PASSED")
     return True

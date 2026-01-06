@@ -5,7 +5,11 @@ Demonstrates setting up secure infrastructure for multiple rural sites with Star
 """
 
 import sys
-sys.path.insert(0, '/home/runner/work/secure-it-infra-Starlink/secure-it-infra-Starlink')
+import os
+
+# Add the repository root to the path
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, repo_root)
 
 from modules import (
     FirewallRuleManager,

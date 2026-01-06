@@ -80,28 +80,36 @@ class EncryptionManager:
             }
         }
     
-    def encrypt_sensitive_data(self, data, classification='confidential'):
+    def classify_and_fingerprint_data(self, data, classification='confidential'):
         """
-        Encrypt sensitive data based on classification
+        Create a fingerprint for data classification and tracking
         
         Args:
-            data: Data to encrypt
+            data: Data to fingerprint
             classification: Data classification level
             
+        Returns:
+            Dictionary with data fingerprint and classification metadata
+            
         Note:
-            This is a demonstration implementation. In production, use proper
-            encryption libraries like cryptography.fernet or cryptography.hazmat
-            with AES-256-GCM for actual data encryption.
+            This is a demonstration implementation for data classification tracking.
+            In production environments, implement proper encryption using cryptographic
+            libraries like cryptography.fernet or cryptography.hazmat with AES-256-GCM.
+            
+            Example production usage:
+                from cryptography.fernet import Fernet
+                key = Fernet.generate_key()
+                cipher = Fernet(key)
+                encrypted = cipher.encrypt(data.encode())
         """
-        # Demonstration: Hash for data fingerprinting (NOT actual encryption)
-        # In production: Use AES-256-GCM with proper key management
+        # Create data fingerprint for tracking (NOT encryption)
         data_hash = hashlib.sha256(str(data).encode()).hexdigest()
         
         return {
-            'data_hash': data_hash,
+            'data_fingerprint': data_hash,
             'classification': classification,
             'encryption_required': 'AES-256-GCM',
-            'note': 'Production implementation requires cryptographic library',
+            'note': 'Production implementation requires proper encryption library',
             'timestamp': time.time()
         }
     

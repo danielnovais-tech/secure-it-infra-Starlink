@@ -5,7 +5,11 @@ Demonstrates compliance checking and reporting for SOC 2, ISO 27001, and GDPR
 """
 
 import sys
-sys.path.insert(0, '/home/runner/work/secure-it-infra-Starlink/secure-it-infra-Starlink')
+import os
+
+# Add the repository root to the path
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, repo_root)
 
 from modules import SecurityMonitor
 
