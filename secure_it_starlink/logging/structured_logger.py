@@ -143,12 +143,25 @@ class EventCorrelator:
             List of correlated incidents
         """
         current_time = time.time()
-        return [
-            incident for incident in self.correlated_events
-            if current_time - time.mktime(
-                time.strptime(incident['timestamp'], '%Y-%m-%dT%H:%M:%S.%f')
-            ) <= timeframe
-        ]
+        recent_incidents = []
+        
+        for incident in self.correlated_events:
+            try:
+                # Try parsing with microseconds first
+                timestamp = incident['timestamp']
+                try:
+                    incident_time = time.mktime(time.strptime(timestamp, '%Y-%m-%dT%H:%M:%S.%f'))
+                except ValueError:
+                    # Fall back to parsing without microseconds
+                    incident_time = time.mktime(time.strptime(timestamp, '%Y-%m-%dT%H:%M:%S'))
+                
+                if current_time - incident_time <= timeframe:
+                    recent_incidents.append(incident)
+            except (ValueError, KeyError):
+                # Skip incidents with invalid timestamps
+                continue
+        
+        return recent_incidents
 
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
@@ -341,14 +354,18 @@ class StructuredLogger:
         """Parse size string (e.g., '100MB') to bytes."""
         size_str = size_str.upper().strip()
         
-        if size_str.endswith('KB'):
-            return int(size_str[:-2]) * 1024
-        elif size_str.endswith('MB'):
-            return int(size_str[:-2]) * 1024 * 1024
-        elif size_str.endswith('GB'):
-            return int(size_str[:-2]) * 1024 * 1024 * 1024
-        else:
-            return int(size_str)
+        try:
+            if size_str.endswith('KB'):
+                return int(size_str[:-2]) * 1024
+            elif size_str.endswith('MB'):
+                return int(size_str[:-2]) * 1024 * 1024
+            elif size_str.endswith('GB'):
+                return int(size_str[:-2]) * 1024 * 1024 * 1024
+            else:
+                return int(size_str)
+        except (ValueError, TypeError) as e:
+            # Default to 100MB if parsing fails
+            return 100 * 1024 * 1024
     
     def log(self, level: str, message: str, **kwargs):
         """

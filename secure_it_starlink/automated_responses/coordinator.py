@@ -449,7 +449,11 @@ class AutomatedResponseCoordinator:
         
         # Check for threat containment needs
         if event_type in ['security_threat', 'malware_detected', 'intrusion_attempt']:
-            severity_level = SeverityLevel[severity.upper()]
+            # Safely convert severity to enum with fallback
+            try:
+                severity_level = SeverityLevel[severity.upper()]
+            except (KeyError, AttributeError):
+                severity_level = SeverityLevel.LOW
             
             if event.get('device_id'):
                 action = self.threat_containment.isolate_device(

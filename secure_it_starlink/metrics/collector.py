@@ -59,8 +59,11 @@ class SecurityScoring:
         
         for check in self.checks:
             if check in security_data:
-                total_score += security_data[check]
-                check_count += 1
+                # Validate that the value is numeric
+                value = security_data[check]
+                if isinstance(value, (int, float)):
+                    total_score += value
+                    check_count += 1
         
         if check_count == 0:
             return 0.0
