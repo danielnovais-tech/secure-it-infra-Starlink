@@ -61,7 +61,8 @@ def test_encryption():
     assert tls['tls_version'] == '1.3', "TLS configuration failed"
     
     encrypted = encryption.encrypt_sensitive_data('test_data')
-    assert encrypted['encrypted_data'] is not None, "Data encryption failed"
+    assert encrypted['data_hash'] is not None, "Data encryption failed"
+    assert encrypted['timestamp'] > 0, "Timestamp generation failed"
     
     print("  ✓ Encryption: PASSED")
     return True
