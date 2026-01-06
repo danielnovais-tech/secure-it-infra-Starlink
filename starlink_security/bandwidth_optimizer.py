@@ -5,7 +5,7 @@ Optimizes security operations for satellite bandwidth constraints,
 minimizing data usage while maintaining security effectiveness.
 """
 
-from typing import Dict, List, Optional, Callable, Any
+from typing import Dict, List, Optional, Callable, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime, timedelta
@@ -91,7 +91,7 @@ class BandwidthOptimizer:
         
         self._compression_level = CompressionLevel.MEDIUM
         self._operation_queue: List[QueuedOperation] = []
-        self._cache: Dict[str, tuple[Any, datetime, int]] = {}  # key -> (data, timestamp, size)
+        self._cache: Dict[str, Tuple[Any, datetime, int]] = {}  # key -> (data, timestamp, size)
         self._metrics_history: List[OptimizationMetrics] = []
         self._current_usage_mbps = 0.0
         self._cache_hit_count = 0
