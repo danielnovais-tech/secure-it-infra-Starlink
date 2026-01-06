@@ -205,3 +205,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+security_audit.log
+security_audit_report.json
+*_audit_report.json
