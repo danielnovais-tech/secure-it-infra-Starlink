@@ -32,6 +32,7 @@ class VPNManager:
         self.connection_attempts = 0
         self.consecutive_failures = 0
         self.is_running = False
+        self.vpn_process = None  # Store VPN process handle
         
     def _load_config(self) -> Dict:
         """Load VPN configuration from YAML file."""
@@ -47,30 +48,32 @@ class VPNManager:
         logger = logging.getLogger('VPNManager')
         logger.setLevel(logging.INFO)
         
-        # Console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        
-        # File handler if logging is enabled
-        if self.config.get('vpn', {}).get('monitoring', {}).get('enable_logging', False):
-            log_file = self.config['vpn']['monitoring'].get('log_file', '/var/log/vpn_manager.log')
-            try:
-                # Create log directory if it doesn't exist
-                log_dir = os.path.dirname(log_file)
-                if log_dir and not os.path.exists(log_dir):
-                    os.makedirs(log_dir, exist_ok=True)
-                
-                file_handler = logging.FileHandler(log_file)
-                file_handler.setLevel(logging.INFO)
-                file_handler.setFormatter(formatter)
-                logger.addHandler(file_handler)
-            except Exception as e:
-                logger.warning(f"Could not setup file logging: {e}")
+        # Only add handlers if they don't already exist
+        if not logger.handlers:
+            # Console handler
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.INFO)
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
+            
+            # File handler if logging is enabled
+            if self.config.get('vpn', {}).get('monitoring', {}).get('enable_logging', False):
+                log_file = self.config['vpn']['monitoring'].get('log_file', '/var/log/vpn_manager.log')
+                try:
+                    # Create log directory if it doesn't exist
+                    log_dir = os.path.dirname(log_file)
+                    if log_dir and not os.path.exists(log_dir):
+                        os.makedirs(log_dir, exist_ok=True)
+                    
+                    file_handler = logging.FileHandler(log_file)
+                    file_handler.setLevel(logging.INFO)
+                    file_handler.setFormatter(formatter)
+                    logger.addHandler(file_handler)
+                except Exception as e:
+                    logger.warning(f"Could not setup file logging: {e}")
         
         return logger
     
@@ -197,8 +200,8 @@ class VPNManager:
                 self.logger.error(f"OpenVPN config file not found: {config_file}")
                 return False
             
-            # Start OpenVPN in background
-            subprocess.Popen(
+            # Start OpenVPN in background and store process handle
+            self.vpn_process = subprocess.Popen(
                 ['openvpn', '--config', config_file, '--daemon'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
