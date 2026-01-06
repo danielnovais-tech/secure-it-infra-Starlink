@@ -83,7 +83,6 @@ class NetworkSecurityMonitor:
         """Update network and security metrics."""
         try:
             # Simulate metric collection (in production, would use actual monitoring)
-            import random
             self.metrics.latency = random.uniform(20, 80)
             self.metrics.jitter = random.uniform(5, 15)
             self.metrics.packet_loss = random.uniform(0.1, 1.5)
