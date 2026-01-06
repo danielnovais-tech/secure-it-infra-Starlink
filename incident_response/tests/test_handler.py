@@ -7,12 +7,15 @@ import os
 import yaml
 from datetime import datetime
 from pathlib import Path
-import sys
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from handler import IncidentResponseHandler
+# Import from parent package
+try:
+    from incident_response.handler import IncidentResponseHandler
+except ImportError:
+    # Fallback for running tests directly
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from handler import IncidentResponseHandler
 
 
 class TestIncidentResponseHandler(unittest.TestCase):

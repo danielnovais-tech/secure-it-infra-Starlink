@@ -7,9 +7,14 @@ security events such as malware detection and security breaches.
 
 import os
 import yaml
+import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from pathlib import Path
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class IncidentResponseHandler:
@@ -45,9 +50,9 @@ class IncidentResponseHandler:
                         incident_type = incident.get('type')
                         if incident_type:
                             self.incidents[incident_type] = incident
-                            print(f"Loaded incident configuration: {incident.get('name')} ({incident_type})")
+                            logger.info(f"Loaded incident configuration: {incident.get('name')} ({incident_type})")
             except Exception as e:
-                print(f"Error loading {yaml_file}: {e}")
+                logger.error(f"Error loading {yaml_file}: {e}")
     
     def get_incident_config(self, incident_type: str) -> Optional[Dict[str, Any]]:
         """

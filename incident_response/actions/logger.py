@@ -8,6 +8,9 @@ from typing import Dict, Any, List
 from datetime import datetime
 import json
 
+# Compliance retention period (7 years in days)
+COMPLIANCE_RETENTION_DAYS = 365 * 7  # 2555 days
+
 
 class LoggingAction:
     """Implements logging actions for incident tracking and compliance."""
@@ -67,7 +70,7 @@ class LoggingAction:
             log_entry['compliance'] = {
                 'reporting_required': True,
                 'frameworks': ['SOC2', 'ISO27001', 'GDPR'],
-                'retention_period_days': 2555  # 7 years
+                'retention_period_days': COMPLIANCE_RETENTION_DAYS
             }
         
         # SIEM-specific fields
