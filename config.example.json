@@ -1,0 +1,15 @@
+{
+  "starlink_gateway": "192.168.100.1",
+  "critical_ports": [22, 80, 443, 3389, 5900],
+  "internal_subnets": [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ],
+  "security_checks": {
+    "network_security": true,
+    "service_audit": true,
+    "encryption_check": true,
+    "vpn_validation": true
+  }
+}
