@@ -1,3 +1,23 @@
+# VPN Manager Dependencies
+# For Starlink infrastructure security VPN management
+
+# YAML parsing
+PyYAML>=6.0.1
+
+# Optional dependencies for advanced features
+# Uncomment if needed:
+
+# For email notifications
+# smtplib (built-in)
+
+# For webhook notifications
+# requests>=2.31.0
+
+# For systemd integration
+# python-systemd>=235
+
+# For enhanced logging
+# python-json-logger>=2.0.7
 # PyYAML for YAML configuration parsing
 PyYAML>=6.0.1
 PyYAML>=6.0
