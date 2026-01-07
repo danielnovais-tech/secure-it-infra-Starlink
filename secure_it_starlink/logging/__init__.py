@@ -1,6 +1,5 @@
 """
 Security Logging and Alerting Module
-=====================================
 
 Provides comprehensive logging and alerting for security events
 in Starlink-connected infrastructures.
@@ -285,3 +284,8 @@ class AlertManager:
             stats["by_severity"][severity.value] = count
 
         return stats
+"""Logging package for Secure IT Starlink."""
+
+from .structured_logger import StructuredLogger, EventCorrelator
+
+__all__ = ["StructuredLogger", "EventCorrelator"]

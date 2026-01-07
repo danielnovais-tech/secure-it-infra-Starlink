@@ -1,6 +1,5 @@
 """
 Configuration Security Scanner Module
-======================================
 
 Provides configuration validation and security scanning for
 Starlink infrastructure configurations.
@@ -309,3 +308,8 @@ class SecurityConfig:
         """
         import json
         self.config = json.loads(config_str)
+"""Configuration package for Secure IT Starlink."""
+
+from .config_loader import ConfigurationManager
+
+__all__ = ["ConfigurationManager"]
