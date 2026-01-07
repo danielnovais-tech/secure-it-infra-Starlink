@@ -1,1 +1,21 @@
 cryptography>=41.0.0
+# Starlink Security Auditor Requirements
+# Python 3.7+ required
+
+# No external dependencies required for basic functionality
+# All modules used are part of Python standard library:
+# - json
+# - logging
+# - subprocess
+# - socket
+# - os
+# - sys
+# - datetime
+# - typing
+# - dataclasses
+# - pathlib
+
+# Optional dependencies for enhanced functionality:
+# pytest>=7.0.0  # For running tests (if tests are added)
+# pylint>=2.12.0  # For code linting
+# black>=22.0.0   # For code formatting
