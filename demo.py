@@ -140,7 +140,9 @@ def main():
     print("Demonstration Complete!")
     print("=" * 70)
     print("\nTo run the actual monitor with Starlink API:")
-    print("  python3 src/starlink_monitor.py")
+    print("  python3 run_monitor.py")
+    print("  OR")
+    print("  python3 -m src.starlink_monitor")
     print("\nConfiguration can be set via environment variables or .env file")
     print("=" * 70 + "\n")
 

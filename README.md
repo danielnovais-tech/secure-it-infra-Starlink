@@ -50,10 +50,16 @@ cp config.env.example .env
 
 ### Running Directly
 
-Run the monitoring application directly:
+Run the monitoring application directly using the wrapper script:
 
 ```bash
-python3 src/starlink_monitor.py
+python3 run_monitor.py
+```
+
+Or using the module syntax:
+
+```bash
+python3 -m src.starlink_monitor
 ```
 
 The application will:
