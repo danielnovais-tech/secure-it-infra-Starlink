@@ -23,7 +23,7 @@ output "provider_configuration" {
   description = "Summary of provider configuration"
   value = {
     primary_region     = var.aws_region
-    cross_region       = var.enable_cross_region ? "us-east-1" : "disabled"
+    secondary_region   = var.enable_cross_region ? var.aws_secondary_region : "disabled"
     environment        = var.environment
     backup_enabled     = var.enable_backup
     monitoring_enabled = var.enable_monitoring

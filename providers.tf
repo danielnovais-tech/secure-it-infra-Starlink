@@ -15,8 +15,8 @@ provider "aws" {
 
 # Secondary AWS Provider for Cross-Region Resources (e.g., CloudFront, ACM)
 provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
+  alias  = "secondary"
+  region = var.aws_secondary_region
 
   default_tags {
     tags = {

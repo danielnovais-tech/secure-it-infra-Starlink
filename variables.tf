@@ -5,7 +5,7 @@ variable "aws_region" {
   default     = "us-west-2"
 
   validation {
-    condition     = can(regex("^[a-z]{2}-[a-z]+-[0-9]{1}$", var.aws_region))
+    condition     = can(regex("^[a-z]{2}-[a-z]+-[0-9]+$", var.aws_region))
     error_message = "AWS region must be a valid region format (e.g., us-west-2)."
   }
 }
@@ -44,6 +44,18 @@ variable "aws_account_id" {
   validation {
     condition     = var.aws_account_id == "" || can(regex("^[0-9]{12}$", var.aws_account_id))
     error_message = "AWS Account ID must be a 12-digit number."
+  }
+}
+
+# Secondary AWS Region for Cross-Region Resources
+variable "aws_secondary_region" {
+  description = "Secondary AWS region for cross-region resources (e.g., CloudFront, ACM)"
+  type        = string
+  default     = "us-east-1"
+
+  validation {
+    condition     = can(regex("^[a-z]{2}-[a-z]+-[0-9]+$", var.aws_secondary_region))
+    error_message = "AWS secondary region must be a valid region format (e.g., us-east-1)."
   }
 }
 

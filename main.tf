@@ -33,6 +33,6 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
   region     = data.aws_region.current.name
 
-  # Availability zones
-  azs = slice(data.aws_availability_zones.available.names, 0, 3)
+  # Availability zones (up to 3, or fewer if region has less)
+  azs = slice(data.aws_availability_zones.available.names, 0, min(3, length(data.aws_availability_zones.available.names)))
 }
