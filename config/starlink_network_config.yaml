@@ -1,0 +1,108 @@
+# Starlink Network Configuration Template
+# Enterprise-grade configuration for Starlink-enabled networks
+
+network:
+  # Starlink Terminal Configuration
+  starlink:
+    terminal_id: "STARLINK-ENTERPRISE-001"
+    service_plan: "business"
+    priority: "high"
+    
+  # Network Topology
+  topology:
+    type: "hub-and-spoke"
+    hub_location: "primary_data_center"
+    remote_sites:
+      - name: "rural_site_1"
+        location: "remote_location_1"
+        bandwidth: "100Mbps_minimum"
+      - name: "rural_site_2"
+        location: "remote_location_2"
+        bandwidth: "100Mbps_minimum"
+  
+  # IP Addressing
+  addressing:
+    primary_subnet: "10.0.0.0/16"
+    starlink_gateway: "10.0.1.1"
+    vpn_subnet: "10.1.0.0/16"
+    management_subnet: "10.2.0.0/24"
+  
+  # Quality of Service (QoS)
+  qos:
+    enabled: true
+    priority_classes:
+      critical: ["ssh", "https", "dns", "ntp"]
+      high: ["vpn", "monitoring", "backup"]
+      medium: ["email", "file_transfer"]
+      low: ["general_internet"]
+    
+  # Bandwidth Management
+  bandwidth:
+    optimization: true
+    compression: true
+    caching: true
+    traffic_shaping: true
+    
+# Security Configuration
+security:
+  # Firewall Rules
+  firewall:
+    default_policy: "deny_all"
+    allow_rules:
+      - name: "starlink_management"
+        source: "internal"
+        destination: "starlink_gateway"
+        ports: [443, 80, 53]
+        protocol: "tcp/udp"
+      - name: "vpn_access"
+        source: "any"
+        destination: "vpn_gateway"
+        ports: [51820]  # WireGuard
+        protocol: "udp"
+  
+  # VPN Configuration
+  vpn:
+    protocol: "wireguard"
+    encryption: "AES-256-GCM"
+    mtu: 1420  # Optimized for Starlink
+    keepalive: 25
+    
+  # Access Control
+  access_control:
+    mfa_required: true
+    session_timeout: 3600
+    max_concurrent_sessions: 3
+    
+# Monitoring
+monitoring:
+  # Metrics Collection
+  metrics:
+    enabled: true
+    collection_interval: 60  # seconds
+    retention_days: 90
+    metrics_types:
+      - "network_throughput"
+      - "latency"
+      - "packet_loss"
+      - "connection_uptime"
+      - "security_events"
+  
+  # Alerting
+  alerts:
+    enabled: true
+    channels: ["email", "sms", "webhook"]
+    thresholds:
+      latency_ms: 600
+      packet_loss_percent: 5
+      uptime_percent: 99.5
+      
+# Compliance
+compliance:
+  frameworks:
+    - "SOC2"
+    - "ISO27001"
+    - "GDPR"
+  audit_logging: true
+  log_retention_days: 365
+  encryption_at_rest: true
+  encryption_in_transit: true
