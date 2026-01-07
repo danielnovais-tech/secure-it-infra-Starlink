@@ -4,12 +4,14 @@ Demonstration script showing the Starlink monitor in action.
 This creates a mock API server and runs the monitor for a few cycles.
 """
 import sys
+import os
 import time
 import signal
 from unittest.mock import patch, Mock
 from datetime import datetime, timezone
 
-sys.path.insert(0, '/home/runner/work/secure-it-infra-Starlink/secure-it-infra-Starlink')
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.starlink_api import StarlinkAPIClient
 from src.metrics_collector import MetricsCollector
@@ -20,6 +22,7 @@ def create_mock_metrics(cycle: int):
     base_latency = 45.0
     base_downlink = 150.0
     base_uplink = 25.0
+    obstruction = 0.5  # Default obstruction value
     
     # Simulate different network conditions
     if cycle == 2:
@@ -46,8 +49,6 @@ def create_mock_metrics(cycle: int):
     else:
         latency = base_latency
         state = "CONNECTED"
-    
-    obstruction = obstruction if cycle == 4 else 0.5
     
     return {
         'state': state,
