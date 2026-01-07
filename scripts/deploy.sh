@@ -126,7 +126,7 @@ case $ACTION in
             print_info "Deployment completed successfully"
         else
             print_warning "No plan file found, creating and applying new plan..."
-            terraform plan -out=tfplan
+            terraform plan -var-file=$ENVIRONMENT.tfvars -out=tfplan
             
             # Auto-approve in automation mode, otherwise ask for confirmation
             if [ "${TF_IN_AUTOMATION:-false}" == "true" ]; then

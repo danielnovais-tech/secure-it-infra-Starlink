@@ -141,7 +141,13 @@ jobs:
         working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
         run: |
           set -e
-          terraform plan -var-file=${{ matrix.environment }}.tfvars -no-color -input=false | tee plan.out
+          # Check if tfvars file exists
+          if [ ! -f "${{ matrix.environment }}.tfvars" ]; then
+            echo "Warning: ${{ matrix.environment }}.tfvars not found, using default values"
+            terraform plan -no-color -input=false | tee plan.out
+          else
+            terraform plan -var-file=${{ matrix.environment }}.tfvars -no-color -input=false | tee plan.out
+          fi
           # Exit 0 to allow comment even if plan finds changes; fail applies in dedicated job
           exit 0
 
