@@ -1,0 +1,22 @@
+{
+  "framework": {
+    "environment": "development"
+  },
+  "security": {
+    "certificate_validation": false
+  },
+  "authentication": {
+    "session_timeout": 7200,
+    "max_login_attempts": 5
+  },
+  "network": {
+    "rate_limiting": false
+  },
+  "monitoring": {
+    "log_level": "DEBUG",
+    "alert_threshold": "MEDIUM"
+  },
+  "compliance": {
+    "data_retention_days": 30
+  }
+}
