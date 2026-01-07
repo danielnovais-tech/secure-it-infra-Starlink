@@ -20,11 +20,7 @@ from .modules import (
     VPNManager,
 )
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Logger for this module
 logger = logging.getLogger(__name__)
 
 # Default directories
@@ -57,7 +53,7 @@ class StarlinkSecurityFoundation:
         
         logger.info("Starlink Security Foundation initialized")
     
-    def _load_config(self, config_path: str) -> Dict:
+    def _load_config(self, config_path: Optional[str]) -> Dict:
         """Load configuration from file or defaults."""
         default_config = {
             "security": {
@@ -199,11 +195,29 @@ class StarlinkSecurityFoundation:
                 logger.error(f"Error during cleanup: {e}")
 
 
-async def main():
-    """Main entry point."""
+def configure_logging():
+    """Configure logging for the application."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+
+async def async_main():
+    """Main async entry point."""
     foundation = StarlinkSecurityFoundation()
     await foundation.run()
 
 
+def main():
+    """Main synchronous entry point for console script."""
+    configure_logging()
+    try:
+        asyncio.run(async_main())
+    except KeyboardInterrupt:
+        logger.info("Shutdown complete")
+        sys.exit(0)
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
