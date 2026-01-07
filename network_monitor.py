@@ -213,8 +213,9 @@ class NetworkMonitor:
                 sock.connect((host, port))
                 # Send a simple HTTP request
                 request = f"HEAD / HTTP/1.1\r\nHost: {host}\r\n\r\n"
-                sock.sendall(request.encode())
-                bytes_transferred += len(request.encode())
+                request_bytes = request.encode()
+                sock.sendall(request_bytes)
+                bytes_transferred += len(request_bytes)
                 
                 # Receive response
                 response = sock.recv(4096)
@@ -277,7 +278,7 @@ class NetworkMonitor:
             'timestamp': datetime.now().isoformat()
         }
     
-    def detect_device_connections(self, network: str) -> Dict[str, Any]:
+    def detect_device_connections(self, network: str, max_hosts: int = 10) -> Dict[str, Any]:
         """Detect active devices on the network (simplified approach)."""
         active_devices = []
         
@@ -285,17 +286,18 @@ class NetworkMonitor:
             # Parse network CIDR
             network_obj = ipaddress.ip_network(network, strict=False)
             
-            # For demonstration, we'll check a subset of IPs
+            # Check a subset of IPs (configurable limit)
             # In production, use proper network scanning tools
-            hosts_to_check = list(network_obj.hosts())[:10]  # Limit for demo
+            hosts_to_check = list(network_obj.hosts())[:max_hosts]
             
             for host in hosts_to_check:
                 try:
                     host_str = str(host)
                     # Quick check using ping
                     param = '-n' if os.name == 'nt' else '-c'
+                    timeout_param = '-w' if os.name == 'nt' else '-W'
                     result = subprocess.run(
-                        ['ping', param, '1', '-W', '1', host_str],
+                        ['ping', param, '1', timeout_param, '1000' if os.name == 'nt' else '1', host_str],
                         capture_output=True,
                         timeout=2
                     )
@@ -323,9 +325,10 @@ class NetworkMonitor:
             }
     
     def check_unauthorized_devices(self, network: str, 
-                                   authorized_devices: List[str]) -> Dict[str, Any]:
+                                   authorized_devices: List[str],
+                                   max_hosts: int = 10) -> Dict[str, Any]:
         """Check for unauthorized devices on the network."""
-        detection_result = self.detect_device_connections(network)
+        detection_result = self.detect_device_connections(network, max_hosts)
         
         if 'error' in detection_result:
             return detection_result
@@ -397,15 +400,17 @@ class NetworkMonitor:
             
             # Device connection detection
             if network and monitoring['network'].get('detect_devices', False):
+                max_hosts = monitoring['network'].get('max_scan_hosts', 10)
                 results['device_connections'].append(
-                    self.detect_device_connections(network)
+                    self.detect_device_connections(network, max_hosts)
                 )
             
             # Unauthorized device detection
             if network and monitoring['network'].get('check_unauthorized', False):
                 authorized = monitoring['network'].get('authorized_devices', [])
+                max_hosts = monitoring['network'].get('max_scan_hosts', 10)
                 results['unauthorized_devices'].append(
-                    self.check_unauthorized_devices(network, authorized)
+                    self.check_unauthorized_devices(network, authorized, max_hosts)
                 )
         
         results['monitoring_end'] = datetime.now().isoformat()

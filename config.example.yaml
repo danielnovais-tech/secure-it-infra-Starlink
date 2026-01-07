@@ -48,6 +48,7 @@ monitoring:
     subnet: "192.168.1.0/24"  # Network to monitor
     detect_devices: true       # Enable device detection
     check_unauthorized: true   # Check for unauthorized devices
+    max_scan_hosts: 10         # Maximum number of hosts to scan in the subnet
     
     # List of authorized device IP addresses
     authorized_devices:
