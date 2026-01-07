@@ -18,10 +18,16 @@ variable "project_name" {
 }
 
 # Security Group for Application Layer
-# NOTE: This is a baseline configuration. For production use:
-# - Replace 0.0.0.0/0 with specific IP ranges or use a load balancer
-# - Consider implementing AWS WAF for additional protection
-# - Use VPN or bastion host for administrative access
+# WARNING: This baseline configuration allows ingress from any IP (0.0.0.0/0) on ports 80/443.
+# This exposes the application tier directly to the internet and creates security risks.
+#
+# REQUIRED for production deployments - implement one of these:
+# 1. Place an Application Load Balancer (ALB) in front and restrict ingress to ALB security group
+# 2. Use CloudFront with AWS WAF for DDoS protection and restrict backend access
+# 3. At minimum, restrict ingress to known IP ranges or VPN endpoints
+# 4. Implement AWS Shield and WAF for additional protection
+#
+# The current configuration is suitable ONLY for development/testing environments.
 resource "aws_security_group" "app" {
   name        = "${var.project_name}-${var.environment}-app-sg"
   description = "Security group for application tier"

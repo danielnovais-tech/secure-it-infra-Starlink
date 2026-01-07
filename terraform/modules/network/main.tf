@@ -48,6 +48,20 @@ resource "aws_subnet" "public" {
 }
 
 # Private Subnet
+# WARNING: These private subnets currently have NO outbound internet connectivity.
+# NAT gateways are not yet configured, which means resources placed in these subnets will be
+# unable to:
+# - Download software updates or patches
+# - Access external APIs or services
+# - Communicate with AWS services via the internet
+#
+# Private subnets are non-functional until NAT gateways are added.
+# See docs/FUTURE_IMPROVEMENTS.md for implementation plans.
+#
+# Options:
+# 1. Add NAT gateways (recommended - see FUTURE_IMPROVEMENTS.md)
+# 2. Use VPC endpoints for AWS service access
+# 3. Only deploy resources that don't require outbound connectivity
 resource "aws_subnet" "private" {
   count             = 2
   vpc_id            = aws_vpc.main.id
