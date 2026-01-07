@@ -12,6 +12,7 @@ import time
 import statistics
 import json
 import os
+import itertools
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 import ipaddress
@@ -202,6 +203,17 @@ class NetworkMonitor:
                           duration: int = 5) -> Dict[str, Any]:
         """Measure network throughput by attempting a connection."""
         try:
+            # Validate host to prevent HTTP header injection
+            # Remove any CRLF sequences or whitespace that could be malicious
+            sanitized_host = host.replace('\r', '').replace('\n', '').strip()
+            if not sanitized_host or sanitized_host != host:
+                return {
+                    'host': host,
+                    'port': port,
+                    'error': 'Invalid host format',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
             start_time = time.time()
             bytes_transferred = 0
             
@@ -210,9 +222,9 @@ class NetworkMonitor:
             sock.settimeout(10)
             
             try:
-                sock.connect((host, port))
+                sock.connect((sanitized_host, port))
                 # Send a simple HTTP request
-                request = f"HEAD / HTTP/1.1\r\nHost: {host}\r\n\r\n"
+                request = f"HEAD / HTTP/1.1\r\nHost: {sanitized_host}\r\n\r\n"
                 request_bytes = request.encode()
                 sock.sendall(request_bytes)
                 bytes_transferred += len(request_bytes)
@@ -287,8 +299,8 @@ class NetworkMonitor:
             network_obj = ipaddress.ip_network(network, strict=False)
             
             # Check a subset of IPs (configurable limit)
-            # In production, use proper network scanning tools
-            hosts_to_check = list(network_obj.hosts())[:max_hosts]
+            # Use itertools.islice for memory efficiency with large networks
+            hosts_to_check = itertools.islice(network_obj.hosts(), max_hosts)
             
             for host in hosts_to_check:
                 try:
