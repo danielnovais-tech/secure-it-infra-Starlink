@@ -7,7 +7,9 @@ import asyncio
 import json
 import logging
 import queue
+import random
 import signal
+import socket
 import sys
 import threading
 from datetime import datetime
@@ -271,7 +273,6 @@ class NetworkMonitor:
         with self.scan_lock:
             try:
                 # Simulate network scan (in production, use scapy or nmap)
-                import random
                 device_count = random.randint(5, 20)
                 
                 self.devices = {
@@ -308,7 +309,6 @@ class NetworkMonitor:
         
         try:
             open_ports = []
-            import socket
             for port in critical_ports:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.settimeout(1)

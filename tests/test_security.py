@@ -27,7 +27,7 @@ def test_foundation_initialization():
     foundation = StarlinkSecurityFoundation()
     assert foundation.security_level == SecurityLevel.NORMAL
     assert foundation.connection_type == ConnectionType.STARLINK_ONLY
-    assert foundation.running == True
+    assert foundation.running is True
     assert foundation.metrics.security_score == 100
     print("✓ Foundation initialization test passed")
 
