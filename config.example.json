@@ -1,0 +1,15 @@
+{
+  "starlink": {
+    "performance_thresholds": {
+      "max_latency": 100.0,
+      "max_jitter": 20.0,
+      "max_packet_loss": 5.0,
+      "min_throughput": 50.0
+    },
+    "monitoring": {
+      "interval_seconds": 60,
+      "enable_anomaly_detection": true,
+      "enable_security_checks": true
+    }
+  }
+}
