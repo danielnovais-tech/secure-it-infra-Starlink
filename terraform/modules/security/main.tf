@@ -18,6 +18,10 @@ variable "project_name" {
 }
 
 # Security Group for Application Layer
+# NOTE: This is a baseline configuration. For production use:
+# - Replace 0.0.0.0/0 with specific IP ranges or use a load balancer
+# - Consider implementing AWS WAF for additional protection
+# - Use VPN or bastion host for administrative access
 resource "aws_security_group" "app" {
   name        = "${var.project_name}-${var.environment}-app-sg"
   description = "Security group for application tier"
@@ -40,10 +44,26 @@ resource "aws_security_group" "app" {
   }
 
   egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "Allow outbound HTTPS for updates and API calls"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow outbound HTTP for package downloads"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow DNS queries"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -55,6 +75,7 @@ resource "aws_security_group" "app" {
 }
 
 # Security Group for Database Layer
+# NOTE: Egress is restricted to essential services only
 resource "aws_security_group" "db" {
   name        = "${var.project_name}-${var.environment}-db-sg"
   description = "Security group for database tier"
@@ -69,10 +90,18 @@ resource "aws_security_group" "db" {
   }
 
   egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "Allow HTTPS for AWS services and updates"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow DNS queries"
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
