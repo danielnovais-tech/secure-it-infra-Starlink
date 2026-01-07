@@ -199,7 +199,7 @@ class StarlinkSecurityFoundation:
         
         Args:
             event_type: Type of event
-            severity: Event severity level
+            severity: Event severity level (info, warning, error, critical)
             source: Source of the event
             message: Event message
             metadata: Additional event metadata
@@ -214,7 +214,15 @@ class StarlinkSecurityFoundation:
         }
         self.events.append(event)
         
-        log_level = getattr(logging, severity.upper(), logging.INFO)
+        # Map severity to logging level safely
+        severity_mapping = {
+            "debug": logging.DEBUG,
+            "info": logging.INFO,
+            "warning": logging.WARNING,
+            "error": logging.ERROR,
+            "critical": logging.CRITICAL
+        }
+        log_level = severity_mapping.get(severity.lower(), logging.INFO)
         logger.log(log_level, f"{event_type}: {message}")
     
     def get_security_report(self) -> Dict[str, Any]:
@@ -330,7 +338,13 @@ async def main():
         return
     
     if args.daemon:
-        # Run as daemon
+        # Run as daemon (Unix/Linux only)
+        # Note: This implementation uses os.fork() which is not available on Windows
+        if sys.platform == "win32":
+            print("Error: Daemon mode is not supported on Windows")
+            print("Please run the application in the foreground instead")
+            sys.exit(1)
+        
         print(f"Starting Starlink Security Foundation (PID: {os.getpid()})")
         print(f"Log file: {LOG_DIR}/starlink_security.log")
         
