@@ -11,6 +11,7 @@ import socket
 import time
 import statistics
 import json
+import os
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 import ipaddress
@@ -53,7 +54,7 @@ class NetworkMonitor:
         
         try:
             # Use ping command based on OS
-            param = '-n' if subprocess.os.name == 'nt' else '-c'
+            param = '-n' if os.name == 'nt' else '-c'
             cmd = ['ping', param, str(count), host]
             
             result = subprocess.run(
@@ -107,7 +108,7 @@ class NetworkMonitor:
         latencies = []
         
         try:
-            param = '-n' if subprocess.os.name == 'nt' else '-c'
+            param = '-n' if os.name == 'nt' else '-c'
             cmd = ['ping', param, str(count), host]
             
             result = subprocess.run(
@@ -154,7 +155,7 @@ class NetworkMonitor:
     def measure_packet_loss(self, host: str, count: int = 20) -> Dict[str, Any]:
         """Measure packet loss percentage."""
         try:
-            param = '-n' if subprocess.os.name == 'nt' else '-c'
+            param = '-n' if os.name == 'nt' else '-c'
             cmd = ['ping', param, str(count), host]
             
             result = subprocess.run(
@@ -292,7 +293,7 @@ class NetworkMonitor:
                 try:
                     host_str = str(host)
                     # Quick check using ping
-                    param = '-n' if subprocess.os.name == 'nt' else '-c'
+                    param = '-n' if os.name == 'nt' else '-c'
                     result = subprocess.run(
                         ['ping', param, '1', '-W', '1', host_str],
                         capture_output=True,
