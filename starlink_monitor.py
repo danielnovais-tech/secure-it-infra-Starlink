@@ -1,7 +1,6 @@
 """
 Starlink Network Monitoring and Security System
 """
-import asyncio
 from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, List, Any, Optional, Callable, Awaitable

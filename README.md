@@ -117,23 +117,3 @@ The test suite includes:
 
 All 25 tests pass successfully.
 
-## Configuration
-
-See `config.example.json` for a sample configuration file.
-
-### Performance Thresholds
-
-Default values (can be overridden in configuration):
-- `max_latency`: Maximum acceptable latency in milliseconds (default: 100.0)
-- `max_jitter`: Maximum acceptable jitter in milliseconds (default: 20.0)
-- `max_packet_loss`: Maximum acceptable packet loss percentage (default: 5.0)
-- `min_throughput`: Minimum acceptable throughput in Mbps (default: 50.0)
-
-### Stability Calculation Constants
-
-The stability calculation uses configurable class constants:
-- `JITTER_MULTIPLIER`: 2 (each ms of jitter deducts 2 points)
-- `JITTER_MAX_DEDUCTION`: 30 (maximum points deducted for jitter)
-- `PACKET_LOSS_MULTIPLIER`: 10 (each % of packet loss deducts 10 points)
-- `PACKET_LOSS_MAX_DEDUCTION`: 40 (maximum points deducted for packet loss)
-
