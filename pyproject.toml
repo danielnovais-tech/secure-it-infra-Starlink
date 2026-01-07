@@ -1,0 +1,128 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secure-it-starlink"
+version = "0.1.0"
+description = "Comprehensive security tool foundation for Starlink-connected enterprise infrastructures"
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "starlink-security"
+version = "1.0.0"
+description = "Security solutions for managed enterprise infrastructures supporting Starlink"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Daniel Novais Tech"}
+]
+keywords = ["security", "starlink", "network", "enterprise", "infrastructure"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Information Technology",
+    "Topic :: Security",
+    "Topic :: System :: Networking :: Monitoring",
+    {name = "Secure IT Infrastructure Team"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secure-it-starlink"
+version = "1.0.0"
+description = "Enterprise-grade security solutions for managed Starlink infrastructures"
+authors = [{name = "Secure IT Team"}]
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "cryptography>=41.0.0",
+    "requests>=2.31.0",
+    "python-dateutil>=2.8.0",
+    "pyyaml>=6.0",
+    "Topic :: Security",
+    "Topic :: System :: Networking :: Monitoring",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
+Repository = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["starlink_security*"]
+exclude = ["tests*", "examples*"]
+]
+dependencies = [
+    "pyyaml>=6.0",
+    "python-json-logger>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
+Repository = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "flake8>=6.0",
+]
+
+[project.scripts]
+secure-it-starlink = "secure_it_starlink.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["secure_it_starlink*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+line-length = 88
+target-version = ["py38", "py39", "py310", "py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+addopts = "-v --tb=short"
