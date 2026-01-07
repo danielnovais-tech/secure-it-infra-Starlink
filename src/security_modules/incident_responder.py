@@ -1,6 +1,6 @@
 """Incident Responder module for handling security incidents."""
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 from .security_event import SecurityEvent
 
 logger = logging.getLogger(__name__)
@@ -11,7 +11,7 @@ class IncidentResponder:
     
     def __init__(self):
         """Initialize the incident responder."""
-        self.incidents: list = []
+        self.incidents: List[SecurityEvent] = []
         self.response_actions: Dict[str, list] = {
             "critical": [
                 "isolate_affected_systems",

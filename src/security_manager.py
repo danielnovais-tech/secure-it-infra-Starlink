@@ -2,7 +2,7 @@
 import asyncio
 import logging
 import queue
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import datetime
 
 from security_modules import SecurityEvent, PolicyEnforcer, IncidentResponder
@@ -25,7 +25,7 @@ class SecurityManager:
             'incident_responder': IncidentResponder()
         }
         self.events_queue: queue.Queue = queue.Queue()
-        self.event_log: list = []
+        self.event_log: List[SecurityEvent] = []
         self.running = False
     
     async def start(self):
@@ -123,7 +123,7 @@ class SecurityManager:
         )
         self.add_event(event)
     
-    def get_event_log(self) -> list:
+    def get_event_log(self) -> List[SecurityEvent]:
         """Get the event log.
         
         Returns:
@@ -131,7 +131,7 @@ class SecurityManager:
         """
         return self.event_log.copy()
     
-    def get_incidents(self) -> list:
+    def get_incidents(self) -> List[SecurityEvent]:
         """Get list of handled incidents.
         
         Returns:
