@@ -146,7 +146,7 @@ jobs:
         working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
         run: |
           set -e
-          terraform plan -no-color -input=false | tee plan.out
+          terraform plan -var-file=${{ matrix.environment }}.tfvars -no-color -input=false | tee plan.out
           # Exit 0 to allow comment even if plan finds changes; fail applies in dedicated job
           exit 0
 
