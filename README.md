@@ -8,14 +8,16 @@ This system provides comprehensive network monitoring and security management fo
 
 ### Network Stability Monitoring
 - Calculates network stability score (0-100) based on performance metrics
-- Deducts points for high jitter (up to 30 points)
-- Deducts points for high packet loss (up to 40 points)
+- Deducts points for high jitter (up to 30 points, using multiplier of 2)
+- Deducts points for high packet loss (up to 40 points, using multiplier of 10)
 - Ensures stability scores remain within valid bounds (0-100)
+- Formula constants are configurable via class constants
 
 ### Anomaly Detection
 - Monitors latency, jitter, packet loss, and throughput
 - Triggers alerts when metrics exceed configured thresholds
 - Provides detailed anomaly information in event data
+- Uses default thresholds when configuration is missing
 
 ### Security Level Management
 - Tracks overall security score
@@ -25,6 +27,26 @@ This system provides comprehensive network monitoring and security management fo
   - CRITICAL: security_score < 50
   - ELEVATED: 50 ≤ security_score < 70
   - NORMAL: security_score ≥ 70
+
+## Configuration
+
+See `config.example.json` for a sample configuration file.
+
+### Performance Thresholds
+
+Default values (can be overridden in configuration):
+- `max_latency`: Maximum acceptable latency in milliseconds (default: 100.0)
+- `max_jitter`: Maximum acceptable jitter in milliseconds (default: 20.0)
+- `max_packet_loss`: Maximum acceptable packet loss percentage (default: 5.0)
+- `min_throughput`: Minimum acceptable throughput in Mbps (default: 50.0)
+
+### Stability Calculation Constants
+
+The stability calculation uses configurable class constants:
+- `JITTER_MULTIPLIER`: 2 (each ms of jitter deducts 2 points)
+- `JITTER_MAX_DEDUCTION`: 30 (maximum points deducted for jitter)
+- `PACKET_LOSS_MULTIPLIER`: 10 (each % of packet loss deducts 10 points)
+- `PACKET_LOSS_MAX_DEDUCTION`: 40 (maximum points deducted for packet loss)
 
 ## Installation
 
@@ -85,13 +107,33 @@ Run the test suite:
 pytest test_starlink_monitor.py -v
 ```
 
+The test suite includes:
+- Network metrics initialization and serialization tests
+- Stability calculation tests with various scenarios
+- Anomaly detection tests for all threshold types
+- Security level transition tests
+- Configuration validation tests
+- Integration tests
+
+All 25 tests pass successfully.
+
 ## Configuration
 
 See `config.example.json` for a sample configuration file.
 
 ### Performance Thresholds
 
-- `max_latency`: Maximum acceptable latency in milliseconds
-- `max_jitter`: Maximum acceptable jitter in milliseconds
-- `max_packet_loss`: Maximum acceptable packet loss percentage
-- `min_throughput`: Minimum acceptable throughput in Mbps
+Default values (can be overridden in configuration):
+- `max_latency`: Maximum acceptable latency in milliseconds (default: 100.0)
+- `max_jitter`: Maximum acceptable jitter in milliseconds (default: 20.0)
+- `max_packet_loss`: Maximum acceptable packet loss percentage (default: 5.0)
+- `min_throughput`: Minimum acceptable throughput in Mbps (default: 50.0)
+
+### Stability Calculation Constants
+
+The stability calculation uses configurable class constants:
+- `JITTER_MULTIPLIER`: 2 (each ms of jitter deducts 2 points)
+- `JITTER_MAX_DEDUCTION`: 30 (maximum points deducted for jitter)
+- `PACKET_LOSS_MULTIPLIER`: 10 (each % of packet loss deducts 10 points)
+- `PACKET_LOSS_MAX_DEDUCTION`: 40 (maximum points deducted for packet loss)
+

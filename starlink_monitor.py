@@ -38,6 +38,18 @@ class NetworkMetrics:
 class StarlinkMonitor:
     """Starlink network monitoring and security management."""
     
+    # Stability calculation constants
+    JITTER_MULTIPLIER = 2
+    JITTER_MAX_DEDUCTION = 30
+    PACKET_LOSS_MULTIPLIER = 10
+    PACKET_LOSS_MAX_DEDUCTION = 40
+    
+    # Default performance thresholds
+    DEFAULT_MAX_LATENCY = 100.0
+    DEFAULT_MAX_JITTER = 20.0
+    DEFAULT_MAX_PACKET_LOSS = 5.0
+    DEFAULT_MIN_THROUGHPUT = 50.0
+    
     def __init__(self, config: Dict[str, Any]):
         """
         Initialize the Starlink monitor.
@@ -93,8 +105,8 @@ class StarlinkMonitor:
         stability = 100.0
         
         # Deduct for high jitter and packet loss
-        stability -= min(self.metrics.jitter * 2, 30)
-        stability -= min(self.metrics.packet_loss * 10, 40)
+        stability -= min(self.metrics.jitter * self.JITTER_MULTIPLIER, self.JITTER_MAX_DEDUCTION)
+        stability -= min(self.metrics.packet_loss * self.PACKET_LOSS_MULTIPLIER, self.PACKET_LOSS_MAX_DEDUCTION)
         
         return max(0, min(100, stability))
     
@@ -108,10 +120,10 @@ class StarlinkMonitor:
         thresholds = self.config['starlink']['performance_thresholds']
         
         # Get thresholds with defaults
-        max_latency = thresholds.get('max_latency', 100.0)
-        max_jitter = thresholds.get('max_jitter', 20.0)
-        max_packet_loss = thresholds.get('max_packet_loss', 5.0)
-        min_throughput = thresholds.get('min_throughput', 50.0)
+        max_latency = thresholds.get('max_latency', self.DEFAULT_MAX_LATENCY)
+        max_jitter = thresholds.get('max_jitter', self.DEFAULT_MAX_JITTER)
+        max_packet_loss = thresholds.get('max_packet_loss', self.DEFAULT_MAX_PACKET_LOSS)
+        min_throughput = thresholds.get('min_throughput', self.DEFAULT_MIN_THROUGHPUT)
         
         anomalies = []
         
