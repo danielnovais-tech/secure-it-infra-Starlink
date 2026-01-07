@@ -106,7 +106,14 @@ print_info "Checking Terraform formatting..."
 terraform fmt -check -recursive || {
     print_warning "Terraform files are not properly formatted"
     print_info "Running terraform fmt..."
+    # Temporarily disable 'exit on error' to handle fmt failures explicitly
+    set +e
     terraform fmt -recursive
+    FMT_STATUS=$?
+    set -e
+    if [ "$FMT_STATUS" -ne 0 ]; then
+        print_error "terraform fmt -recursive failed with exit code ${FMT_STATUS}; continuing without aborting deployment"
+    fi
 }
 
 # Run Terraform action
