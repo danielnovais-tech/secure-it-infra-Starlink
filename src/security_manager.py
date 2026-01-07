@@ -1,7 +1,6 @@
 """Security Manager - Main orchestration class for security monitoring."""
 import asyncio
 import logging
-import queue
 from typing import Dict, Any, List
 from datetime import datetime
 
@@ -24,7 +23,7 @@ class SecurityManager:
             'policy_enforcer': PolicyEnforcer(),
             'incident_responder': IncidentResponder()
         }
-        self.events_queue: queue.Queue = queue.Queue()
+        self.events_queue: asyncio.Queue = asyncio.Queue()
         self.event_log: List[SecurityEvent] = []
         self.running = False
     
@@ -62,10 +61,8 @@ class SecurityManager:
         """Process queued security events."""
         try:
             while not self.events_queue.empty():
-                event = self.events_queue.get_nowait()
+                event = await self.events_queue.get()
                 await self._handle_event(event)
-        except queue.Empty:
-            pass
         except Exception as e:
             logger.error(f"Error processing events: {e}")
     
@@ -93,7 +90,7 @@ class SecurityManager:
         Args:
             event: SecurityEvent to add
         """
-        self.events_queue.put(event)
+        self.events_queue.put_nowait(event)
         logger.debug(f"Event queued: {event.event_type}")
     
     def create_and_queue_event(
