@@ -1,0 +1,48 @@
+{
+  "audit_scope": {
+    "network_security": true,
+    "service_vulnerabilities": true,
+    "encryption_validation": true,
+    "vpn_validation": true,
+    "network_segmentation": true,
+    "privilege_checks": true
+  },
+  "starlink_settings": {
+    "remote_environment": true,
+    "connectivity_resilient": true,
+    "require_vpn": true,
+    "min_bandwidth_mbps": 50,
+    "max_latency_ms": 100
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "security_audit.log",
+    "console": true
+  },
+  "reporting": {
+    "format": "json",
+    "output_file": "security_audit_report.json"
+  },
+  "network_checks": {
+    "allowed_ports": [22, 443, 1194],
+    "check_dns": true,
+    "check_ntp": true
+  },
+  "compliance": {
+    "standards": ["CIS", "NIST"],
+    "enforce_encryption": true,
+    "require_mfa": false
+  "starlink_gateway": "192.168.100.1",
+  "critical_ports": [22, 80, 443, 3389, 5900],
+  "internal_subnets": [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ],
+  "security_checks": {
+    "network_security": true,
+    "service_audit": true,
+    "encryption_check": true,
+    "vpn_validation": true
+  }
+}
