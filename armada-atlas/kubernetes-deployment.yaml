@@ -156,6 +156,13 @@ spec:
         requests:
           storage: 20Gi
 ---
+# ⚠️ SECURITY WARNING ⚠️
+# This Secret contains a DEFAULT PASSWORD for development only!
+# For production, generate a secure random password:
+#   kubectl create secret generic armada-postgres-secret \
+#     --from-literal=password="$(openssl rand -base64 32)" \
+#     -n armada
+# See docs/SECURITY.md for more details
 apiVersion: v1
 kind: Secret
 metadata:
@@ -163,7 +170,7 @@ metadata:
   namespace: armada
 type: Opaque
 stringData:
-  password: armada_password  # Change this in production
+  password: armada_password  # CHANGE THIS! Use: openssl rand -base64 32
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -187,9 +194,9 @@ data:
         host: postgres
         port: 5432
         user: armada
-        password: armada_password
+        password: ${POSTGRES_PASSWORD}  # Injected from Secret via environment variable
         dbname: armada
-        sslmode: disable
+        sslmode: disable  # Change to 'require' in production
     
     scheduling:
       maxJobsPerCall: 5000
@@ -267,10 +274,15 @@ spec:
         - name: config
           mountPath: /config/armada
         env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: armada-postgres-secret
+              key: password
         - name: ARMADA_REDIS_ADDRS
           value: "redis:6379"
-        - name: ARMADA_POSTGRES_CONNECTION
-          value: "host=postgres port=5432 user=armada password=armada_password dbname=armada sslmode=disable"
+        # Note: ARMADA_POSTGRES_CONNECTION is deprecated in favor of config file
+        # The config file uses ${POSTGRES_PASSWORD} which will be substituted
         resources:
           requests:
             memory: "1Gi"
@@ -452,10 +464,14 @@ spec:
         - containerPort: 8080
           name: http
         env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: armada-postgres-secret
+              key: password
         - name: ARMADA_SERVER_URL
           value: "armada-server:50051"
-        - name: ARMADA_POSTGRES_CONNECTION
-          value: "host=postgres port=5432 user=armada password=armada_password dbname=armada sslmode=disable"
+        # Note: Use config file with ${POSTGRES_PASSWORD} substitution instead of direct env var
         resources:
           requests:
             memory: "512Mi"

@@ -27,9 +27,12 @@ postgres:
     host: postgres
     port: 5432
     user: armada
-    password: armada_password
+    # Password should be injected via environment variable in production:
+    # Set POSTGRES_PASSWORD environment variable from Kubernetes Secret
+    # or use: password: ${POSTGRES_PASSWORD}
+    password: armada_password  # DEV ONLY - change in production!
     dbname: armada
-    sslmode: disable
+    sslmode: disable  # Change to 'require' for production
   maxOpenConns: 100
   maxIdleConns: 25
   connMaxLifetime: 30m

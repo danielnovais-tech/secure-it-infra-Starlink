@@ -18,9 +18,9 @@ postgres:
     host: postgres
     port: 5432
     user: armada
-    password: armada_password
+    password: armada_password  # DEV ONLY - Use env var ${POSTGRES_PASSWORD} in production
     dbname: armada
-    sslmode: disable
+    sslmode: disable  # Change to 'require' for production
   maxOpenConns: 100
   maxIdleConns: 25
 
