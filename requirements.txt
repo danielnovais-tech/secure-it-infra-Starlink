@@ -1,3 +1,29 @@
+# Secure IT Infrastructure - Starlink
+# Python dependencies
+
+# Core dependencies
+# No external dependencies required for basic functionality
+# All modules use Python standard library
+
+# Optional dependencies for enhanced functionality:
+# Uncomment these if you want to use real implementations
+
+# Network scanning
+# nmap==0.0.1
+# scapy==2.5.0
+
+# Threat intelligence
+# requests==2.31.0
+# feedparser==6.0.10
+
+# VPN
+# python-openvpn==1.0.0
+
+# Backup and compression
+# paramiko==3.4.0
+
+# Monitoring and logging
+# prometheus-client==0.19.0
 cryptography>=41.0.0
 # Starlink Security Auditor Requirements
 # Python 3.7+ required
