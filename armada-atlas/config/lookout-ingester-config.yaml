@@ -1,6 +1,11 @@
 # Lookout Ingester Configuration
 # Ingests job events into PostgreSQL for Lookout UI
 
+# ⚠️ SECURITY WARNING ⚠️
+# Default password is used here for development only!
+# For production: Use environment variables or secrets management
+# See docs/SECURITY.md for security hardening
+
 # API Connection
 armadaUrl: "armada-server:50051"
 

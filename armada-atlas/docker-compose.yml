@@ -1,5 +1,14 @@
 version: '3.8'
 
+# ⚠️ SECURITY WARNING ⚠️
+# This configuration is for DEVELOPMENT/TESTING ONLY!
+# DO NOT use in production without:
+# 1. Changing all default passwords
+# 2. Enabling TLS/SSL encryption
+# 3. Configuring authentication
+# 4. Using secrets management (Docker secrets, Vault, etc.)
+# See docs/SECURITY.md for production hardening guide
+
 services:
   # Redis - used for job queue and state management
   redis:

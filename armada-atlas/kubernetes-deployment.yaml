@@ -1,3 +1,11 @@
+# ⚠️ SECURITY WARNING ⚠️
+# This configuration contains DEFAULT CREDENTIALS for development/testing only!
+# For production deployments:
+# 1. Change the default password (currently: armada_password)
+# 2. Use Kubernetes Secrets to store credentials
+# 3. Enable SSL/TLS for database connections
+# 4. See docs/SECURITY.md for complete hardening guide
+
 apiVersion: v1
 kind: Namespace
 metadata:

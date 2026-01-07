@@ -1,6 +1,14 @@
 # Armada Server Configuration
 # Fleet Management Control Plane
 
+# ⚠️ SECURITY WARNING ⚠️
+# This is a SAMPLE configuration for development/testing!
+# For production use:
+# 1. Disable anonymousAuth and configure proper authentication (OIDC, etc.)
+# 2. Use environment variables or secrets for sensitive values (passwords, tokens)
+# 3. Enable TLS encryption
+# 4. See docs/SECURITY.md for complete security configuration
+
 grpcPort: 50051
 httpPort: 8080
 metricsPort: 9000

@@ -58,6 +58,7 @@ For detailed instructions, see the [Quick Start Guide](docs/QUICKSTART.md).
 
 - [Quick Start Guide](docs/QUICKSTART.md) - Get up and running quickly
 - [Integration Guide](docs/INTEGRATION.md) - Detailed architecture and integration patterns
+- [Security Configuration Guide](docs/SECURITY.md) - **Production security hardening (REQUIRED reading)**
 - [Pulsar Documentation](pulsar/README.md) - Apache Pulsar setup and configuration
 - [Armada Atlas Documentation](armada-atlas/README.md) - Armada setup and usage
 
@@ -141,16 +142,19 @@ See individual component READMEs for detailed deployment instructions.
 
 ## Security Considerations
 
+⚠️ **IMPORTANT**: The default configurations are for development and testing only!
+
 For production deployments, ensure you:
 
 1. **Enable TLS Encryption**: Encrypt data in transit for both Pulsar and Armada
 2. **Configure Authentication**: Use token-based or certificate-based authentication
 3. **Enable Authorization**: Implement role-based access control (RBAC)
-4. **Secure Secrets**: Use Kubernetes Secrets or a secrets management solution
-5. **Network Policies**: Restrict network access between components
-6. **Regular Updates**: Keep all components updated with security patches
+4. **Secure Secrets**: Use Kubernetes Secrets or a secrets management solution (Vault, AWS Secrets Manager, etc.)
+5. **Change Default Passwords**: All default passwords must be changed
+6. **Network Policies**: Restrict network access between components
+7. **Regular Updates**: Keep all components updated with security patches
 
-See the [Integration Guide](docs/INTEGRATION.md) for security best practices.
+**See the comprehensive [Security Configuration Guide](docs/SECURITY.md) for detailed hardening instructions.**
 
 ## Monitoring
 
