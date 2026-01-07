@@ -147,8 +147,6 @@ jobs:
         run: |
           set -e
           terraform plan -no-color -input=false | tee plan.out
-          # Exit 0 to allow comment even if plan finds changes; fail applies in dedicated job
-          exit 0
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
