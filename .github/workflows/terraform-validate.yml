@@ -1,4 +1,4 @@
-name: Terraform Validation and Testing
+name: Terraform Validation and Testing (Prod)
 
 on:
   pull_request:
@@ -12,121 +12,197 @@ on:
       - 'terraform/**'
       - '.github/workflows/terraform-validate.yml'
 
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TF_VERSION: 1.6.x
+  TF_WORKDIR_BASE: terraform/environments
+  # If you use cloud creds, configure in repository secrets and export here or in steps.
+
 jobs:
   validate:
-    name: Validate Terraform Configuration
+    name: Validate & Lint (dev, staging, production)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     strategy:
       matrix:
         environment: [dev, staging, production]
-    
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ~> 1.6
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.terraform.d/plugin-cache
+            ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}/.terraform
+          key: tf-${{ runner.os }}-${{ env.TF_VERSION }}-${{ hashFiles(format('{0}/{1}/**/*.tf', env.TF_WORKDIR_BASE, matrix.environment)) }}
+          restore-keys: |
+            tf-${{ runner.os }}-${{ env.TF_VERSION }}-
 
       - name: Terraform Format Check
         run: |
-          cd terraform/environments/${{ matrix.environment }}
+          cd $TF_WORKDIR_BASE/${{ matrix.environment }}
           terraform fmt -check -recursive
-        continue-on-error: false
 
-      - name: Terraform Init
+      - name: Terraform Init (no backend for static validation)
         run: |
-          cd terraform/environments/${{ matrix.environment }}
+          cd $TF_WORKDIR_BASE/${{ matrix.environment }}
           terraform init -backend=false
 
       - name: Terraform Validate
         run: |
-          cd terraform/environments/${{ matrix.environment }}
+          cd $TF_WORKDIR_BASE/${{ matrix.environment }}
           terraform validate
 
-      - name: Run tflint
+      - name: Setup tflint
         uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: latest
 
-      - name: Lint Terraform files
+      - name: Cache tflint
+        uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}
+          restore-keys: |
+            tflint-${{ runner.os }}-
+
+      - name: Lint Terraform with tflint
         run: |
-          cd terraform/environments/${{ matrix.environment }}
+          cd $TF_WORKDIR_BASE/${{ matrix.environment }}
           tflint --init
           tflint --format compact
-        continue-on-error: true
+        # Fail the job if linting finds issues you deem blocking; set continue-on-error: false in prod
+        continue-on-error: false
 
   security-scan:
-    name: Security Scan with tfsec
+    name: Security Scan (tfsec, hard fail)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run tfsec
+      - name: Run tfsec (hard fail)
         uses: aquasecurity/tfsec-action@v1.0.0
         with:
           working_directory: terraform
-          soft_fail: true
+          # Hard fail to enforce compliance
+          soft_fail: false
 
   plan:
-    name: Terraform Plan
+    name: Terraform Plan (PR only)
     runs-on: ubuntu-latest
     needs: [validate, security-scan]
     if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      pull-requests: write
     strategy:
       matrix:
         environment: [dev, staging]
-    
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ~> 1.6
+          terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Terraform Init
-        run: |
-          cd terraform/environments/${{ matrix.environment }}
-          terraform init -backend=false
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.terraform.d/plugin-cache
+            ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}/.terraform
+          key: tf-${{ runner.os }}-${{ env.TF_VERSION }}-${{ hashFiles(format('{0}/{1}/**/*.tf', env.TF_WORKDIR_BASE, matrix.environment)) }}
+          restore-keys: |
+            tf-${{ runner.os }}-${{ env.TF_VERSION }}-
 
-      - name: Terraform Plan
+      - name: Terraform Init (backend enabled)
+        working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
         run: |
-          cd terraform/environments/${{ matrix.environment }}
-          terraform plan -no-color
-        continue-on-error: true
+          # If you use a remote backend, ensure backend config files or secrets are present
+          terraform init -input=false
+
+      - name: Select/Create Workspace
+        working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
+        run: |
+          terraform workspace select ${{ matrix.environment }} || terraform workspace new ${{ matrix.environment }}
+
+      - name: Terraform Plan (capture output)
+        id: plan
+        working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
+        run: |
+          set -e
+          terraform plan -no-color -input=false | tee plan.out
+          # Exit 0 to allow comment even if plan finds changes; fail applies in dedicated job
+          exit 0
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plan-${{ matrix.environment }}
+          path: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}/plan.out
 
       - name: Comment PR with Plan
         uses: actions/github-script@v7
-        if: github.event_name == 'pull_request'
         with:
           script: |
-            const output = `#### Terraform Plan for \`${{ matrix.environment }}\` 📖
-            
+            const fs = require('fs');
+            const env = '${{ matrix.environment }}';
+            const path = `${process.env.TF_WORKDIR_BASE}/${env}/plan.out`;
+            const plan = fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : 'No plan output found.';
+            const output = `#### Terraform Plan for \`${env}\` 📖
+
             <details><summary>Show Plan</summary>
-            
+
             \`\`\`
-            Plan output would appear here in actual deployment
+            ${plan}
             \`\`\`
-            
+
             </details>
-            
+
             *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: output
+            });
+
+  # Optional: gate merges with a summary status (can be used with branch protection)
+  summary:
+    name: Workflow Summary
+    runs-on: ubuntu-latest
+    needs: [validate, security-scan, plan]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Post check summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `
+            ✅ Validation and linting passed
+            ✅ Security scan (tfsec) enforced
+            ✅ Plan comments posted for dev and staging
+
+            Ensure reviewers check the PR comments for environment-specific plans.`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
             })
