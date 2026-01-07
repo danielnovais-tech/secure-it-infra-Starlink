@@ -3,6 +3,7 @@ Unit tests for Starlink Security Monitoring System
 """
 
 import unittest
+from unittest.mock import patch
 import time
 from starlink_monitor import StarlinkMonitor, SecurityMetrics
 
@@ -217,11 +218,13 @@ class TestStarlinkMonitor(unittest.TestCase):
     def test_metrics_update_timestamp(self):
         """Test that last_updated timestamp is updated on metric changes."""
         initial_timestamp = self.monitor.metrics.last_updated
-        time.sleep(0.01)  # Small delay to ensure timestamp changes
         
-        self.monitor.update_metrics(signal_quality=95.0)
+        # Mock time.time to return a different value
+        with patch('time.time', return_value=initial_timestamp + 100):
+            self.monitor.update_metrics(signal_quality=95.0)
         
         self.assertGreater(self.monitor.metrics.last_updated, initial_timestamp)
+        self.assertEqual(self.monitor.metrics.last_updated, initial_timestamp + 100)
     
     def test_realistic_scenario(self):
         """Test a realistic monitoring scenario."""

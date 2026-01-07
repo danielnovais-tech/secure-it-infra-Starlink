@@ -10,6 +10,12 @@ from typing import Optional
 import time
 
 
+# Constants for security score calculation
+AUTH_PENALTY_MULTIPLIER = 3  # Penalty multiplier per failed auth attempt
+PACKET_LOSS_PENALTY_MULTIPLIER = 6  # Penalty multiplier for packet loss
+LATENCY_DIVISOR = 5  # Divisor for latency score calculation
+
+
 @dataclass
 class SecurityMetrics:
     """Data class to hold security and connection metrics."""
@@ -50,7 +56,7 @@ class StarlinkMonitor:
         
         self.metrics.last_updated = time.time()
         
-        # Update connection stability first, then security score
+        # Calculate connection stability first, as it's used in security score
         self.metrics.connection_stability = self._calculate_stability()
         
         # Update security score based on various factors
@@ -79,7 +85,7 @@ class StarlinkMonitor:
         # Factor 2: Failed authentication attempts (30% weight)
         # More failed attempts = lower score
         # Penalize heavily for failed auth attempts (max penalty at 10+ attempts)
-        auth_penalty = min(self.metrics.failed_auth_attempts * 3, 30)
+        auth_penalty = min(self.metrics.failed_auth_attempts * AUTH_PENALTY_MULTIPLIER, 30)
         auth_factor = max(0, 30.0 - auth_penalty)
         
         # Factor 3: Connection stability (20% weight)
@@ -115,7 +121,7 @@ class StarlinkMonitor:
         # Factor 2: Packet loss rate (30% weight)
         # Lower packet loss = higher stability
         # Assume packet loss > 5% is very bad
-        packet_loss_penalty = min(self.metrics.packet_loss_rate * 6, 30)
+        packet_loss_penalty = min(self.metrics.packet_loss_rate * PACKET_LOSS_PENALTY_MULTIPLIER, 30)
         packet_loss_factor = max(0, 30.0 - packet_loss_penalty)
         
         # Factor 3: Signal quality (20% weight)
@@ -125,7 +131,7 @@ class StarlinkMonitor:
         # Lower latency = higher stability
         # Assume latency > 100ms starts to degrade stability
         # Latency > 500ms is very poor
-        latency_score = max(0, 100 - (self.metrics.latency_ms / 5))
+        latency_score = max(0, 100 - (self.metrics.latency_ms / LATENCY_DIVISOR))
         latency_factor = (latency_score / 100.0) * 10.0
         
         # Calculate final stability score
