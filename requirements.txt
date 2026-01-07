@@ -1,0 +1,2 @@
+# No external dependencies required for the core system
+# All modules use Python standard library only
