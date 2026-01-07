@@ -241,8 +241,6 @@ class VPNManager:
     async def check_vpn_status(self):
         """Check current VPN status."""
         # Simulate VPN status check
-        import random
-        
         statuses = ["connected", "disconnected", "connecting"]
         new_status = random.choice(statuses)
         
@@ -289,7 +287,6 @@ class VPNManager:
         # result = subprocess.run(['sudo', 'systemctl', 'start', 'openvpn@client'])
         # return result.returncode == 0
         
-        import random
         return random.random() > 0.3  # 70% success rate for simulation
 
 
@@ -335,7 +332,6 @@ class BackupManager:
         """Check availability of backup connections."""
         for backup_name, info in self.backup_connections.items():
             # Simulate availability check
-            import random
             was_available = info["available"]
             info["available"] = random.random() > 0.2  # 80% available
             
@@ -352,8 +348,6 @@ class BackupManager:
     
     async def evaluate_failover_needs(self):
         """Evaluate if failover to backup is needed."""
-        metrics = self.foundation.metrics
-        
         # Check primary connection health
         # If primary is down, activate highest priority available backup
         available_backups = [
