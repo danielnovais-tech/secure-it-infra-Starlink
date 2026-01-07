@@ -130,11 +130,11 @@ jobs:
           restore-keys: |
             tf-${{ runner.os }}-${{ env.TF_VERSION }}-
 
-      - name: Terraform Init (backend enabled)
+      - name: Terraform Init (backend disabled for CI plan)
         working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
         run: |
-          # If you use a remote backend, ensure backend config files or secrets are present
-          terraform init -input=false
+          # Backend is disabled here to avoid needing cloud credentials in the plan job.
+          terraform init -backend=false -input=false
 
       - name: Select/Create Workspace
         working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
