@@ -90,14 +90,6 @@ resource "aws_security_group" "db" {
   }
 
   egress {
-    description = "Allow HTTPS for AWS services and updates"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
     description = "Allow DNS queries"
     from_port   = 53
     to_port     = 53
