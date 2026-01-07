@@ -136,11 +136,6 @@ jobs:
           # Backend is disabled here to avoid needing cloud credentials in the plan job.
           terraform init -backend=false -input=false
 
-      - name: Select/Create Workspace
-        working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
-        run: |
-          terraform workspace select ${{ matrix.environment }} || terraform workspace new ${{ matrix.environment }}
-
       - name: Terraform Plan (capture output)
         id: plan
         working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
