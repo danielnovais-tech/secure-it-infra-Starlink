@@ -65,20 +65,26 @@ cd "$TERRAFORM_DIR"
 # Safety check for production
 if [ "$ENVIRONMENT" == "production" ]; then
     if [ "$ACTION" == "apply" ] || [ "$ACTION" == "destroy" ]; then
-        print_warning "You are about to $ACTION changes to PRODUCTION environment!"
-        read -p "Are you sure you want to continue? (yes/no): " confirmation
-        if [ "$confirmation" != "yes" ]; then
-            print_info "Deployment cancelled"
-            exit 0
-        fi
-        
-        # Require additional confirmation for destroy
-        if [ "$ACTION" == "destroy" ]; then
-            print_warning "DANGER: This will DESTROY production infrastructure!"
-            read -p "Type 'DELETE-PRODUCTION' to confirm: " delete_confirm
-            if [ "$delete_confirm" != "DELETE-PRODUCTION" ]; then
+        # Skip confirmations in automation mode
+        if [ "${TF_IN_AUTOMATION:-false}" == "true" ]; then
+            print_warning "Running in automation mode - skipping interactive confirmations"
+            print_warning "Proceeding with $ACTION to PRODUCTION environment"
+        else
+            print_warning "You are about to $ACTION changes to PRODUCTION environment!"
+            read -p "Are you sure you want to continue? (yes/no): " confirmation
+            if [ "$confirmation" != "yes" ]; then
                 print_info "Deployment cancelled"
                 exit 0
+            fi
+            
+            # Require additional confirmation for destroy
+            if [ "$ACTION" == "destroy" ]; then
+                print_warning "DANGER: This will DESTROY production infrastructure!"
+                read -p "Type 'DELETE-PRODUCTION' to confirm: " delete_confirm
+                if [ "$delete_confirm" != "DELETE-PRODUCTION" ]; then
+                    print_info "Deployment cancelled"
+                    exit 0
+                fi
             fi
         fi
     fi
@@ -121,15 +127,24 @@ case $ACTION in
         else
             print_warning "No plan file found, creating and applying new plan..."
             terraform plan -out=tfplan
-            read -p "Apply this plan? (yes/no): " apply_confirm
-            if [ "$apply_confirm" == "yes" ]; then
+            
+            # Auto-approve in automation mode, otherwise ask for confirmation
+            if [ "${TF_IN_AUTOMATION:-false}" == "true" ]; then
+                print_info "Running in automation mode - auto-approving plan"
                 terraform apply tfplan
                 rm -f tfplan
                 print_info "Deployment completed successfully"
             else
-                print_info "Deployment cancelled"
-                rm -f tfplan
-                exit 0
+                read -p "Apply this plan? (yes/no): " apply_confirm
+                if [ "$apply_confirm" == "yes" ]; then
+                    terraform apply tfplan
+                    rm -f tfplan
+                    print_info "Deployment completed successfully"
+                else
+                    print_info "Deployment cancelled"
+                    rm -f tfplan
+                    exit 0
+                fi
             fi
         fi
         ;;
@@ -137,15 +152,24 @@ case $ACTION in
         print_info "Planning destruction..."
         terraform plan -destroy -out=tfplan
         print_warning "Review the destruction plan above"
-        read -p "Proceed with destroy? (yes/no): " destroy_confirm
-        if [ "$destroy_confirm" == "yes" ]; then
+        
+        # Auto-approve in automation mode, otherwise ask for confirmation
+        if [ "${TF_IN_AUTOMATION:-false}" == "true" ]; then
+            print_warning "Running in automation mode - auto-approving destruction"
             terraform apply tfplan
             rm -f tfplan
             print_info "Destruction completed"
         else
-            print_info "Destruction cancelled"
-            rm -f tfplan
-            exit 0
+            read -p "Proceed with destroy? (yes/no): " destroy_confirm
+            if [ "$destroy_confirm" == "yes" ]; then
+                terraform apply tfplan
+                rm -f tfplan
+                print_info "Destruction completed"
+            else
+                print_info "Destruction cancelled"
+                rm -f tfplan
+                exit 0
+            fi
         fi
         ;;
 esac
