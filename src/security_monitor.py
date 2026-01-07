@@ -69,6 +69,9 @@ class SecurityMonitor:
         """Detect anomalies in current metrics."""
         detected_anomalies = []
         
+        # Capture timestamp once for consistency
+        timestamp = datetime.now(timezone.utc).isoformat()
+        
         # Check for critical thresholds
         if "failed_login_attempts" in self.metrics:
             if self.metrics["failed_login_attempts"] > 5:
@@ -77,7 +80,7 @@ class SecurityMonitor:
                     "severity": "high",
                     "metric": "failed_login_attempts",
                     "value": self.metrics["failed_login_attempts"],
-                    "timestamp": datetime.now(timezone.utc).isoformat()
+                    "timestamp": timestamp
                 })
         
         if "unauthorized_access_attempts" in self.metrics:
@@ -87,7 +90,7 @@ class SecurityMonitor:
                     "severity": "critical",
                     "metric": "unauthorized_access_attempts",
                     "value": self.metrics["unauthorized_access_attempts"],
-                    "timestamp": datetime.now(timezone.utc).isoformat()
+                    "timestamp": timestamp
                 })
         
         if "network_intrusion_attempts" in self.metrics:
@@ -97,10 +100,12 @@ class SecurityMonitor:
                     "severity": "critical",
                     "metric": "network_intrusion_attempts",
                     "value": self.metrics["network_intrusion_attempts"],
-                    "timestamp": datetime.now(timezone.utc).isoformat()
+                    "timestamp": timestamp
                 })
         
         # Store and log anomalies
+        # Note: Anomalies are accumulated for historical tracking.
+        # Use clear_anomalies() to prevent unbounded growth if needed.
         if detected_anomalies:
             self.anomalies.extend(detected_anomalies)
             for anomaly in detected_anomalies:
