@@ -53,7 +53,7 @@ class TestNetworkMetrics:
             throughput=100.0,
             security_score=85.0
         )
-        metrics_dict = metrics.__dict__()
+        metrics_dict = metrics.to_dict()
         assert metrics_dict['latency'] == 50.0
         assert metrics_dict['jitter'] == 10.0
         assert metrics_dict['packet_loss'] == 2.0

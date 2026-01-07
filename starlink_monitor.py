@@ -24,7 +24,7 @@ class NetworkMetrics:
     throughput: float = 0.0
     security_score: float = 100.0
     
-    def __dict__(self):
+    def to_dict(self):
         """Convert to dictionary for serialization."""
         return {
             'latency': self.latency,
@@ -122,7 +122,7 @@ class StarlinkMonitor:
                 "warning",
                 "network_monitor",
                 f"Network anomalies detected: {', '.join(anomalies)}",
-                {"metrics": self.metrics.__dict__(), "anomalies": anomalies}
+                {"metrics": self.metrics.to_dict(), "anomalies": anomalies}
             )
     
     async def _check_security_status(self):
