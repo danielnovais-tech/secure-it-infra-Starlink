@@ -62,6 +62,14 @@ class EncryptionModule:
         """
         Encrypt data using specified key.
         
+        ⚠️ WARNING: This is a PLACEHOLDER implementation using base64 encoding.
+        This provides NO SECURITY and is for demonstration purposes only.
+        
+        In production, replace with proper AES-256-GCM encryption using:
+        - cryptography.hazmat.primitives.ciphers.aead.AESGCM
+        - Proper nonce generation and management
+        - Authenticated encryption with associated data (AEAD)
+        
         Args:
             data: Data to encrypt
             key_id: Key identifier (generates new key if not provided)
@@ -75,8 +83,10 @@ class EncryptionModule:
         if key_id not in self.keys:
             raise ValueError(f"Key {key_id} not found")
         
-        # In production, this would use actual AES-256-GCM
-        # For demo purposes, using base64 encoding
+        # ⚠️ DEMO ONLY: In production, use actual AES-256-GCM encryption
+        # Example: from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        # aesgcm = AESGCM(self.keys[key_id]["key"])
+        # encrypted_data = aesgcm.encrypt(nonce, data, None)
         nonce = secrets.token_bytes(12)
         
         # Simplified encryption (would use cryptography library in production)
@@ -96,6 +106,14 @@ class EncryptionModule:
         """
         Decrypt data using specified key.
         
+        ⚠️ WARNING: This is a PLACEHOLDER implementation using base64 decoding.
+        This provides NO SECURITY and is for demonstration purposes only.
+        
+        In production, replace with proper AES-256-GCM decryption using:
+        - cryptography.hazmat.primitives.ciphers.aead.AESGCM
+        - Proper verification of authentication tags
+        - Exception handling for tampering detection
+        
         Args:
             encrypted_data: Encrypted data
             key_id: Key identifier
@@ -107,7 +125,10 @@ class EncryptionModule:
         if key_id not in self.keys:
             raise ValueError(f"Key {key_id} not found")
         
-        # Simplified decryption (would use cryptography library in production)
+        # ⚠️ DEMO ONLY: In production, use actual AES-256-GCM decryption
+        # Example: from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        # aesgcm = AESGCM(self.keys[key_id]["key"])
+        # decrypted_data = aesgcm.decrypt(nonce, encrypted_data, None)
         decrypted_data = base64.b64decode(encrypted_data)
         
         return decrypted_data

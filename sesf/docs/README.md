@@ -1,5 +1,26 @@
 # SESF - Starlink Enterprise Security Framework
 
+## ⚠️ IMPORTANT SECURITY NOTICE
+
+**This is a demonstration/conceptual framework for educational purposes.**
+
+Several core security functions use **placeholder implementations** that do NOT provide actual security:
+- Authentication uses hardcoded validation (no real password checking)
+- Encryption uses base64 encoding (NOT actual AES-256-GCM encryption)
+- MFA validation is a placeholder (no TOTP/SMS verification)
+- Firewall rule matching is simplified (no CIDR support)
+
+**DO NOT deploy this code in production without replacing placeholder implementations with proper security libraries:**
+- Use `cryptography` library for real AES-256-GCM encryption
+- Use `bcrypt` or `argon2` for password hashing
+- Use `pyotp` for TOTP-based MFA
+- Implement proper database integration for user management
+- Add CIDR notation support for firewall rules
+
+The framework architecture, APIs, and module structure are production-ready, but the cryptographic and authentication implementations must be replaced before production use.
+
+---
+
 ## Overview
 
 SESF (Starlink Enterprise Security Framework) is a comprehensive security solution designed specifically for managing enterprise infrastructures supporting Starlink satellite communications. It provides a unified framework for authentication, encryption, network security, monitoring, and compliance management.

@@ -6,6 +6,10 @@ Repository dedicated to security solutions for managed enterprise infrastructure
 
 This repository contains the **Starlink Enterprise Security Framework (SESF)**, a comprehensive security solution designed specifically for managing enterprise infrastructures supporting Starlink satellite communications.
 
+### ⚠️ Security Notice
+
+SESF is a **demonstration framework** with placeholder implementations for some security functions. See [sesf/docs/README.md](./sesf/docs/README.md) for important security considerations before deployment.
+
 ### Features
 
 - **🔐 Authentication & Authorization**: Multi-factor authentication, RBAC, and session management

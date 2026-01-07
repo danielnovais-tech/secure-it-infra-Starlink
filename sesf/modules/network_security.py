@@ -91,7 +91,17 @@ class NetworkSecurityModule:
         return {"allowed": False, "reason": "No matching allow rule"}
     
     def _match_rule(self, rule: Dict, source_ip: str, dest_ip: str, protocol: str, port: int) -> bool:
-        """Check if traffic matches a firewall rule."""
+        """
+        Check if traffic matches a firewall rule.
+        
+        ⚠️ WARNING: This is a SIMPLIFIED implementation for demonstration.
+        In production, implement proper matching logic including:
+        - CIDR notation support (e.g., 192.168.1.0/24)
+        - IP range matching
+        - Source and destination IP validation
+        - Port range support
+        - Protocol-specific rules
+        """
         if "protocol" in rule and rule["protocol"] != protocol:
             return False
         if "port" in rule and rule["port"] != port:

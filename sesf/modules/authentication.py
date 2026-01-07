@@ -148,12 +148,30 @@ class AuthenticationModule:
         return False
     
     def _validate_credentials(self, username: str, password: str) -> bool:
-        """Validate user credentials (simplified implementation)."""
+        """
+        Validate user credentials (simplified implementation).
+        
+        ⚠️ WARNING: This is a PLACEHOLDER implementation for demonstration purposes.
+        DO NOT use in production. In production, this must:
+        - Check credentials against a secure database (e.g., PostgreSQL, MySQL)
+        - Use proper password hashing (bcrypt, argon2, PBKDF2)
+        - Implement proper SQL injection prevention
+        - Use parameterized queries
+        """
         # In production, this would check against a secure database
         return True  # Placeholder for demo
     
     def _validate_mfa(self, username: str, token: str) -> bool:
-        """Validate MFA token (simplified implementation)."""
+        """
+        Validate MFA token (simplified implementation).
+        
+        ⚠️ WARNING: This is a PLACEHOLDER implementation for demonstration purposes.
+        DO NOT use in production. In production, this must implement proper MFA:
+        - TOTP validation (e.g., using pyotp library)
+        - SMS verification with rate limiting
+        - Hardware token validation (FIDO2, U2F)
+        - Time-based validation with replay protection
+        """
         # In production, this would validate TOTP/SMS/hardware token
         return True  # Placeholder for demo
     
