@@ -130,16 +130,11 @@ jobs:
           restore-keys: |
             tf-${{ runner.os }}-${{ env.TF_VERSION }}-
 
-      - name: Terraform Init (backend enabled)
+      - name: Terraform Init (no backend for plan)
         working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
         run: |
-          # If you use a remote backend, ensure backend config files or secrets are present
-          terraform init -input=false
-
-      - name: Select/Create Workspace
-        working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
-        run: |
-          terraform workspace select ${{ matrix.environment }} || terraform workspace new ${{ matrix.environment }}
+          # Using -backend=false since backend is commented out
+          terraform init -backend=false -input=false
 
       - name: Terraform Plan (capture output)
         id: plan

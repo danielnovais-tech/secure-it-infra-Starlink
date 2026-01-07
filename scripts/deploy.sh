@@ -113,7 +113,7 @@ terraform fmt -check -recursive || {
 case $ACTION in
     plan)
         print_info "Running Terraform plan..."
-        terraform plan -out=tfplan
+        terraform plan -var-file=$ENVIRONMENT.tfvars -out=tfplan
         print_info "Plan saved to tfplan"
         print_info "Review the plan above before applying"
         ;;
