@@ -1,0 +1,46 @@
+# Development Environment Configuration Override
+# Merge this with default_config.yaml for development
+
+metrics:
+  collection:
+    interval: 10  # Fast collection for testing
+    retention_days: 7
+
+automated_responses:
+  threat_containment:
+    auto_execute: false  # Manual approval in dev
+  
+  policy_enforcement:
+    auto_execute: false
+  
+  failover:
+    auto_execute: false
+
+logging:
+  structured:
+    level: DEBUG  # Verbose logging for development
+  
+  levels:
+    root: DEBUG
+    metrics: DEBUG
+    automated_responses: DEBUG
+    security: DEBUG
+  
+  destinations:
+    - type: file
+      path: ./logs/dev.log
+      rotation: daily
+      max_size: 50MB
+      backup_count: 7
+    - type: console
+      enabled: true
+      level: DEBUG
+
+application:
+  environment: development
+  
+  alerts:
+    enabled: true
+    channels:
+      - type: log
+        enabled: true

@@ -1,0 +1,22 @@
+{
+  "connection_check_interval": 30,
+  "latency_threshold_excellent": 20.0,
+  "latency_threshold_good": 50.0,
+  "latency_threshold_fair": 100.0,
+  "latency_threshold_poor": 200.0,
+  "reconnect_attempts": 5,
+  "reconnect_delay_seconds": 10,
+  "failover_threshold_seconds": 30.0,
+  "bandwidth_limit_mbps": 100.0,
+  "enable_compression": true,
+  "enable_caching": true,
+  "enable_deferred_ops": true,
+  "compression_level": "medium",
+  "management_mode": "supervised",
+  "checkin_interval_minutes": 60,
+  "autonomous_recovery": true,
+  "default_security_level": "high",
+  "enable_encryption": true,
+  "enable_packet_inspection": true,
+  "log_verbosity": 4
+}
