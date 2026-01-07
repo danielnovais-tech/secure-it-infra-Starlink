@@ -4,7 +4,7 @@ Starlink Network Monitoring and Security System
 import asyncio
 from enum import Enum
 from dataclasses import dataclass
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable, Awaitable
 import logging
 
 
@@ -49,7 +49,7 @@ class StarlinkMonitor:
         self.metrics = NetworkMetrics()
         self.security_level = SecurityLevel.NORMAL
         self.logger = logging.getLogger(__name__)
-        self.event_handlers: List = []
+        self.event_handlers: List[Callable[[Dict[str, Any]], Awaitable[None]]] = []
     
     async def trigger_event(
         self,
@@ -100,20 +100,31 @@ class StarlinkMonitor:
     
     async def _detect_anomalies(self):
         """Detect anomalies in network behavior."""
+        # Validate configuration structure
+        if 'starlink' not in self.config or 'performance_thresholds' not in self.config['starlink']:
+            self.logger.warning("Missing performance_thresholds configuration")
+            return
+        
         thresholds = self.config['starlink']['performance_thresholds']
+        
+        # Get thresholds with defaults
+        max_latency = thresholds.get('max_latency', 100.0)
+        max_jitter = thresholds.get('max_jitter', 20.0)
+        max_packet_loss = thresholds.get('max_packet_loss', 5.0)
+        min_throughput = thresholds.get('min_throughput', 50.0)
         
         anomalies = []
         
-        if self.metrics.latency > thresholds['max_latency']:
+        if self.metrics.latency > max_latency:
             anomalies.append(f"High latency: {self.metrics.latency:.1f}ms")
         
-        if self.metrics.jitter > thresholds['max_jitter']:
+        if self.metrics.jitter > max_jitter:
             anomalies.append(f"High jitter: {self.metrics.jitter:.1f}ms")
         
-        if self.metrics.packet_loss > thresholds['max_packet_loss']:
+        if self.metrics.packet_loss > max_packet_loss:
             anomalies.append(f"High packet loss: {self.metrics.packet_loss:.1f}%")
         
-        if self.metrics.throughput < thresholds['min_throughput']:
+        if self.metrics.throughput < min_throughput:
             anomalies.append(f"Low throughput: {self.metrics.throughput:.1f}Mbps")
         
         if anomalies:

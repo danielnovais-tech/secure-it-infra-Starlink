@@ -405,3 +405,59 @@ class TestMonitorIntegration:
         assert monitor.metrics.packet_loss == 3.0
         assert monitor.metrics.throughput == 80.0
         assert monitor.metrics.security_score == 85.0
+    
+    @pytest.mark.asyncio
+    async def test_missing_config_validation(self):
+        """Test that monitor handles missing configuration gracefully."""
+        # Test with empty config
+        empty_monitor = StarlinkMonitor({})
+        events = []
+        
+        async def event_handler(event):
+            events.append(event)
+        
+        empty_monitor.event_handlers.append(event_handler)
+        empty_monitor.metrics = NetworkMetrics(
+            latency=150.0,
+            jitter=25.0,
+            packet_loss=10.0,
+            throughput=30.0
+        )
+        
+        # Should not raise an error, just log a warning
+        await empty_monitor._detect_anomalies()
+        
+        # No events should be triggered due to missing config
+        assert len(events) == 0
+    
+    @pytest.mark.asyncio
+    async def test_partial_config_with_defaults(self):
+        """Test that monitor uses defaults for missing threshold values."""
+        partial_config = {
+            'starlink': {
+                'performance_thresholds': {
+                    'max_latency': 100.0
+                    # Other thresholds missing, should use defaults
+                }
+            }
+        }
+        
+        partial_monitor = StarlinkMonitor(partial_config)
+        events = []
+        
+        async def event_handler(event):
+            events.append(event)
+        
+        partial_monitor.event_handlers.append(event_handler)
+        partial_monitor.metrics = NetworkMetrics(
+            latency=50.0,  # Below threshold
+            jitter=25.0,   # Above default (20.0)
+            packet_loss=1.0,
+            throughput=100.0
+        )
+        
+        await partial_monitor._detect_anomalies()
+        
+        # Should detect high jitter using default threshold
+        assert len(events) == 1
+        assert 'High jitter' in events[0]['data']['anomalies'][0]
