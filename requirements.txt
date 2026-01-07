@@ -1,3 +1,4 @@
+cryptography>=41.0.0
 # Starlink Security Auditor Requirements
 # Python 3.7+ required
 
