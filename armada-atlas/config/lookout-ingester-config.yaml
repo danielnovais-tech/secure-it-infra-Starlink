@@ -1,0 +1,52 @@
+# Lookout Ingester Configuration
+# Ingests job events into PostgreSQL for Lookout UI
+
+# API Connection
+armadaUrl: "armada-server:50051"
+
+# Metrics
+metricsPort: 9003
+
+# PostgreSQL Configuration
+postgres:
+  connection:
+    host: postgres
+    port: 5432
+    user: armada
+    password: armada_password
+    dbname: armada
+    sslmode: disable
+  maxOpenConns: 100
+  maxIdleConns: 25
+
+# Pulsar Subscription Configuration
+pulsar:
+  enabled: true
+  url: "pulsar://broker.pulsar:6650"
+  
+  # Subscribe to job events
+  jobEventsTopic: "persistent://public/default/armada-job-events"
+  subscriptionName: "lookout-ingester"
+  
+  # Subscription type
+  subscriptionType: "Shared"
+  
+  # Consumer settings
+  receiverQueueSize: 1000
+  batchSize: 100
+
+# Ingestion Configuration
+ingestion:
+  # Batch size for database inserts
+  batchSize: 1000
+  
+  # How often to flush batches
+  batchDuration: 5s
+  
+  # Number of worker threads
+  workerCount: 10
+
+# Logging
+logging:
+  level: "info"
+  format: "json"
