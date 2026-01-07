@@ -63,7 +63,7 @@ if [ "$ENVIRONMENT" == "production" ]; then
 fi
 
 # Check if state file exists
-if [ ! -f "terraform.tfstate" ] && [ ! -f ".terraform/terraform.tfstate" ]; then
+if [ ! -f "terraform.tfstate" ]; then
     print_error "No Terraform state found. Cannot perform rollback."
     exit 1
 fi
