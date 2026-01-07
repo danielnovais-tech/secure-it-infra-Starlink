@@ -464,6 +464,7 @@ spec:
         - containerPort: 8080
           name: http
         env:
+        # PostgreSQL password injected from Secret
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -471,7 +472,6 @@ spec:
               key: password
         - name: ARMADA_SERVER_URL
           value: "armada-server:50051"
-        # Note: Use config file with ${POSTGRES_PASSWORD} substitution instead of direct env var
         resources:
           requests:
             memory: "512Mi"
