@@ -1,0 +1,71 @@
+incident:
+  name: "Security Breach"
+  type: "breach"
+  severity: "high"
+  description: "Handles security breach incidents including unauthorized access"
+  
+  triggers:
+    - event_type: "unauthorized_access"
+      conditions:
+        - field: "severity"
+          operator: "gte"
+          value: "high"
+        - field: "access_level"
+          operator: "in"
+          value: ["admin", "root", "privileged"]
+    
+    - event_type: "data_exfiltration"
+      conditions:
+        - field: "data_volume"
+          operator: "gt"
+          value: 100  # MB
+  
+  actions:
+    - action: "isolate"
+      target: "compromised_account"
+      priority: 1
+      config:
+        disable_credentials: true
+        revoke_tokens: true
+        block_ip: true
+        preserve_logs: true
+      
+    - action: "isolate"
+      target: "affected_network_segment"
+      priority: 2
+      config:
+        segment_isolation: true
+        firewall_lockdown: true
+        maintain_monitoring: true
+        
+    - action: "scan"
+      target: "affected_systems"
+      priority: 3
+      config:
+        scan_type: "forensic"
+        memory_dump: true
+        network_traffic_analysis: true
+        artifact_collection: true
+        
+    - action: "notify"
+      target: "incident_response_team"
+      priority: 4
+      config:
+        channels:
+          - "email"
+          - "sms"
+          - "pagerduty"
+        recipients:
+          - "incident-response@company.com"
+          - "ciso@company.com"
+        urgency: "critical"
+        escalation_required: true
+        
+    - action: "log"
+      target: "siem"
+      priority: 5
+      config:
+        log_level: "critical"
+        incident_id: "auto_generate"
+        chain_of_custody: true
+        compliance_reporting: true
