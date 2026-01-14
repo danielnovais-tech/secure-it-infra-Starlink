@@ -3,6 +3,11 @@ variable "environment" {
   type        = string
 }
 
+variable "vpc_id" {
+  description = "VPC ID"
+  type        = string
+}
+
 variable "alert_sns_topic_arn" {
   description = "SNS topic ARN for alerts from monitoring module"
   type        = string

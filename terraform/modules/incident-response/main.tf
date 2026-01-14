@@ -30,6 +30,7 @@ resource "aws_lambda_function" "incident_responder" {
   environment {
     variables = {
       ENVIRONMENT         = var.environment
+      VPC_ID              = var.vpc_id
       SNS_TOPIC_ARN       = aws_sns_topic.incidents.arn
       ALERT_SNS_TOPIC_ARN = var.alert_sns_topic_arn
     }

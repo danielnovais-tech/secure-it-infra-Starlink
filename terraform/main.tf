@@ -74,6 +74,7 @@ module "incident_response" {
   source = "./modules/incident-response"
 
   environment          = var.environment
+  vpc_id               = module.networking.vpc_id
   alert_sns_topic_arn  = module.monitoring.alert_sns_topic_arn
   response_team_emails = var.incident_response_emails
 }

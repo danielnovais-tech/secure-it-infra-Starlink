@@ -151,11 +151,11 @@ resource "aws_config_config_rule" "vpc_flow_logs_enabled" {
 }
 
 resource "aws_config_config_rule" "guardduty_enabled" {
-  name = "starlink-${var.environment}-guardduty-enabled-centralized"
+  name = "starlink-${var.environment}-guardduty-enabled"
 
   source {
     owner             = "AWS"
-    source_identifier = "GUARDDUTY_ENABLED_CENTRALIZED"
+    source_identifier = "GUARDDUTY_NON_ARCHIVED_FINDINGS"
   }
 
   depends_on = [aws_config_configuration_recorder.main]
