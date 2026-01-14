@@ -3,7 +3,7 @@
 # AWS Backup Vault
 resource "aws_backup_vault" "main" {
   name = "starlink-${var.environment}-backup-vault"
-  
+
   tags = {
     Name = "starlink-${var.environment}-backup-vault"
   }
@@ -12,45 +12,45 @@ resource "aws_backup_vault" "main" {
 # AWS Backup Plan
 resource "aws_backup_plan" "main" {
   name = "starlink-${var.environment}-backup-plan"
-  
+
   rule {
     rule_name         = "daily_backup"
     target_vault_name = aws_backup_vault.main.name
     schedule          = "cron(0 2 * * ? *)"
-    
+
     lifecycle {
       delete_after = var.backup_retention_days
     }
-    
+
     recovery_point_tags = {
       Environment = var.environment
       BackupType  = "Daily"
     }
   }
-  
+
   rule {
     rule_name         = "weekly_backup"
     target_vault_name = aws_backup_vault.main.name
     schedule          = "cron(0 3 ? * 1 *)"
-    
+
     lifecycle {
       cold_storage_after = 30
       delete_after       = 90
     }
-    
+
     recovery_point_tags = {
       Environment = var.environment
       BackupType  = "Weekly"
     }
   }
-  
+
   advanced_backup_setting {
     backup_options = {
       WindowsVSS = "enabled"
     }
     resource_type = "EC2"
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-backup-plan"
   }
@@ -59,7 +59,7 @@ resource "aws_backup_plan" "main" {
 # IAM role for AWS Backup
 resource "aws_iam_role" "backup" {
   name = "starlink-${var.environment}-backup-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -89,13 +89,13 @@ resource "aws_backup_selection" "main" {
   name         = "starlink-${var.environment}-backup-selection"
   plan_id      = aws_backup_plan.main.id
   iam_role_arn = aws_iam_role.backup.arn
-  
+
   selection_tag {
     type  = "STRINGEQUALS"
     key   = "Backup"
     value = "true"
   }
-  
+
   selection_tag {
     type  = "STRINGEQUALS"
     key   = "Environment"
@@ -108,7 +108,7 @@ resource "aws_backup_vault" "secondary" {
   count    = var.enable_multi_region ? 1 : 0
   provider = aws.secondary
   name     = "starlink-${var.environment}-backup-vault-secondary"
-  
+
   tags = {
     Name = "starlink-${var.environment}-backup-vault-secondary"
   }
@@ -117,7 +117,7 @@ resource "aws_backup_vault" "secondary" {
 # S3 bucket for configuration backups
 resource "aws_s3_bucket" "config_backup" {
   bucket = "starlink-${var.environment}-config-backup-${data.aws_caller_identity.current.account_id}"
-  
+
   tags = {
     Name = "starlink-${var.environment}-config-backup"
   }
@@ -125,7 +125,7 @@ resource "aws_s3_bucket" "config_backup" {
 
 resource "aws_s3_bucket_versioning" "config_backup" {
   bucket = aws_s3_bucket.config_backup.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -133,20 +133,20 @@ resource "aws_s3_bucket_versioning" "config_backup" {
 
 resource "aws_s3_bucket_replication_configuration" "config_backup" {
   count = var.enable_multi_region ? 1 : 0
-  
+
   role   = aws_iam_role.replication[0].arn
   bucket = aws_s3_bucket.config_backup.id
-  
+
   rule {
     id     = "replicate-all"
     status = "Enabled"
-    
+
     destination {
       bucket        = aws_s3_bucket.config_backup_secondary[0].arn
       storage_class = "STANDARD_IA"
     }
   }
-  
+
   depends_on = [aws_s3_bucket_versioning.config_backup]
 }
 
@@ -154,7 +154,7 @@ resource "aws_s3_bucket" "config_backup_secondary" {
   count    = var.enable_multi_region ? 1 : 0
   provider = aws.secondary
   bucket   = "starlink-${var.environment}-config-backup-secondary-${data.aws_caller_identity.current.account_id}"
-  
+
   tags = {
     Name = "starlink-${var.environment}-config-backup-secondary"
   }
@@ -164,7 +164,7 @@ resource "aws_s3_bucket_versioning" "config_backup_secondary" {
   count    = var.enable_multi_region ? 1 : 0
   provider = aws.secondary
   bucket   = aws_s3_bucket.config_backup_secondary[0].id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -174,7 +174,7 @@ resource "aws_s3_bucket_versioning" "config_backup_secondary" {
 resource "aws_iam_role" "replication" {
   count = var.enable_multi_region ? 1 : 0
   name  = "starlink-${var.environment}-s3-replication-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -193,7 +193,7 @@ resource "aws_iam_role_policy" "replication" {
   count = var.enable_multi_region ? 1 : 0
   name  = "starlink-${var.environment}-s3-replication-policy"
   role  = aws_iam_role.replication[0].id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -233,7 +233,7 @@ resource "aws_route53_health_check" "primary" {
   resource_path     = "/health"
   failure_threshold = 3
   request_interval  = 30
-  
+
   tags = {
     Name = "starlink-${var.environment}-primary-health-check"
   }
@@ -241,23 +241,23 @@ resource "aws_route53_health_check" "primary" {
 
 # DynamoDB for state management
 resource "aws_dynamodb_table" "failover_state" {
-  name           = "starlink-${var.environment}-failover-state"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "resource_id"
-  
+  name         = "starlink-${var.environment}-failover-state"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "resource_id"
+
   attribute {
     name = "resource_id"
     type = "S"
   }
-  
+
   point_in_time_recovery {
     enabled = true
   }
-  
+
   server_side_encryption {
     enabled = true
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-failover-state"
   }
@@ -271,16 +271,16 @@ resource "aws_lambda_function" "failover_handler" {
   handler       = "index.handler"
   runtime       = "python3.11"
   timeout       = 300
-  
+
   source_code_hash = data.archive_file.failover_handler.output_base64sha256
-  
+
   environment {
     variables = {
       ENVIRONMENT = var.environment
       STATE_TABLE = aws_dynamodb_table.failover_state.name
     }
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-failover-handler"
   }
@@ -289,7 +289,7 @@ resource "aws_lambda_function" "failover_handler" {
 data "archive_file" "failover_handler" {
   type        = "zip"
   output_path = "${path.module}/failover_handler.zip"
-  
+
   source {
     content  = <<-EOF
       import json
@@ -328,7 +328,7 @@ data "archive_file" "failover_handler" {
 
 resource "aws_iam_role" "failover_handler" {
   name = "starlink-${var.environment}-failover-handler-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -346,7 +346,7 @@ resource "aws_iam_role" "failover_handler" {
 resource "aws_iam_role_policy" "failover_handler" {
   name = "starlink-${var.environment}-failover-handler-policy"
   role = aws_iam_role.failover_handler.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -392,7 +392,7 @@ terraform {
   required_providers {
     aws = {
       source                = "hashicorp/aws"
-      version              = "~> 5.0"
+      version               = "~> 5.0"
       configuration_aliases = [aws.secondary]
     }
   }

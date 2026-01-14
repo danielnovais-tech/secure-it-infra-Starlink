@@ -3,7 +3,7 @@
 # SNS Topic for incident response
 resource "aws_sns_topic" "incidents" {
   name = "starlink-${var.environment}-incidents"
-  
+
   tags = {
     Name = "starlink-${var.environment}-incidents"
   }
@@ -24,17 +24,17 @@ resource "aws_lambda_function" "incident_responder" {
   handler       = "index.handler"
   runtime       = "python3.11"
   timeout       = 300
-  
+
   source_code_hash = data.archive_file.incident_responder.output_base64sha256
-  
+
   environment {
     variables = {
       ENVIRONMENT         = var.environment
-      SNS_TOPIC_ARN      = aws_sns_topic.incidents.arn
+      SNS_TOPIC_ARN       = aws_sns_topic.incidents.arn
       ALERT_SNS_TOPIC_ARN = var.alert_sns_topic_arn
     }
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-incident-responder"
   }
@@ -44,7 +44,7 @@ resource "aws_lambda_function" "incident_responder" {
 data "archive_file" "incident_responder" {
   type        = "zip"
   output_path = "${path.module}/incident_responder.zip"
-  
+
   source {
     content  = <<-EOF
       import json
@@ -165,7 +165,7 @@ data "archive_file" "incident_responder" {
 # IAM role for Lambda
 resource "aws_iam_role" "incident_responder" {
   name = "starlink-${var.environment}-incident-responder-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -183,7 +183,7 @@ resource "aws_iam_role" "incident_responder" {
 resource "aws_iam_role_policy" "incident_responder" {
   name = "starlink-${var.environment}-incident-responder-policy"
   role = aws_iam_role.incident_responder.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -224,7 +224,7 @@ resource "aws_iam_role_policy" "incident_responder" {
 resource "aws_cloudwatch_event_rule" "security_incidents" {
   name        = "starlink-${var.environment}-security-incidents"
   description = "Trigger incident response on security events"
-  
+
   event_pattern = jsonencode({
     source      = ["aws.guardduty", "aws.securityhub"]
     detail-type = ["GuardDuty Finding", "Security Hub Findings - Imported"]
@@ -249,7 +249,7 @@ resource "aws_lambda_permission" "allow_eventbridge" {
 resource "aws_cloudwatch_log_group" "incident_responder" {
   name              = "/aws/lambda/${aws_lambda_function.incident_responder.function_name}"
   retention_in_days = 30
-  
+
   tags = {
     Name = "starlink-${var.environment}-incident-responder-logs"
   }
@@ -259,18 +259,18 @@ resource "aws_cloudwatch_log_group" "incident_responder" {
 resource "aws_sfn_state_machine" "incident_workflow" {
   name     = "starlink-${var.environment}-incident-workflow"
   role_arn = aws_iam_role.step_functions.arn
-  
+
   definition = jsonencode({
     Comment = "Incident response workflow"
     StartAt = "DetectIncident"
     States = {
       DetectIncident = {
-        Type = "Task"
+        Type     = "Task"
         Resource = aws_lambda_function.incident_responder.arn
-        Next = "NotifyTeam"
+        Next     = "NotifyTeam"
       }
       NotifyTeam = {
-        Type = "Task"
+        Type     = "Task"
         Resource = "arn:aws:states:::sns:publish"
         Parameters = {
           TopicArn = aws_sns_topic.incidents.arn
@@ -280,7 +280,7 @@ resource "aws_sfn_state_machine" "incident_workflow" {
       }
     }
   })
-  
+
   tags = {
     Name = "starlink-${var.environment}-incident-workflow"
   }
@@ -288,7 +288,7 @@ resource "aws_sfn_state_machine" "incident_workflow" {
 
 resource "aws_iam_role" "step_functions" {
   name = "starlink-${var.environment}-step-functions-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -306,7 +306,7 @@ resource "aws_iam_role" "step_functions" {
 resource "aws_iam_role_policy" "step_functions" {
   name = "starlink-${var.environment}-step-functions-policy"
   role = aws_iam_role.step_functions.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

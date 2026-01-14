@@ -4,7 +4,7 @@ resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  
+
   tags = {
     Name = "starlink-${var.environment}-vpc"
   }
@@ -12,7 +12,7 @@ resource "aws_vpc" "main" {
 
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
-  
+
   tags = {
     Name = "starlink-${var.environment}-igw"
   }
@@ -24,7 +24,7 @@ resource "aws_subnet" "public" {
   cidr_block              = cidrsubnet(var.vpc_cidr, 4, count.index)
   availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true
-  
+
   tags = {
     Name = "starlink-${var.environment}-public-${count.index + 1}"
     Type = "public"
@@ -36,7 +36,7 @@ resource "aws_subnet" "private" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 4, count.index + length(var.availability_zones))
   availability_zone = var.availability_zones[count.index]
-  
+
   tags = {
     Name = "starlink-${var.environment}-private-${count.index + 1}"
     Type = "private"
@@ -46,7 +46,7 @@ resource "aws_subnet" "private" {
 resource "aws_eip" "nat" {
   count  = length(var.availability_zones)
   domain = "vpc"
-  
+
   tags = {
     Name = "starlink-${var.environment}-nat-eip-${count.index + 1}"
   }
@@ -56,22 +56,22 @@ resource "aws_nat_gateway" "main" {
   count         = length(var.availability_zones)
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
-  
+
   tags = {
     Name = "starlink-${var.environment}-nat-${count.index + 1}"
   }
-  
+
   depends_on = [aws_internet_gateway.main]
 }
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
-  
+
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-public-rt"
   }
@@ -80,12 +80,12 @@ resource "aws_route_table" "public" {
 resource "aws_route_table" "private" {
   count  = length(var.availability_zones)
   vpc_id = aws_vpc.main.id
-  
+
   route {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.main[count.index].id
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-private-rt-${count.index + 1}"
   }
@@ -109,7 +109,7 @@ resource "aws_flow_log" "main" {
   log_destination = aws_cloudwatch_log_group.flow_logs.arn
   traffic_type    = "ALL"
   vpc_id          = aws_vpc.main.id
-  
+
   tags = {
     Name = "starlink-${var.environment}-vpc-flow-logs"
   }
@@ -122,7 +122,7 @@ resource "aws_cloudwatch_log_group" "flow_logs" {
 
 resource "aws_iam_role" "flow_logs" {
   name = "starlink-${var.environment}-vpc-flow-logs-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -140,7 +140,7 @@ resource "aws_iam_role" "flow_logs" {
 resource "aws_iam_role_policy" "flow_logs" {
   name = "starlink-${var.environment}-vpc-flow-logs-policy"
   role = aws_iam_role.flow_logs.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

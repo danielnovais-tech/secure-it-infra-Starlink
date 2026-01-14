@@ -3,7 +3,7 @@
 # S3 bucket for log storage
 resource "aws_s3_bucket" "logs" {
   bucket = "starlink-${var.environment}-logs-${data.aws_caller_identity.current.account_id}"
-  
+
   tags = {
     Name = "starlink-${var.environment}-logs"
   }
@@ -11,7 +11,7 @@ resource "aws_s3_bucket" "logs" {
 
 resource "aws_s3_bucket_versioning" "logs" {
   bucket = aws_s3_bucket.logs.id
-  
+
   versioning_configuration {
     status = "Enabled"
   }
@@ -19,7 +19,7 @@ resource "aws_s3_bucket_versioning" "logs" {
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
   bucket = aws_s3_bucket.logs.id
-  
+
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
@@ -29,7 +29,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logs" {
 
 resource "aws_s3_bucket_public_access_block" "logs" {
   bucket = aws_s3_bucket.logs.id
-  
+
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -38,21 +38,23 @@ resource "aws_s3_bucket_public_access_block" "logs" {
 
 resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   bucket = aws_s3_bucket.logs.id
-  
+
   rule {
     id     = "log-retention"
     status = "Enabled"
-    
+
+    filter {}
+
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
     }
-    
+
     transition {
       days          = 60
       storage_class = "GLACIER"
     }
-    
+
     expiration {
       days = var.retention_days
     }
@@ -63,7 +65,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
 resource "aws_cloudwatch_log_group" "application" {
   name              = "/aws/starlink/${var.environment}/application"
   retention_in_days = var.retention_days
-  
+
   tags = {
     Name = "starlink-${var.environment}-application-logs"
   }
@@ -72,7 +74,7 @@ resource "aws_cloudwatch_log_group" "application" {
 resource "aws_cloudwatch_log_group" "security" {
   name              = "/aws/starlink/${var.environment}/security"
   retention_in_days = var.retention_days
-  
+
   tags = {
     Name = "starlink-${var.environment}-security-logs"
   }
@@ -81,7 +83,7 @@ resource "aws_cloudwatch_log_group" "security" {
 resource "aws_cloudwatch_log_group" "connectivity" {
   name              = "/aws/starlink/${var.environment}/connectivity"
   retention_in_days = var.retention_days
-  
+
   tags = {
     Name = "starlink-${var.environment}-connectivity-logs"
   }
@@ -90,7 +92,7 @@ resource "aws_cloudwatch_log_group" "connectivity" {
 # SNS Topic for alerts
 resource "aws_sns_topic" "alerts" {
   name = "starlink-${var.environment}-alerts"
-  
+
   tags = {
     Name = "starlink-${var.environment}-alerts"
   }
@@ -105,7 +107,7 @@ resource "aws_sns_topic_subscription" "alert_email" {
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main" {
   dashboard_name = "starlink-${var.environment}-monitoring"
-  
+
   dashboard_body = jsonencode({
     widgets = [
       {
@@ -136,9 +138,9 @@ resource "aws_cloudwatch_dashboard" "main" {
       {
         type = "log"
         properties = {
-          query   = "SOURCE '${aws_cloudwatch_log_group.security.name}' | fields @timestamp, @message | sort @timestamp desc | limit 100"
-          region  = data.aws_region.current.name
-          title   = "Recent Security Events"
+          query  = "SOURCE '${aws_cloudwatch_log_group.security.name}' | fields @timestamp, @message | sort @timestamp desc | limit 100"
+          region = data.aws_region.current.name
+          title  = "Recent Security Events"
         }
       }
     ]
@@ -157,7 +159,7 @@ resource "aws_cloudwatch_metric_alarm" "high_error_rate" {
   threshold           = 10
   alarm_description   = "Alert when error rate is high"
   alarm_actions       = [aws_sns_topic.alerts.arn]
-  
+
   tags = {
     Name = "starlink-${var.environment}-high-error-rate"
   }
@@ -175,7 +177,7 @@ resource "aws_cloudwatch_metric_alarm" "connectivity_loss" {
   alarm_description   = "Alert when VPN tunnel goes down"
   alarm_actions       = [aws_sns_topic.alerts.arn]
   treat_missing_data  = "breaching"
-  
+
   tags = {
     Name = "starlink-${var.environment}-connectivity-loss"
   }
@@ -186,7 +188,7 @@ resource "aws_cloudwatch_log_metric_filter" "security_events" {
   name           = "starlink-${var.environment}-security-events"
   log_group_name = aws_cloudwatch_log_group.security.name
   pattern        = "[time, request_id, event_type = SecurityEvent*, ...]"
-  
+
   metric_transformation {
     name      = "SecurityEvents"
     namespace = "Starlink/Security"
@@ -198,7 +200,7 @@ resource "aws_cloudwatch_log_metric_filter" "failed_authentications" {
   name           = "starlink-${var.environment}-failed-auth"
   log_group_name = aws_cloudwatch_log_group.security.name
   pattern        = "[time, request_id, event_type = AuthenticationFailure*, ...]"
-  
+
   metric_transformation {
     name      = "FailedAuthentications"
     namespace = "Starlink/Security"

@@ -6,11 +6,17 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "secondary_region" {
+  description = "Secondary AWS region for backup replication"
+  type        = string
+  default     = "us-west-2"
+}
+
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
   default     = "prod"
-  
+
   validation {
     condition     = contains(["dev", "staging", "prod"], var.environment)
     error_message = "Environment must be dev, staging, or prod."

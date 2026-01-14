@@ -3,7 +3,7 @@
 # Enable GuardDuty for threat detection
 resource "aws_guardduty_detector" "main" {
   enable = true
-  
+
   datasources {
     s3_logs {
       enable = true
@@ -21,7 +21,7 @@ resource "aws_guardduty_detector" "main" {
       }
     }
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-guardduty"
   }
@@ -31,7 +31,7 @@ resource "aws_guardduty_detector" "main" {
 resource "aws_cloudwatch_event_rule" "guardduty_findings" {
   name        = "starlink-${var.environment}-guardduty-findings"
   description = "Capture GuardDuty findings"
-  
+
   event_pattern = jsonencode({
     source      = ["aws.guardduty"]
     detail-type = ["GuardDuty Finding"]
@@ -50,7 +50,7 @@ resource "aws_cloudwatch_event_target" "guardduty_sns" {
 # SNS Topic for threat alerts
 resource "aws_sns_topic" "threat_alerts" {
   name = "starlink-${var.environment}-threat-alerts"
-  
+
   tags = {
     Name = "starlink-${var.environment}-threat-alerts"
   }
@@ -58,7 +58,7 @@ resource "aws_sns_topic" "threat_alerts" {
 
 resource "aws_sns_topic_policy" "threat_alerts" {
   arn = aws_sns_topic.threat_alerts.arn
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -85,13 +85,13 @@ resource "aws_securityhub_account" "main" {}
 
 resource "aws_securityhub_standards_subscription" "cis" {
   standards_arn = "arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.2.0"
-  
+
   depends_on = [aws_securityhub_account.main]
 }
 
 resource "aws_securityhub_standards_subscription" "pci_dss" {
   standards_arn = "arn:aws:securityhub:${data.aws_region.current.name}::standards/pci-dss/v/3.2.1"
-  
+
   depends_on = [aws_securityhub_account.main]
 }
 
@@ -99,83 +99,83 @@ resource "aws_securityhub_standards_subscription" "pci_dss" {
 resource "aws_wafv2_web_acl" "main" {
   name  = "starlink-${var.environment}-waf"
   scope = "REGIONAL"
-  
+
   default_action {
     allow {}
   }
-  
+
   rule {
     name     = "RateLimitRule"
     priority = 1
-    
+
     action {
       block {}
     }
-    
+
     statement {
       rate_based_statement {
         limit              = 2000
         aggregate_key_type = "IP"
       }
     }
-    
+
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "RateLimitRule"
       sampled_requests_enabled   = true
     }
   }
-  
+
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 2
-    
+
     override_action {
       none {}
     }
-    
+
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
         vendor_name = "AWS"
       }
     }
-    
+
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "AWSManagedRulesCommonRuleSet"
       sampled_requests_enabled   = true
     }
   }
-  
+
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
     priority = 3
-    
+
     override_action {
       none {}
     }
-    
+
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesKnownBadInputsRuleSet"
         vendor_name = "AWS"
       }
     }
-    
+
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "AWSManagedRulesKnownBadInputsRuleSet"
       sampled_requests_enabled   = true
     }
   }
-  
+
   visibility_config {
     cloudwatch_metrics_enabled = true
     metric_name                = "starlink-${var.environment}-waf"
     sampled_requests_enabled   = true
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-waf"
   }
@@ -194,7 +194,7 @@ resource "aws_cloudwatch_metric_alarm" "guardduty_high_severity" {
   alarm_description   = "Alert on high severity GuardDuty findings"
   alarm_actions       = [aws_sns_topic.threat_alerts.arn]
   treat_missing_data  = "notBreaching"
-  
+
   tags = {
     Name = "starlink-${var.environment}-guardduty-high-severity"
   }
@@ -205,7 +205,7 @@ resource "aws_cloudwatch_log_metric_filter" "guardduty_findings" {
   name           = "starlink-${var.environment}-guardduty-findings"
   log_group_name = "/aws/guardduty/${var.environment}"
   pattern        = "[severity >= 4]"
-  
+
   metric_transformation {
     name      = "GuardDutyHighSeverityFindings"
     namespace = "Starlink/Security"
@@ -216,7 +216,7 @@ resource "aws_cloudwatch_log_metric_filter" "guardduty_findings" {
 resource "aws_cloudwatch_log_group" "guardduty" {
   name              = "/aws/guardduty/${var.environment}"
   retention_in_days = 90
-  
+
   tags = {
     Name = "starlink-${var.environment}-guardduty-logs"
   }
@@ -225,7 +225,7 @@ resource "aws_cloudwatch_log_group" "guardduty" {
 # Network ACL rules for threat mitigation
 resource "aws_network_acl" "threat_mitigation" {
   vpc_id = var.vpc_id
-  
+
   ingress {
     protocol   = -1
     rule_no    = 100
@@ -234,7 +234,7 @@ resource "aws_network_acl" "threat_mitigation" {
     from_port  = 0
     to_port    = 0
   }
-  
+
   egress {
     protocol   = -1
     rule_no    = 100
@@ -243,7 +243,7 @@ resource "aws_network_acl" "threat_mitigation" {
     from_port  = 0
     to_port    = 0
   }
-  
+
   tags = {
     Name = "starlink-${var.environment}-threat-mitigation"
   }
