@@ -6,6 +6,7 @@ Security monitoring system for Starlink infrastructure
 
 import asyncio
 import logging
+import random
 import socket
 from datetime import datetime
 from enum import Enum
@@ -18,6 +19,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Constants
+THREAT_INTELLIGENCE_FEED_LIMIT = 100  # Maximum number of indicators to process per feed
+THREAT_SIMULATION_PROBABILITY = 0.1  # Probability of simulated threat (10%)
 
 
 class SecurityLevel(Enum):
@@ -218,7 +223,7 @@ class ThreatDetector:
                                     content = await response.text()
                                     # Parse and add to intelligence set
                                     lines = content.split('\n')
-                                    for line in lines[:100]:  # Limit for example
+                                    for line in lines[:THREAT_INTELLIGENCE_FEED_LIMIT]:
                                         if line and not line.startswith('#'):
                                             self.threat_intelligence.add(line.strip())
                         except Exception as e:
@@ -236,9 +241,8 @@ class ThreatDetector:
     async def scan_for_threats(self):
         """Scan for known threats."""
         # Simulate threat detection
-        import random
         
-        if random.random() < 0.1:  # 10% chance of simulated threat
+        if random.random() < THREAT_SIMULATION_PROBABILITY:
             threat_types = ["suspicious_traffic", "malware_indicator", "brute_force_attempt"]
             threat = random.choice(threat_types)
             
@@ -272,6 +276,10 @@ class ThreatDetector:
                         )
             except FileNotFoundError:
                 pass  # File might not exist on all systems
+            except PermissionError:
+                logger.debug("Permission denied accessing auth.log")
+            except IOError as e:
+                logger.debug(f"I/O error reading auth.log: {e}")
                 
         except Exception as e:
             logger.error(f"Log analysis failed: {e}")
