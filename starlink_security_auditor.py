@@ -310,7 +310,7 @@ class StarlinkSecurityAuditor:
                     timeout=5
                 )
                 return result.returncode == 0
-            except:
+            except Exception:
                 logger.warning("Could not determine firewall status")
                 return False
 
@@ -327,7 +327,7 @@ class StarlinkSecurityAuditor:
                 
                 if result == 0:
                     open_ports.append(port)
-            except:
+            except Exception:
                 continue
         
         return open_ports
@@ -347,7 +347,7 @@ class StarlinkSecurityAuditor:
             ]
             
             return any(server in resolv_conf for server in secure_dns_servers)
-        except:
+        except Exception:
             return False
 
     def _validate_network_segmentation(self) -> bool:
@@ -368,7 +368,7 @@ class StarlinkSecurityAuditor:
             ]
             
             return any(ip_obj in network for network in private_ranges)
-        except:
+        except Exception:
             return False
 
     def _find_unnecessary_services(self) -> List[str]:
@@ -393,7 +393,7 @@ class StarlinkSecurityAuditor:
             for service in risky_services:
                 if service in result.stdout.lower():
                     unnecessary.append(service)
-        except:
+        except Exception:
             pass
         
         return unnecessary
@@ -411,17 +411,20 @@ class StarlinkSecurityAuditor:
         
         for service, cmd in services_to_check.items():
             try:
+                # Use command as list to prevent injection
+                cmd_parts = cmd.split()
                 result = subprocess.run(
-                    cmd.split(),
+                    cmd_parts,
                     capture_output=True,
                     text=True,
-                    timeout=5
+                    timeout=5,
+                    shell=False
                 )
                 
                 # Parse version (simplified)
                 version_info = result.stderr or result.stdout
                 outdated[service] = version_info[:50]  # Truncate
-            except:
+            except Exception:
                 continue
         
         return outdated
@@ -448,7 +451,7 @@ class StarlinkSecurityAuditor:
                     root_services += 1
             
             return root_services < 3  # Allow some essential services to run as root
-        except:
+        except Exception:
             return True  # Assume OK if we can't check
 
     def _check_tls_configuration(self) -> Dict:
@@ -459,16 +462,21 @@ class StarlinkSecurityAuditor:
         }
         
         try:
-            # Test SSL Labs API or local SSL check
+            # Test SSL/TLS configuration using modern approach
             context = ssl.create_default_context()
             
-            # Check for weak protocols
-            for proto in [ssl.PROTOCOL_TLS, ssl.PROTOCOL_TLSv1_2, ssl.PROTOCOL_TLSv1_3]:
-                try:
-                    context = ssl.SSLContext(proto)
+            # Check if TLS 1.2 and 1.3 are supported
+            try:
+                # Python 3.7+ supports minimum_version and maximum_version
+                if hasattr(ssl, 'TLSVersion'):
+                    context.minimum_version = ssl.TLSVersion.TLSv1_2
                     result['secure'] = True
-                except:
-                    result['issues'].append(f"Protocol {proto} not supported")
+                else:
+                    # Fallback for older Python versions
+                    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                    result['secure'] = True
+            except (AttributeError, ValueError) as e:
+                result['issues'].append(f"TLS configuration error: {e}")
             
         except Exception as e:
             result['issues'].append(f"SSL check error: {e}")
@@ -488,7 +496,7 @@ class StarlinkSecurityAuditor:
             
             # Look for crypto_LUKS in output
             return 'crypto_LUKS' in result.stdout
-        except:
+        except Exception:
             return False
 
     def _validate_vpn_encryption(self) -> bool:
@@ -511,7 +519,7 @@ class StarlinkSecurityAuditor:
             )
             
             return any(service in result.stdout.lower() for service in vpn_services)
-        except:
+        except Exception:
             return False
 
     def _validate_vpn_auth(self) -> Dict:
@@ -536,7 +544,7 @@ class StarlinkSecurityAuditor:
                     result['issues'].append("Consider using SHA256 for authentication")
             else:
                 result['issues'].append("No OpenVPN config found")
-        except:
+        except Exception:
             result['issues'].append("Could not read VPN config")
         
         return result
