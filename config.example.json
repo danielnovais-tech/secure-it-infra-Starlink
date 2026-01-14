@@ -1,4 +1,27 @@
 {
+  "security_level": "moderate",
+  "connection_type": "starlink_only",
+  "monitoring": {
+    "interval_seconds": 5,
+    "packet_loss_threshold": 10,
+    "latency_threshold_ms": 200,
+    "stability_threshold": 50
+  },
+  "backup_connections": {
+    "lte_backup": {
+      "enabled": true,
+      "priority": 1,
+      "type": "LTE"
+    },
+    "cable_backup": {
+      "enabled": true,
+      "priority": 2,
+      "type": "Cable"
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "json"
   "audit_scope": {
     "network_security": true,
     "service_vulnerabilities": true,

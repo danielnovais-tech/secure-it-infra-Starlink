@@ -1,3 +1,5 @@
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
 # VPN Manager Dependencies
 # For Starlink infrastructure security VPN management
 
