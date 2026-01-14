@@ -83,9 +83,18 @@ This repository includes automated CI/CD workflows for Terraform:
 
 The pipeline runs automatically on pull requests affecting Terraform files.
 
+## Maturity Roadmap
+
+See [MATURITY_ROADMAP.md](./MATURITY_ROADMAP.md) for the complete observability and resilience testing roadmap, including:
+- **Phase 2**: Advanced Observability (X-Ray, Application Insights, unified dashboards)
+- **Phase 3**: Resilience & Chaos Engineering (FIS, GameDays, automated testing)
+- **Phase 4**: Advanced Resilience (multi-region, self-healing)
+- **Phase 5**: AI/ML-Powered Operations (predictive analytics, autonomous optimization)
+
 ## Documentation
 
 - [INFRASTRUCTURE.md](./INFRASTRUCTURE.md) - Complete infrastructure documentation
+- [MATURITY_ROADMAP.md](./MATURITY_ROADMAP.md) - Observability and resilience maturity roadmap
 - [terraform/](./terraform/) - Terraform modules and configurations
 - [.github/workflows/terraform-ci.yml](./.github/workflows/terraform-ci.yml) - CI/CD pipeline
 
