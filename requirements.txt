@@ -1,3 +1,5 @@
+# No external dependencies required
+# The tool uses only Python standard library modules
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 # VPN Manager Dependencies
