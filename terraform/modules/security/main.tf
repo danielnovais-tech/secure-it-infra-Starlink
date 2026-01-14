@@ -22,6 +22,16 @@ variable "project_name" {
 # - Replace 0.0.0.0/0 with specific IP ranges or use a load balancer
 # - Consider implementing AWS WAF for additional protection
 # - Use VPN or bastion host for administrative access
+# WARNING: This baseline configuration allows ingress from any IP (0.0.0.0/0) on ports 80/443.
+# This exposes the application tier directly to the internet and creates security risks.
+#
+# REQUIRED for production deployments - implement one of these:
+# 1. Place an Application Load Balancer (ALB) in front and restrict ingress to ALB security group
+# 2. Use CloudFront with AWS WAF for DDoS protection and restrict backend access
+# 3. At minimum, restrict ingress to known IP ranges or VPN endpoints
+# 4. Implement AWS Shield and WAF for additional protection
+#
+# The current configuration is suitable ONLY for development/testing environments.
 resource "aws_security_group" "app" {
   name        = "${var.project_name}-${var.environment}-app-sg"
   description = "Security group for application tier"
@@ -74,6 +84,36 @@ resource "aws_security_group" "app" {
   }
 }
 
+# Security Group for Web Layer (HTTPS only)
+# This security group is designed for web-facing resources with HTTPS-only ingress
+resource "aws_security_group" "web_sg" {
+  name        = "${var.project_name}-${var.environment}-web-sg"
+  description = "Allow HTTPS inbound traffic"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    description = "HTTPS from anywhere"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name        = "${var.project_name}-${var.environment}-web-sg"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
 # Security Group for Database Layer
 # NOTE: Egress is restricted to essential services only
 resource "aws_security_group" "db" {
@@ -116,6 +156,15 @@ resource "aws_security_group" "db" {
 output "app_security_group_id" {
   description = "ID of the application security group"
   value       = aws_security_group.app.id
+}
+
+output "db_security_group_id" {
+  description = "ID of the database security group"
+  value       = aws_security_group.db.id
+}
+output "web_security_group_id" {
+  description = "ID of the web security group"
+  value       = aws_security_group.web_sg.id
 }
 
 output "db_security_group_id" {
