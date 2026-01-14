@@ -17,6 +17,8 @@ This repository provides infrastructure-as-code (IaC) for securing enterprise St
 - WAF (Web Application Firewall) with managed rule sets
 - Rate limiting and DDoS protection
 - Automated threat alerts and notifications
+- **Custom threat intelligence integration**
+- **Custom WAF rules for SQL injection and malicious user agents**
 
 ### 📋 Policy Enforcement
 - IAM password policies with strict requirements
@@ -25,6 +27,8 @@ This repository provides infrastructure-as-code (IaC) for securing enterprise St
 - Security group enforcement
 - Systems Manager patch management
 - Encrypted storage requirements
+- **Mandatory resource tagging policies**
+- **Tag value validation and enforcement**
 
 ### 🚨 Incident Response
 - Automated incident response workflows
@@ -42,6 +46,7 @@ This repository provides infrastructure-as-code (IaC) for securing enterprise St
 - Transit Gateway for advanced routing
 - VPN configuration stored in Secrets Manager
 - Real-time VPN health monitoring
+- **Automatic VPN secret rotation (30-day cycle)**
 
 ### 💾 Backup & Failover
 - AWS Backup with automated schedules
@@ -51,6 +56,20 @@ This repository provides infrastructure-as-code (IaC) for securing enterprise St
 - Automated failover procedures
 - Configuration backup to S3
 - DynamoDB for state management
+
+### 📊 Governance & Compliance
+- **Weekly automated compliance reports**
+- **Mandatory tagging policies via Config**
+- **Compliance notifications to audit team**
+- **S3-based compliance report storage**
+- **Tag validation for critical resources**
+
+### 🔄 CI/CD Pipeline
+- **Automated Terraform validation on PRs**
+- **Security scanning with Checkov**
+- **Automated PR comments with plan results**
+- **Cost estimation integration (Infracost)**
+- **Format and style checking**
 
 ## Architecture
 

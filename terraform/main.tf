@@ -113,6 +113,25 @@ module "networking" {
   availability_zones = var.availability_zones
 }
 
+# Security Enhancements Module
+module "security_enhancements" {
+  source = "./modules/security-enhancements"
+
+  environment           = var.environment
+  vpn_config_secret_id  = module.vpn_management.vpn_config_secret_arn
+  guardduty_detector_id = module.threat_detection.guardduty_detector_id
+  alert_email           = var.alert_email
+}
+
+# Governance Module
+module "governance" {
+  source = "./modules/governance"
+
+  environment        = var.environment
+  config_recorder_id = module.policy_enforcement.config_recorder_id
+  compliance_emails  = var.compliance_emails
+}
+
 # Outputs
 output "monitoring_dashboard_url" {
   description = "URL to CloudWatch monitoring dashboard"
@@ -133,4 +152,14 @@ output "incident_response_topic_arn" {
 output "backup_vault_arn" {
   description = "AWS Backup vault ARN"
   value       = module.backup_failover.backup_vault_arn
+}
+
+output "compliance_reports_bucket" {
+  description = "S3 bucket for compliance reports"
+  value       = module.governance.compliance_reports_bucket_id
+}
+
+output "threat_intel_bucket" {
+  description = "S3 bucket for custom threat intelligence"
+  value       = module.security_enhancements.threat_intel_bucket_id
 }

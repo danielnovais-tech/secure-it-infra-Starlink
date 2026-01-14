@@ -67,3 +67,9 @@ variable "enable_multi_region_backup" {
   type        = bool
   default     = true
 }
+
+variable "compliance_emails" {
+  description = "List of email addresses for compliance notifications"
+  type        = list(string)
+  default     = []
+}

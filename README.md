@@ -19,12 +19,14 @@ This repository provides Infrastructure as Code (IaC) using Terraform to secure 
 - AWS Security Hub for compliance
 - WAF with managed rule sets
 - Automated threat response
+- **Custom threat intelligence and detection rules**
 
 ### 📋 **Policy Enforcement**
 - AWS Config compliance monitoring
 - IAM security policies
 - Encryption enforcement
 - Automated patch management
+- **Mandatory resource tagging**
 
 ### 🚨 **Incident Response**
 - Automated incident workflows
@@ -37,12 +39,25 @@ This repository provides Infrastructure as Code (IaC) using Terraform to secure 
 - AES-256 encryption
 - BGP dynamic routing
 - Transit Gateway integration
+- **Automatic secret rotation (30-day cycle)**
 
 ### 💾 **Backup & Failover**
 - Automated backup schedules
 - Multi-region replication
 - Health-check based failover
 - Point-in-time recovery
+
+### 📊 **Governance & Compliance**
+- **Weekly automated compliance reports**
+- **Mandatory tagging policies**
+- **Compliance email notifications**
+- **Audit trail in S3**
+
+### 🔄 **CI/CD**
+- **Automated Terraform validation**
+- **Security scanning (Checkov)**
+- **PR comments with plan results**
+- **Cost estimation ready**
 
 ## Quick Start
 
@@ -57,10 +72,22 @@ terraform plan
 terraform apply
 ```
 
+## CI/CD Pipeline
+
+This repository includes automated CI/CD workflows for Terraform:
+- **Format validation** - Ensures consistent code style
+- **Terraform validation** - Validates configuration syntax
+- **Terraform plan** - Shows infrastructure changes on PRs
+- **Security scanning** - Checks for security issues with Checkov
+- **Cost estimation** - Estimates monthly costs (requires INFRACOST_API_KEY)
+
+The pipeline runs automatically on pull requests affecting Terraform files.
+
 ## Documentation
 
 - [INFRASTRUCTURE.md](./INFRASTRUCTURE.md) - Complete infrastructure documentation
 - [terraform/](./terraform/) - Terraform modules and configurations
+- [.github/workflows/terraform-ci.yml](./.github/workflows/terraform-ci.yml) - CI/CD pipeline
 
 ## License
 
