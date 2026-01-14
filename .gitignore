@@ -219,3 +219,33 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Application-specific
+logs/
+data/
+*.db
+security_system.log
+security_audit.log
+security_audit_report.json
+*_audit_report.json
+
+# Secure IT Infra - Starlink specific
+# Security audit logs and reports
+secure_it_infra.log
+security_report*.json
+*_report.json
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc

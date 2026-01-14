@@ -1,0 +1,70 @@
+# Network Monitoring Configuration for Starlink Infrastructure
+# This YAML file configures the network monitoring system
+
+monitoring:
+  # List of hosts/systems to monitor
+  targets:
+    - host: "8.8.8.8"  # Google DNS - example external host
+      monitor_latency: true
+      monitor_jitter: true
+      monitor_packet_loss: true
+      monitor_throughput: false
+      ping_count: 4
+      jitter_count: 10
+      packet_loss_count: 20
+      
+    - host: "1.1.1.1"  # Cloudflare DNS - example external host
+      monitor_latency: true
+      monitor_jitter: true
+      monitor_packet_loss: true
+      monitor_throughput: false
+      ping_count: 4
+      jitter_count: 10
+      packet_loss_count: 20
+      
+    - host: "192.168.1.1"  # Example gateway/router
+      monitor_latency: true
+      monitor_jitter: true
+      monitor_packet_loss: true
+      monitor_throughput: false
+      scan_ports: true
+      ports_to_scan: [22, 23, 80, 443, 8080, 3389]
+      ping_count: 4
+      jitter_count: 10
+      packet_loss_count: 20
+      
+    - host: "192.168.1.100"  # Example critical server
+      monitor_latency: true
+      monitor_jitter: false
+      monitor_packet_loss: true
+      monitor_throughput: false
+      scan_ports: true
+      ports_to_scan: [22, 80, 443, 3306, 5432, 27017]
+      ping_count: 4
+      packet_loss_count: 20
+
+  # Network-wide monitoring settings
+  network:
+    subnet: "192.168.1.0/24"  # Network to monitor
+    detect_devices: true       # Enable device detection
+    check_unauthorized: true   # Check for unauthorized devices
+    max_scan_hosts: 10         # Maximum number of hosts to scan in the subnet
+    
+    # List of authorized device IP addresses
+    authorized_devices:
+      - "192.168.1.1"    # Gateway
+      - "192.168.1.10"   # Server 1
+      - "192.168.1.100"  # Server 2
+      - "192.168.1.200"  # Workstation 1
+      - "192.168.1.201"  # Workstation 2
+
+# Thresholds for alerts (can be used for future alerting features)
+thresholds:
+  latency_warning_ms: 100
+  latency_critical_ms: 500
+  jitter_warning_ms: 30
+  jitter_critical_ms: 100
+  packet_loss_warning_percent: 1.0
+  packet_loss_critical_percent: 5.0
+  throughput_warning_mbps: 10
+  throughput_critical_mbps: 1
