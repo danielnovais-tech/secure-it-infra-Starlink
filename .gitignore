@@ -209,6 +209,12 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
 # Application-specific
 logs/
 data/
@@ -238,3 +244,5 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+crash.log
+crash.*.log
