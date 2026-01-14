@@ -83,7 +83,7 @@ resource "aws_security_group" "app" {
 # Security Group for Web Layer (HTTPS only)
 # This security group is designed for web-facing resources with HTTPS-only ingress
 resource "aws_security_group" "web_sg" {
-  name        = "web-security-group"
+  name        = "${var.project_name}-${var.environment}-web-sg"
   description = "Allow HTTPS inbound traffic"
   vpc_id      = var.vpc_id
 
@@ -96,6 +96,7 @@ resource "aws_security_group" "web_sg" {
   }
 
   egress {
+    description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -103,7 +104,7 @@ resource "aws_security_group" "web_sg" {
   }
 
   tags = {
-    Name        = "web-security-group"
+    Name        = "${var.project_name}-${var.environment}-web-sg"
     Environment = var.environment
     ManagedBy   = "terraform"
   }
