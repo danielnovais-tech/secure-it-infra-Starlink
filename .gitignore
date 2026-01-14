@@ -61,6 +61,9 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Security infrastructure logs
+logs/
+
 # Flask stuff:
 instance/
 .webassets-cache
@@ -212,6 +215,29 @@ __marimo__/
 .terraform/
 .terraform.lock.hcl
 terraform.tfvars
+# Application-specific
+logs/
+data/
+*.db
+security_system.log
+security_audit.log
+security_audit_report.json
+*_audit_report.json
+
+# Secure IT Infra - Starlink specific
+# Security audit logs and reports
+secure_it_infra.log
+security_report*.json
+*_report.json
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars.json
 override.tf
 override.tf.json
 *_override.tf
