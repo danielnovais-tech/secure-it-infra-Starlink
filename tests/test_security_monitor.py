@@ -1,7 +1,7 @@
 """Tests for the security monitor module."""
 import pytest
 import logging
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from src.security_monitor import SecurityMonitor
 
 
