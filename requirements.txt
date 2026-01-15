@@ -1,0 +1,3 @@
+# Python dependencies for secure-it-infra-Starlink
+# No external dependencies required for the core security scoring module
+# Python 3.12+ is required
