@@ -104,17 +104,30 @@ class SecurityMonitor:
                 })
         
         # Store and log anomalies
-        # Note: Anomalies are accumulated for historical tracking.
-        # Use clear_anomalies() to prevent unbounded growth if needed.
+        # Note: Anomalies are accumulated for historical tracking, but
+        # logically duplicate anomalies (same type/metric/severity/value)
+        # are not re-added on each detection cycle to avoid unbounded
+        # growth and score degradation when conditions are unchanged.
         if detected_anomalies:
-            self.anomalies.extend(detected_anomalies)
-            for anomaly in detected_anomalies:
-                logger.critical(
-                    f"Anomaly detected - Type: {anomaly['type']}, "
-                    f"Severity: {anomaly['severity']}, "
-                    f"Metric: {anomaly['metric']}, "
-                    f"Value: {anomaly['value']}"
-                )
+            existing_signatures = {
+                (a.get("type"), a.get("metric"), a.get("severity"), a.get("value"))
+                for a in self.anomalies
+            }
+            new_anomalies = [
+                a
+                for a in detected_anomalies
+                if (a.get("type"), a.get("metric"), a.get("severity"), a.get("value"))
+                not in existing_signatures
+            ]
+            if new_anomalies:
+                self.anomalies.extend(new_anomalies)
+                for anomaly in new_anomalies:
+                    logger.critical(
+                        f"Anomaly detected - Type: {anomaly['type']}, "
+                        f"Severity: {anomaly['severity']}, "
+                        f"Metric: {anomaly['metric']}, "
+                        f"Value: {anomaly['value']}"
+                    )
     
     def _calculate_security_score(self) -> float:
         """Calculate overall security score (0-100)."""
