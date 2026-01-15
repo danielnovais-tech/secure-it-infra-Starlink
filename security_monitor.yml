@@ -1,0 +1,5 @@
+# Security Monitor Configuration
+
+report_url: "https://example.com/report"
+
+# fernet_key: b'generated_fernet_key_here'  # Replace with actual key
