@@ -14,6 +14,13 @@ from statistics import mean
 
 logger = logging.getLogger(__name__)
 
+# Threat severity multipliers for weighted deductions
+THREAT_SEVERITY_MULTIPLIERS = {
+    'low': 0.5,
+    'medium': 1.0,
+    'high': 2.0
+}
+
 
 class ServiceLevel(Enum):
     """Service level classification for connection quality."""
@@ -194,21 +201,30 @@ class StarlinkConnectionQuality:
         """
         Calculate total deduction for active threats, supporting weighted severity.
         
+        Supports severity levels: 'low' (50%), 'medium' (100%), 'high' (200%).
+        Invalid severity values will raise a ValueError.
+        
         Returns:
             Total points to deduct for all active threats
+            
+        Raises:
+            ValueError: If an invalid severity level is provided
         """
-        severity_multipliers = {
-            'low': 0.5,
-            'medium': 1.0,
-            'high': 2.0
-        }
-        
         total_deduction = 0.0
         for threat in self.active_threats:
             if isinstance(threat, dict) and 'severity' in threat:
                 # Weighted threat based on severity
-                severity = threat.get('severity', 'medium').lower()
-                multiplier = severity_multipliers.get(severity, 1.0)
+                severity = threat.get('severity', 'medium')
+                if isinstance(severity, str):
+                    severity = severity.lower()
+                
+                if severity not in THREAT_SEVERITY_MULTIPLIERS:
+                    raise ValueError(
+                        f"Invalid threat severity '{severity}'. "
+                        f"Valid values are: {', '.join(THREAT_SEVERITY_MULTIPLIERS.keys())}"
+                    )
+                
+                multiplier = THREAT_SEVERITY_MULTIPLIERS[severity]
                 total_deduction += self.quality_thresholds.threat_penalty * multiplier
             else:
                 # Default threat (string or dict without severity)

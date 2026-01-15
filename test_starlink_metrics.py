@@ -166,17 +166,28 @@ class TestStarlinkConnectionQuality:
         assert quality.calculate_quality_score() == 80.0
     
     def test_quality_score_mixed_severity_threats(self):
-        """Test quality score with mixed severity threats."""
+        """Test quality score with mixed severity threats.
+        
+        Expected calculation: Base 100 - (2.5 + 5.0 + 10.0 + 5.0) = 77.5
+        where low=2.5, medium=5.0, high=10.0, simple=5.0
+        """
         metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
         active_threats = [
-            {'id': 'threat1', 'severity': 'low'},     # 5 * 0.5 = 2.5
-            {'id': 'threat2', 'severity': 'medium'},  # 5 * 1.0 = 5.0
-            {'id': 'threat3', 'severity': 'high'},    # 5 * 2.0 = 10.0
-            'simple_threat'                            # 5 * 1.0 = 5.0
+            {'id': 'threat1', 'severity': 'low'},
+            {'id': 'threat2', 'severity': 'medium'},
+            {'id': 'threat3', 'severity': 'high'},
+            'simple_threat'
         ]
         quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
-        # Base 100 - (2.5 + 5.0 + 10.0 + 5.0) = 77.5
         assert quality.calculate_quality_score() == 77.5
+    
+    def test_quality_score_invalid_severity(self):
+        """Test that invalid severity values raise ValueError."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        active_threats = [{'id': 'threat1', 'severity': 'invalid'}]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        with pytest.raises(ValueError, match="Invalid threat severity 'invalid'"):
+            quality.calculate_quality_score()
     
     def test_stability_perfect(self):
         """Test stability calculation with perfect metrics."""
