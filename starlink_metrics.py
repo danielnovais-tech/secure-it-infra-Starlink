@@ -5,11 +5,21 @@ This module provides functionality to monitor and calculate quality metrics
 for Starlink satellite internet connections based on packet loss and latency.
 """
 
-from dataclasses import dataclass, field
-from typing import List, Optional, Callable, Dict
+import logging
+from dataclasses import dataclass
+from typing import List, Optional, Callable, Dict, Any, Union
 from enum import Enum
 from collections import deque
 from statistics import mean
+
+logger = logging.getLogger(__name__)
+
+# Threat severity multipliers for weighted deductions
+THREAT_SEVERITY_MULTIPLIERS = {
+    'low': 0.5,
+    'medium': 1.0,
+    'high': 2.0
+}
 
 
 class ServiceLevel(Enum):
@@ -27,6 +37,7 @@ class QualityThresholds:
     packet_loss_penalty: float = 10.0  # Points to deduct
     latency_threshold: float = 150.0  # Milliseconds
     latency_penalty: float = 5.0  # Points to deduct
+    threat_penalty: float = 5.0  # Points to deduct per active threat
     
     def __post_init__(self):
         """Validate threshold values."""
@@ -38,6 +49,8 @@ class QualityThresholds:
             raise ValueError("latency_threshold must be non-negative")
         if self.latency_penalty < 0:
             raise ValueError("latency_penalty must be non-negative")
+        if self.threat_penalty < 0:
+            raise ValueError("threat_penalty must be non-negative")
 
 
 @dataclass
@@ -111,7 +124,8 @@ class StarlinkConnectionQuality:
         stability_thresholds: Optional[StabilityThresholds] = None,
         alert_thresholds: Optional[AlertThresholds] = None,
         alert_callback: Optional[Callable[[str, Dict], None]] = None,
-        history_window_size: int = 0
+        history_window_size: int = 0,
+        active_threats: Optional[List[Any]] = None
     ):
         """
         Initialize the connection quality calculator.
@@ -123,18 +137,26 @@ class StarlinkConnectionQuality:
             alert_thresholds: Optional custom alert thresholds
             alert_callback: Optional callback function for alerts (receives alert_level, data)
             history_window_size: Size of sliding window for historical smoothing (0 = disabled)
+            active_threats: Optional list of active security threats. Can be:
+                - List of strings (each deducts threat_penalty points)
+                - List of dicts with 'severity' key for weighted deduction:
+                  {'id': 'threat1', 'severity': 'high'} where severity can be
+                  'low' (50% of threat_penalty), 'medium' (100%), 'high' (200%)
         """
         self.metrics = metrics
         self.quality_thresholds = quality_thresholds or QualityThresholds()
         self.stability_thresholds = stability_thresholds or StabilityThresholds()
         self.alert_thresholds = alert_thresholds or AlertThresholds()
         self.alert_callback = alert_callback
+        self.active_threats = active_threats or []
         
         # Historical tracking for smoothing
+        if not isinstance(history_window_size, int) or history_window_size < 0:
+            raise ValueError("history_window_size must be a non-negative integer")
         self.history_window_size = history_window_size
         self.stability_history: deque = deque(maxlen=history_window_size if history_window_size > 0 else None)
     
-    def calculate_quality_score(self) -> float:
+    def calculate_quality_score(self, return_details: bool = False) -> Union[float, Dict[str, Any]]:
         """
         Calculate overall connection quality score (0-100).
         
@@ -142,18 +164,193 @@ class StarlinkConnectionQuality:
         Default penalties:
         - Packet loss > 5%: -10 points
         - Latency > 150ms: -5 points
+        - Each active threat: -5 points (configurable via threat_penalty)
+          - Threats can have weighted severity: low (50%), medium (100%), high (200%)
+        
+        Args:
+            return_details: If True, returns a dict with audit trail of deductions.
+                          If False (default), returns just the final score for backward compatibility.
         
         Returns:
-            Quality score between 0 and 100
+            If return_details=False: Quality score between 0 and 100
+            If return_details=True: Dict with keys:
+                - final_score: Final quality score (0-100)
+                - base_score: Starting score before deductions (100)
+                - deductions: List of dicts with 'reason' and 'points' for each deduction
+                - summary: Human-readable summary of deductions (e.g., "Score reduced by 17.5 points due to 3 active threats (1 high, 1 medium, 1 low).")
         """
         base_score = 100.0
+        deductions_list = []
         
         if self.metrics.packet_loss > self.quality_thresholds.packet_loss_threshold:
-            base_score -= self.quality_thresholds.packet_loss_penalty
+            deduction = self.quality_thresholds.packet_loss_penalty
+            base_score -= deduction
+            deductions_list.append({
+                "reason": f"Packet loss above {self.quality_thresholds.packet_loss_threshold}% threshold",
+                "points": -deduction
+            })
+            
         if self.metrics.latency > self.quality_thresholds.latency_threshold:
-            base_score -= self.quality_thresholds.latency_penalty
+            deduction = self.quality_thresholds.latency_penalty
+            base_score -= deduction
+            deductions_list.append({
+                "reason": f"Latency above {self.quality_thresholds.latency_threshold}ms threshold",
+                "points": -deduction
+            })
+            
+        if len(self.active_threats) > 0:
+            threat_deductions = self._calculate_threat_deduction_with_details()
+            for threat_deduction in threat_deductions:
+                deduction_points = threat_deduction['points']  # Negative value
+                base_score += deduction_points  # Add negative value to reduce score
+                deductions_list.append({
+                    "reason": threat_deduction['reason'],
+                    "threat_id": threat_deduction['threat_id'],
+                    "points": deduction_points
+                })
+            
+            total_threat_deduction = abs(sum(d['points'] for d in threat_deductions))
+            logger.info(
+                "Quality score impacted by %d active threat(s), deducting %s points",
+                len(self.active_threats), total_threat_deduction
+            )
         
-        return max(0, min(100, base_score))
+        final_score = max(0, min(100, base_score))
+        
+        if deductions_list and logger.isEnabledFor(logging.DEBUG):
+            deduction_summary = ', '.join(f"{d['reason']}: {d['points']}" for d in deductions_list)
+            logger.debug("Quality score deductions: %s. Final score: %s", deduction_summary, final_score)
+        
+        if return_details:
+            # Generate human-readable summary
+            total_deduction = sum(abs(d['points']) for d in deductions_list)
+            summary_parts = []
+            
+            if total_deduction > 0:
+                summary_parts.append(f"Score reduced by {total_deduction:g} points")
+                
+                # Categorize deductions
+                packet_loss_deduction = 0
+                latency_deduction = 0
+                threat_counts = {'low': 0, 'medium': 0, 'high': 0}
+                
+                for d in deductions_list:
+                    reason_lower = d['reason'].lower()
+                    if 'packet loss' in reason_lower:
+                        packet_loss_deduction += abs(d['points'])
+                    elif 'latency' in reason_lower:
+                        latency_deduction += abs(d['points'])
+                    elif 'threat' in reason_lower:
+                        if 'low severity' in reason_lower:
+                            threat_counts['low'] += 1
+                        elif 'high severity' in reason_lower:
+                            threat_counts['high'] += 1
+                        elif 'medium severity' in reason_lower:
+                            threat_counts['medium'] += 1
+                
+                # Build detailed breakdown
+                causes = []
+                if packet_loss_deduction > 0:
+                    causes.append(f"packet loss ({packet_loss_deduction:g} points)")
+                if latency_deduction > 0:
+                    causes.append(f"latency ({latency_deduction:g} points)")
+                
+                total_threats = sum(threat_counts.values())
+                if total_threats > 0:
+                    threat_breakdown = []
+                    if threat_counts['high'] > 0:
+                        threat_breakdown.append(f"{threat_counts['high']} high")
+                    if threat_counts['medium'] > 0:
+                        threat_breakdown.append(f"{threat_counts['medium']} medium")
+                    if threat_counts['low'] > 0:
+                        threat_breakdown.append(f"{threat_counts['low']} low")
+                    
+                    threat_desc = f"{total_threats} active threat{'s' if total_threats > 1 else ''}"
+                    if threat_breakdown:
+                        threat_desc += f" ({', '.join(threat_breakdown)})"
+                    causes.append(threat_desc)
+                
+                if causes:
+                    summary_parts.append(f"due to {' and '.join(causes)}")
+                
+                summary = ' '.join(summary_parts) + '.'
+            else:
+                summary = "No deductions applied."
+            
+            return {
+                "final_score": final_score,
+                "base_score": 100.0,
+                "deductions": deductions_list,
+                "summary": summary
+            }
+        
+        return final_score
+    
+    def _calculate_threat_deduction(self) -> float:
+        """
+        Calculate total deduction for active threats, supporting weighted severity.
+        
+        Supports severity levels: 'low' (50%), 'medium' (100%), 'high' (200%).
+        Invalid severity values will raise a ValueError.
+        
+        Returns:
+            Total points to deduct for all active threats
+            
+        Raises:
+            ValueError: If an invalid severity level is provided
+        """
+        threat_deductions = self._calculate_threat_deduction_with_details()
+        return sum(d['points'] for d in threat_deductions)
+    
+    def _calculate_threat_deduction_with_details(self) -> List[Dict[str, Any]]:
+        """
+        Calculate deduction for each active threat with details, supporting weighted severity.
+        
+        Supports severity levels: 'low' (50%), 'medium' (100%), 'high' (200%).
+        Invalid severity values will raise a ValueError.
+        
+        Returns:
+            List of dicts with 'reason' and 'points' for each threat
+            
+        Raises:
+            ValueError: If an invalid severity level is provided
+        """
+        deductions = []
+        for threat in self.active_threats:
+            if isinstance(threat, dict) and 'severity' in threat:
+                # Weighted threat based on severity
+                severity = str(threat.get('severity', 'medium')).lower()
+                
+                if severity not in THREAT_SEVERITY_MULTIPLIERS:
+                    raise ValueError(
+                        f"Invalid threat severity '{severity}'. "
+                        f"Valid values are: {', '.join(THREAT_SEVERITY_MULTIPLIERS.keys())}"
+                    )
+                
+                multiplier = THREAT_SEVERITY_MULTIPLIERS[severity]
+                penalty = self.quality_thresholds.threat_penalty * multiplier
+                threat_id = threat.get('id', 'unknown')
+                deductions.append({
+                    "reason": f"{severity.capitalize()} severity threat",
+                    "threat_id": threat_id,
+                    "points": -penalty  # Negative for deductions
+                })
+            else:
+                # Default threat (string or dict without severity)
+                penalty = self.quality_thresholds.threat_penalty
+                if isinstance(threat, str):
+                    threat_id = threat
+                elif isinstance(threat, dict):
+                    threat_id = threat.get('id', 'unknown')
+                else:
+                    threat_id = str(threat)
+                deductions.append({
+                    "reason": "Medium severity threat",
+                    "threat_id": threat_id,
+                    "points": -penalty  # Negative for deductions
+                })
+        
+        return deductions
     
     def _calculate_stability(self, packet_loss: float, latency: float) -> float:
         """
@@ -312,17 +509,22 @@ class StarlinkConnectionQuality:
         return result
 
 
-def monitor_connection(packet_loss: float, latency: float) -> dict:
+def monitor_connection(
+    packet_loss: float,
+    latency: float,
+    active_threats: Optional[List[Any]] = None
+) -> dict:
     """
     Convenience function to monitor connection quality.
     
     Args:
         packet_loss: Packet loss percentage (0-100)
         latency: Latency in milliseconds
+        active_threats: Optional list of active security threats
         
     Returns:
         Dictionary with connection status information
     """
     metrics = ConnectionMetrics(packet_loss=packet_loss, latency=latency)
-    quality = StarlinkConnectionQuality(metrics)
+    quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
     return quality.get_connection_status()
