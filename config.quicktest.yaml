@@ -1,0 +1,20 @@
+# Network Monitoring Configuration - Quick Test
+# Minimal configuration for quick testing
+
+monitoring:
+  # Test with public DNS servers (more reliable than local IPs)
+  targets:
+    - host: "8.8.8.8"  # Google DNS
+      monitor_latency: true
+      monitor_jitter: true
+      monitor_packet_loss: true
+      ping_count: 3
+      jitter_count: 5
+      packet_loss_count: 5
+      
+  # No network-wide scanning in quick test
+  network:
+    subnet: "127.0.0.0/30"  # Minimal local subnet
+    detect_devices: false
+    check_unauthorized: false
+    authorized_devices: []

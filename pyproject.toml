@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "secure-it-starlink"
+version = "1.0.0"
+description = "Enterprise-grade security solutions for managed Starlink infrastructures"
+authors = [{name = "Secure IT Team"}]
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["security", "starlink", "network", "enterprise", "infrastructure"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: System :: Networking :: Monitoring",
+]
+
+dependencies = [
+    "cryptography>=41.0.0",
+    "requests>=2.31.0",
+    "python-dateutil>=2.8.0",
+    "pyyaml>=6.0",
+    "python-json-logger>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.4.0",
+    "isort>=5.12.0",
+]
+
+aws = [
+    "boto3>=1.26.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
+Documentation = "https://github.com/danielnovais-tech/secure-it-infra-Starlink/blob/main/README.md"
+Repository = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
+"Bug Tracker" = "https://github.com/danielnovais-tech/secure-it-infra-Starlink/issues"
+
+[project.scripts]
+secure-it-starlink = "secure_it_starlink.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["secure_it_starlink*", "security_modules*"]
+
+[tool.black]
+line-length = 120
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-v --tb=short"
+testpaths = ["."]
+python_files = "test_*.py"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
