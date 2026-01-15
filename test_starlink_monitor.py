@@ -1,7 +1,6 @@
 """
 Tests for Starlink Network Monitoring System
 """
-import asyncio
 import pytest
 import json
 from starlink_monitor import (
