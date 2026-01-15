@@ -8,7 +8,7 @@ import csv
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, Optional, List, Literal
 
@@ -119,7 +119,7 @@ class AuditEntry:
         self.original_score = original_score
         self.adjusted_score = adjusted_score
         self.previous_score = previous_score
-        self.timestamp = timestamp or datetime.utcnow().isoformat()
+        self.timestamp = timestamp or datetime.now(timezone.utc).isoformat()
     
     def to_dict(self, detail_level: Literal["summary", "full"] = "full") -> dict:
         """
@@ -320,7 +320,7 @@ class SecurityScorer:
         """
         audit_data = {
             "security_level": self.security_level.value,
-            "export_timestamp": datetime.utcnow().isoformat(),
+            "export_timestamp": datetime.now(timezone.utc).isoformat(),
             "entries": self.get_audit_trail(detail_level=detail_level)
         }
         
@@ -351,11 +351,9 @@ class SecurityScorer:
             
             for entry in self.audit_trail:
                 row = entry.to_dict(detail_level="full")
-                # Add historical_delta if not present
-                if 'historical_delta' not in row:
-                    row['historical_delta'] = None
-                if 'previous_score' not in row:
-                    row['previous_score'] = None
+                # Add missing fields with defaults
+                row.setdefault('historical_delta', None)
+                row.setdefault('previous_score', None)
                 writer.writerow(row)
         
         logger.info(f"Exported {len(self.audit_trail)} audit entries to {filepath}")
