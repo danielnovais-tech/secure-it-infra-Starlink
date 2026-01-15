@@ -5,12 +5,12 @@ Tests for Starlink Security Foundation
 
 import asyncio
 import pytest
-from starlink_security import (
+from security import (
+    SecurityLevel,
     StarlinkSecurityFoundation,
     NetworkMonitor,
     ThreatDetector,
-    PolicyEnforcer,
-    SecurityLevel
+    PolicyEnforcer
 )
 
 
@@ -113,6 +113,40 @@ async def test_event_triggering():
     assert events[0]['severity'] == 'info'
     assert events[0]['source'] == 'test_source'
     assert events[0]['data']['key'] == 'value'
+
+
+@pytest.mark.asyncio
+async def test_metrics_collection():
+    """Test metrics collection functionality."""
+    foundation = StarlinkSecurityFoundation()
+    
+    # Trigger some events
+    await foundation.trigger_event("test_event_1", "info", "test", "Message 1")
+    await foundation.trigger_event("test_event_2", "warning", "test", "Message 2")
+    await foundation.trigger_event("test_event_1", "info", "test", "Message 3")
+    
+    metrics = foundation.get_metrics()
+    
+    assert 'event_counts' in metrics
+    assert 'total_events' in metrics
+    assert metrics['total_events'] >= 3
+    assert 'test_event_1' in metrics['event_counts']
+    assert metrics['event_counts']['test_event_1'] == 2
+
+
+@pytest.mark.asyncio
+async def test_policy_retrieval():
+    """Test policy retrieval functionality."""
+    foundation = StarlinkSecurityFoundation()
+    enforcer = PolicyEnforcer(foundation)
+    enforcer.initialize()
+    
+    policies = enforcer.get_policies()
+    
+    assert isinstance(policies, dict)
+    assert "network_access" in policies
+    assert "encryption" in policies
+    assert "authentication" in policies
 
 
 if __name__ == "__main__":
