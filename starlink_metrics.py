@@ -6,7 +6,6 @@ for Starlink satellite internet connections based on packet loss and latency.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -74,9 +73,10 @@ class StarlinkConnectionQuality:
         Returns:
             Stability score between 0.0 and 1.0
         """
-        # penaliza fortemente packet loss
+        # Heavily penalize packet loss
         loss_factor = max(0, 1 - packet_loss * 2)
-        latency_factor = max(0, 1 - latency / 500)  # 500ms como limite
+        # 500ms as the latency limit
+        latency_factor = max(0, 1 - latency / 500)
         return (loss_factor * 0.7 + latency_factor * 0.3)
     
     def calculate_stability_score(self) -> float:
