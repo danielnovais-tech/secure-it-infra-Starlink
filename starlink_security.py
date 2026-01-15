@@ -5,12 +5,16 @@ Foundation for securing enterprise infrastructures using Starlink connectivity.
 Provides monitoring, enforcement, and response capabilities.
 """
 
+import hashlib
 import json
 import logging
 import os
+import pickle
 import queue
 import threading
+import time
 import warnings
+from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
@@ -192,6 +196,105 @@ class NetworkMetrics:
     threat_indicators: List[str] = field(default_factory=list)
 
 
+class EventProcessor(ABC):
+    """Abstract base class for pluggable event processing strategies."""
+    
+    @abstractmethod
+    def process_event(self, event: 'SecurityEvent') -> None:
+        """Process a security event."""
+        pass
+    
+    @abstractmethod
+    def start(self) -> None:
+        """Start the event processor."""
+        pass
+    
+    @abstractmethod
+    def stop(self) -> None:
+        """Stop the event processor."""
+        pass
+
+
+class DefaultEventProcessor(EventProcessor):
+    """Default synchronous event processor."""
+    
+    def __init__(self):
+        self.logger = logging.getLogger("starlink_security.event_processor")
+        self.running = False
+    
+    def process_event(self, event: 'SecurityEvent') -> None:
+        """Process event synchronously."""
+        self.logger.debug(f"Processing event: {event.event_type}")
+    
+    def start(self) -> None:
+        """Start processor."""
+        self.running = True
+        self.logger.info("Default event processor started")
+    
+    def stop(self) -> None:
+        """Stop processor."""
+        self.running = False
+        self.logger.info("Default event processor stopped")
+
+
+class AuditLogger:
+    """Tamper-evident audit logger with hash chaining."""
+    
+    def __init__(self, audit_file: Path):
+        """
+        Initialize audit logger.
+        
+        Args:
+            audit_file: Path to audit log file
+        """
+        self.audit_file = audit_file
+        self.last_hash = "0" * 64  # Genesis hash
+        self._lock = threading.Lock()
+        self.logger = logging.getLogger("starlink_security.audit")
+        
+        # Load last hash if file exists
+        if self.audit_file.exists():
+            try:
+                with open(self.audit_file, 'r') as f:
+                    lines = f.readlines()
+                    if lines:
+                        last_entry = json.loads(lines[-1])
+                        self.last_hash = last_entry.get("hash", self.last_hash)
+            except (IOError, json.JSONDecodeError) as e:
+                self.logger.warning(f"Failed to load audit log: {e}")
+    
+    def log_audit(self, action: str, details: Dict[str, Any]) -> None:
+        """
+        Log an audit event with hash chaining.
+        
+        Args:
+            action: Action being audited
+            details: Additional details
+        """
+        with self._lock:
+            timestamp = datetime.now().isoformat()
+            entry = {
+                "timestamp": timestamp,
+                "action": action,
+                "details": details,
+                "previous_hash": self.last_hash
+            }
+            
+            # Calculate hash of this entry
+            entry_str = json.dumps(entry, sort_keys=True)
+            current_hash = hashlib.sha256(entry_str.encode()).hexdigest()
+            entry["hash"] = current_hash
+            
+            # Write to audit log
+            try:
+                with open(self.audit_file, 'a') as f:
+                    f.write(json.dumps(entry) + '\n')
+                self.last_hash = current_hash
+                self.logger.info(f"Audit logged: {action}")
+            except IOError as e:
+                self.logger.error(f"Failed to write audit log: {e}")
+
+
 class SecurityModule:
     """Base class for security modules with lifecycle management."""
     
@@ -235,13 +338,15 @@ class StarlinkSecurityFoundation:
     """
     
     def __init__(self, config_path: Optional[str] = None, 
-                 module_factory: Optional[Callable[[str, bool], SecurityModule]] = None):
+                 module_factory: Optional[Callable[[str, bool], SecurityModule]] = None,
+                 event_processor: Optional[EventProcessor] = None):
         """
         Initialize the security foundation.
         
         Args:
             config_path: Path to configuration file (optional)
             module_factory: Factory function for creating security modules (for dependency injection)
+            event_processor: Custom event processor (for pluggable event processing)
             
         Raises:
             PermissionError: If required directories cannot be created due to permissions.
@@ -258,6 +363,12 @@ class StarlinkSecurityFoundation:
         # Thread safety
         self._lock = threading.RLock()
         self._metrics_lock = threading.Lock()
+        self._config_lock = threading.Lock()
+        
+        # Configuration hot-reloading
+        self.config_path = config_path
+        self._config_last_modified = None
+        self._config_reload_thread = None
         
         # Load and validate configuration
         self.config = self._load_config(config_path)
@@ -287,6 +398,13 @@ class StarlinkSecurityFoundation:
                 DEFAULT_CONNECTION_STABILITY
             )
         
+        # Pluggable event processor
+        self.event_processor = event_processor or DefaultEventProcessor()
+        
+        # Audit logger
+        self.audit_logger = AuditLogger(LOG_DIR / "audit.log")
+        self.audit_logger.log_audit("system_init", {"config_path": str(config_path) if config_path else "default"})
+        
         # Module factory for dependency injection
         self._module_factory = module_factory or self._default_module_factory
         self.security_modules: Dict[str, SecurityModule] = {}
@@ -295,6 +413,9 @@ class StarlinkSecurityFoundation:
         # Key rotation tracking
         self._key_created_at = datetime.now()
         self._key_rotation_days = self.config.get('key_rotation_days', DEFAULT_KEY_ROTATION_DAYS)
+        
+        # State persistence file
+        self._state_file = DATA_DIR / "state.pkl"
         
         self.logger.info("Starlink Security Foundation initialized successfully")
     
@@ -310,6 +431,11 @@ class StarlinkSecurityFoundation:
                 return
             
             self.logger.info("Starting Starlink Security Foundation")
+            
+            # Start event processor
+            self.event_processor.start()
+            
+            # Start modules
             for name, module in self.security_modules.items():
                 try:
                     module.start()
@@ -317,7 +443,12 @@ class StarlinkSecurityFoundation:
                 except Exception as e:
                     self.logger.error(f"Failed to start module {name}: {e}")
             
+            # Start config hot-reloading if config file provided
+            if self.config_path and self.config.get('hot_reload_config', False):
+                self._start_config_reload()
+            
             self.running = True
+            self.audit_logger.log_audit("system_start", {"timestamp": datetime.now().isoformat()})
             self.logger.info("Starlink Security Foundation started")
     
     def stop(self) -> None:
@@ -328,6 +459,19 @@ class StarlinkSecurityFoundation:
                 return
             
             self.logger.info("Stopping Starlink Security Foundation")
+            
+            # Stop config reload thread
+            if self._config_reload_thread and self._config_reload_thread.is_alive():
+                self.running = False  # Signal thread to stop
+                self._config_reload_thread.join(timeout=2.0)
+            
+            # Save state before stopping
+            self.save_state()
+            
+            # Stop event processor
+            self.event_processor.stop()
+            
+            # Stop modules
             for name, module in self.security_modules.items():
                 try:
                     module.stop()
@@ -336,6 +480,7 @@ class StarlinkSecurityFoundation:
                     self.logger.error(f"Failed to stop module {name}: {e}")
             
             self.running = False
+            self.audit_logger.log_audit("system_stop", {"timestamp": datetime.now().isoformat()})
             self.logger.info("Starlink Security Foundation stopped")
     
     def get_metrics_summary(self) -> Dict[str, Any]:
@@ -385,6 +530,8 @@ class StarlinkSecurityFoundation:
             IOError: If key rotation fails
         """
         self.logger.info("Rotating encryption key")
+        self.audit_logger.log_audit("key_rotation_start", {"timestamp": datetime.now().isoformat()})
+        
         try:
             # Backup old key
             key_file = CONFIG_DIR / "encryption.key"
@@ -408,11 +555,208 @@ class StarlinkSecurityFoundation:
             
             self.encryption_key = new_key
             self._key_created_at = datetime.now()
+            self.audit_logger.log_audit("key_rotation_success", {
+                "timestamp": datetime.now().isoformat(),
+                "backup_file": str(backup_file)
+            })
             self.logger.info("Encryption key rotated successfully")
             
         except Exception as e:
+            self.audit_logger.log_audit("key_rotation_failure", {
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            })
             self.logger.error(f"Failed to rotate encryption key: {e}")
             raise IOError(f"Key rotation failed: {e}") from e
+    
+    def reload_config(self) -> bool:
+        """
+        Reload configuration from file at runtime (hot reload).
+        
+        Returns:
+            True if config was reloaded successfully, False otherwise
+        """
+        if not self.config_path:
+            self.logger.warning("No config path set, cannot reload")
+            return False
+        
+        config_file = Path(self.config_path)
+        if not config_file.exists():
+            self.logger.warning(f"Config file {self.config_path} not found")
+            return False
+        
+        try:
+            with self._config_lock:
+                with open(self.config_path, 'r') as f:
+                    new_config = json.load(f)
+                
+                # Merge with defaults
+                default_config = {
+                    "security_level": "normal",
+                    "connection_type": "starlink_only",
+                    "monitoring_interval": 60,
+                    "max_events_queue": 1000,
+                    "encryption_enabled": True,
+                    "key_rotation_days": DEFAULT_KEY_ROTATION_DAYS,
+                    "log_level": "INFO",
+                    "hot_reload_config": False
+                }
+                default_config.update(new_config)
+                
+                # Validate new config
+                if not validate_config(default_config):
+                    self.logger.error("Invalid config schema, reload aborted")
+                    return False
+                
+                # Update config
+                old_security_level = self.config.get('security_level')
+                self.config = default_config
+                
+                # Apply dynamic changes
+                new_security_level = self.config.get('security_level')
+                if old_security_level != new_security_level:
+                    self.security_level = SecurityLevel(new_security_level)
+                    self.logger.info(f"Security level updated: {new_security_level}")
+                
+                self.audit_logger.log_audit("config_reload", {
+                    "timestamp": datetime.now().isoformat(),
+                    "config_path": self.config_path
+                })
+                self.logger.info("Configuration reloaded successfully")
+                return True
+                
+        except Exception as e:
+            self.logger.error(f"Failed to reload config: {e}")
+            return False
+    
+    def _start_config_reload(self) -> None:
+        """Start background thread for configuration hot-reloading."""
+        def reload_loop():
+            if not self.config_path:
+                return
+            
+            config_file = Path(self.config_path)
+            while self.running:
+                try:
+                    if config_file.exists():
+                        current_mtime = config_file.stat().st_mtime
+                        if self._config_last_modified is None:
+                            self._config_last_modified = current_mtime
+                        elif current_mtime > self._config_last_modified:
+                            self.logger.info("Config file changed, reloading...")
+                            if self.reload_config():
+                                self._config_last_modified = current_mtime
+                    time.sleep(5)  # Check every 5 seconds
+                except Exception as e:
+                    self.logger.error(f"Error in config reload loop: {e}")
+                    time.sleep(5)
+        
+        self._config_reload_thread = threading.Thread(target=reload_loop, daemon=True)
+        self._config_reload_thread.start()
+        self.logger.info("Config hot-reload thread started")
+    
+    def save_state(self) -> None:
+        """Save current state to disk for resilience and recovery."""
+        try:
+            state = {
+                "active_threats": list(self.active_threats),
+                "timestamp": datetime.now().isoformat(),
+                "security_level": self.security_level.value,
+                "unresolved_events_count": len([e for e in self.events if not e.resolved])
+            }
+            
+            with open(self._state_file, 'wb') as f:
+                pickle.dump(state, f)
+            
+            self.logger.info(f"State saved to {self._state_file}")
+            self.audit_logger.log_audit("state_save", state)
+            
+        except Exception as e:
+            self.logger.error(f"Failed to save state: {e}")
+    
+    def restore_state(self) -> bool:
+        """
+        Restore state from disk after crash/restart.
+        
+        Returns:
+            True if state was restored, False otherwise
+        """
+        if not self._state_file.exists():
+            self.logger.info("No saved state found")
+            return False
+        
+        try:
+            with open(self._state_file, 'rb') as f:
+                state = pickle.load(f)
+            
+            # Restore active threats
+            with self._lock:
+                self.active_threats = set(state.get("active_threats", []))
+            
+            self.logger.info(f"State restored from {self._state_file}")
+            self.logger.info(f"Restored {len(self.active_threats)} active threats")
+            self.audit_logger.log_audit("state_restore", {
+                "timestamp": datetime.now().isoformat(),
+                "restored_threats": len(self.active_threats)
+            })
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to restore state: {e}")
+            return False
+    
+    def get_prometheus_metrics(self) -> str:
+        """
+        Get metrics in Prometheus exposition format.
+        
+        Returns:
+            Metrics in Prometheus text format
+        """
+        metrics_summary = self.get_metrics_summary()
+        
+        prometheus_output = []
+        
+        # System metrics
+        prometheus_output.append("# HELP starlink_security_running System running status")
+        prometheus_output.append("# TYPE starlink_security_running gauge")
+        prometheus_output.append(f"starlink_security_running {{status=\"{metrics_summary['status']}\"}} {1 if self.running else 0}")
+        
+        # Threat metrics
+        prometheus_output.append("# HELP starlink_security_active_threats Number of active threats")
+        prometheus_output.append("# TYPE starlink_security_active_threats gauge")
+        prometheus_output.append(f"starlink_security_active_threats {metrics_summary['active_threats_count']}")
+        
+        # Event metrics
+        prometheus_output.append("# HELP starlink_security_unresolved_events Number of unresolved events")
+        prometheus_output.append("# TYPE starlink_security_unresolved_events gauge")
+        prometheus_output.append(f"starlink_security_unresolved_events {metrics_summary['unresolved_events_count']}")
+        
+        prometheus_output.append("# HELP starlink_security_total_events Total number of events")
+        prometheus_output.append("# TYPE starlink_security_total_events counter")
+        prometheus_output.append(f"starlink_security_total_events {metrics_summary['total_events_count']}")
+        
+        # Queue metrics
+        prometheus_output.append("# HELP starlink_security_queue_utilization Event queue utilization percentage")
+        prometheus_output.append("# TYPE starlink_security_queue_utilization gauge")
+        prometheus_output.append(f"starlink_security_queue_utilization {metrics_summary['events_queue_utilization']}")
+        
+        # Network metrics
+        nm = metrics_summary['network_metrics']
+        prometheus_output.append("# HELP starlink_security_score Security score (0-100)")
+        prometheus_output.append("# TYPE starlink_security_score gauge")
+        prometheus_output.append(f"starlink_security_score {nm['security_score']}")
+        
+        prometheus_output.append("# HELP starlink_security_latency Network latency in ms")
+        prometheus_output.append("# TYPE starlink_security_latency gauge")
+        prometheus_output.append(f"starlink_security_latency {nm['latency']}")
+        
+        # Key age
+        prometheus_output.append("# HELP starlink_security_key_age_days Encryption key age in days")
+        prometheus_output.append("# TYPE starlink_security_key_age_days gauge")
+        prometheus_output.append(f"starlink_security_key_age_days {metrics_summary['key_age_days']}")
+        
+        return "\n".join(prometheus_output)
     
     def _load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -526,13 +870,19 @@ class StarlinkSecurityFoundation:
     
     def log_event(self, event: SecurityEvent) -> None:
         """
-        Log a security event with thread safety.
+        Log a security event with thread safety and pluggable processing.
         
         Args:
             event: SecurityEvent to log
         """
         with self._lock:
             self.events.append(event)
+        
+        # Process event through pluggable processor
+        try:
+            self.event_processor.process_event(event)
+        except Exception as e:
+            self.logger.error(f"Event processor error: {e}")
         
         # Also log to structured logger
         event_data = {
