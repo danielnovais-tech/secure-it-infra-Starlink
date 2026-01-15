@@ -6,7 +6,9 @@ Provides monitoring, enforcement, and response capabilities.
 """
 
 import json
+import os
 import queue
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -112,11 +114,11 @@ class StarlinkSecurityFoundation:
         setup_directories()
         
         self.config = self._load_config(config_path)
-        self.security_level = SecurityLevel.NORMAL
-        self.connection_type = ConnectionType.STARLINK_ONLY
+        self.security_level = SecurityLevel(self.config.get('security_level', 'normal'))
+        self.connection_type = ConnectionType(self.config.get('connection_type', 'starlink_only'))
         self.encryption_key = self._initialize_encryption()
         self.running = True
-        self.events_queue: queue.Queue = queue.Queue()
+        self.events_queue: queue.Queue = queue.Queue(maxsize=self.config.get('max_events_queue', 1000))
         self.metrics = NetworkMetrics(
             DEFAULT_LATENCY,
             DEFAULT_JITTER,
@@ -155,7 +157,6 @@ class StarlinkSecurityFoundation:
                     default_config.update(user_config)
             except (json.JSONDecodeError, IOError) as e:
                 # Log error but continue with defaults
-                import warnings
                 warnings.warn(
                     f"Failed to load configuration from {config_path}: {e}. "
                     f"Using default configuration.",
@@ -175,7 +176,6 @@ class StarlinkSecurityFoundation:
             IOError: If key file cannot be read or written
             PermissionError: If key file permissions are insufficient
         """
-        import os
         key_file = CONFIG_DIR / "encryption.key"
         
         if key_file.exists():
