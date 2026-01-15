@@ -209,6 +209,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Starlink Security Foundation
+.starlink-security/
+starlink_security.log
 # Terraform
 *.tfstate
 *.tfstate.*
