@@ -1,0 +1,150 @@
+version: '3.8'
+
+# ⚠️ SECURITY WARNING ⚠️
+# This configuration is for DEVELOPMENT/TESTING ONLY!
+# DO NOT use in production without:
+# 1. Changing all default passwords
+# 2. Enabling TLS/SSL encryption
+# 3. Configuring authentication
+# 4. Using secrets management (Docker secrets, Vault, etc.)
+# See docs/SECURITY.md for production hardening guide
+
+services:
+  # Redis - used for job queue and state management
+  redis:
+    image: redis:7.2-alpine
+    container_name: armada-redis
+    restart: unless-stopped
+    networks:
+      - armada-network
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL - used for persistent storage
+  postgres:
+    image: postgres:16-alpine
+    container_name: armada-postgres
+    restart: unless-stopped
+    networks:
+      - armada-network
+    environment:
+      POSTGRES_USER: armada
+      POSTGRES_PASSWORD: armada_password
+      POSTGRES_DB: armada
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U armada"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Armada Server - main control plane
+  armada-server:
+    image: gresearch/armada-server:v0.4.54
+    container_name: armada-server
+    restart: unless-stopped
+    networks:
+      - armada-network
+    ports:
+      - "50051:50051"  # gRPC
+      - "8080:8080"    # HTTP
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./config/armada-server-config.yaml:/config/armada/config.yaml:ro
+    command:
+      - --config
+      - /config/armada/config.yaml
+    environment:
+      - ARMADA_REDIS_ADDRS=redis:6379
+      - ARMADA_POSTGRES_CONNECTION=host=postgres port=5432 user=armada password=armada_password dbname=armada sslmode=disable
+    healthcheck:
+      test: ["CMD", "grpc_health_probe", "-addr=:50051"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # Armada Executor - runs on each cluster to execute jobs
+  armada-executor:
+    image: gresearch/armada-executor:v0.4.54
+    container_name: armada-executor
+    restart: unless-stopped
+    networks:
+      - armada-network
+    depends_on:
+      armada-server:
+        condition: service_healthy
+    volumes:
+      - ./config/armada-executor-config.yaml:/config/armada/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock  # For local job execution
+    command:
+      - --config
+      - /config/armada/config.yaml
+    environment:
+      - ARMADA_SERVER_URL=armada-server:50051
+
+  # Lookout - UI for Armada
+  lookout:
+    image: gresearch/armada-lookout:v0.4.54
+    container_name: armada-lookout
+    restart: unless-stopped
+    networks:
+      - armada-network
+    ports:
+      - "8089:8080"
+    depends_on:
+      armada-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./config/lookout-config.yaml:/config/armada/config.yaml:ro
+    command:
+      - --config
+      - /config/armada/config.yaml
+    environment:
+      - ARMADA_SERVER_URL=armada-server:50051
+      - ARMADA_POSTGRES_CONNECTION=host=postgres port=5432 user=armada password=armada_password dbname=armada sslmode=disable
+
+  # Lookout Ingester - ingests job events into database
+  lookout-ingester:
+    image: gresearch/armada-lookout-ingester:v0.4.54
+    container_name: armada-lookout-ingester
+    restart: unless-stopped
+    networks:
+      - armada-network
+    depends_on:
+      armada-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./config/lookout-ingester-config.yaml:/config/armada/config.yaml:ro
+    command:
+      - --config
+      - /config/armada/config.yaml
+    environment:
+      - ARMADA_SERVER_URL=armada-server:50051
+      - ARMADA_POSTGRES_CONNECTION=host=postgres port=5432 user=armada password=armada_password dbname=armada sslmode=disable
+
+networks:
+  armada-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  postgres-data:
