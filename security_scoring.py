@@ -75,9 +75,12 @@ class SecurityScorer:
         audit_trail (List[AuditEntry]): List of audit entries for scoring operations.
     """
     
-    def __init__(self, security_level: SecurityLevel, 
-                 custom_multipliers: Optional[Dict[SecurityLevel, float]] = None,
-                 config_file: Optional[str] = None):
+    def __init__(
+        self, 
+        security_level: SecurityLevel, 
+        custom_multipliers: Optional[Dict[SecurityLevel, float]] = None,
+        config_file: Optional[str] = None
+    ):
         """
         Initialize the SecurityScorer with a security level.
         

@@ -135,7 +135,6 @@ class TestSecurityScorer(unittest.TestCase):
         
         self.assertIn("non-negative", str(context.exception))
     
-    # New boundary tests
     def test_zero_base_score(self):
         """Test that base score of 0 remains 0 regardless of multiplier."""
         for level in SecurityLevel:
@@ -161,7 +160,6 @@ class TestSecurityScorer(unittest.TestCase):
         result = scorer.calculate_score(base_score)
         self.assertEqual(result, 7000.0)
     
-    # Custom multipliers tests
     def test_custom_multipliers(self):
         """Test using custom multipliers."""
         custom_mult = {
@@ -200,7 +198,6 @@ class TestSecurityScorer(unittest.TestCase):
         result = scorer.calculate_score(100.0)
         self.assertEqual(result, 70.0)  # Default multiplier
     
-    # Audit trail tests
     def test_audit_trail_created(self):
         """Test that audit trail is created for scoring operations."""
         scorer = SecurityScorer(SecurityLevel.CRITICAL)
