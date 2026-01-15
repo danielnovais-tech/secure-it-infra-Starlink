@@ -175,6 +175,7 @@ class StarlinkConnectionQuality:
                 - final_score: Final quality score (0-100)
                 - base_score: Starting score before deductions (100)
                 - deductions: List of dicts with 'reason' and 'points' for each deduction
+                - summary: Human-readable summary of deductions (e.g., "Score reduced by 17.5 points due to 3 active threats (1 high, 1 medium, 1 low).")
         """
         base_score = 100.0
         deductions_list = []
@@ -218,10 +219,48 @@ class StarlinkConnectionQuality:
             logger.debug("Quality score deductions: %s. Final score: %s", deduction_summary, final_score)
         
         if return_details:
+            # Generate human-readable summary
+            total_deduction = sum(abs(d['points']) for d in deductions_list)
+            summary_parts = []
+            
+            if total_deduction > 0:
+                summary_parts.append(f"Score reduced by {total_deduction} points")
+                
+                # Count threats by severity
+                threat_counts = {'low': 0, 'medium': 0, 'high': 0}
+                for d in deductions_list:
+                    reason_lower = d['reason'].lower()
+                    if 'threat' in reason_lower:
+                        if 'low severity' in reason_lower:
+                            threat_counts['low'] += 1
+                        elif 'high severity' in reason_lower:
+                            threat_counts['high'] += 1
+                        elif 'medium severity' in reason_lower:
+                            threat_counts['medium'] += 1
+                
+                total_threats = sum(threat_counts.values())
+                if total_threats > 0:
+                    threat_breakdown = []
+                    if threat_counts['high'] > 0:
+                        threat_breakdown.append(f"{threat_counts['high']} high")
+                    if threat_counts['medium'] > 0:
+                        threat_breakdown.append(f"{threat_counts['medium']} medium")
+                    if threat_counts['low'] > 0:
+                        threat_breakdown.append(f"{threat_counts['low']} low")
+                    
+                    summary_parts.append(f"due to {total_threats} active threat{'s' if total_threats > 1 else ''}")
+                    if threat_breakdown:
+                        summary_parts.append(f"({', '.join(threat_breakdown)})")
+                
+                summary = ' '.join(summary_parts) + '.'
+            else:
+                summary = "No deductions applied."
+            
             return {
                 "final_score": final_score,
                 "base_score": 100.0,
-                "deductions": deductions_list
+                "deductions": deductions_list,
+                "summary": summary
             }
         
         return final_score

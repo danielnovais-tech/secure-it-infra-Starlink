@@ -256,6 +256,84 @@ class TestStarlinkConnectionQuality:
         # 100 - 10 (packet loss) - 5 (latency) - 10 (high threat) = 75
         assert result == 75.0
     
+    def test_audit_trail_output_format(self):
+        """Test audit trail always contains expected keys."""
+        metrics = ConnectionMetrics(packet_loss=10.0, latency=200.0)
+        active_threats = [{'id': 'threat1', 'severity': 'high'}]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        result = quality.calculate_quality_score(return_details=True)
+        
+        # Verify all required keys are present
+        required_keys = {"final_score", "base_score", "deductions", "summary"}
+        assert set(result.keys()) == required_keys
+        
+        # Verify types
+        assert isinstance(result["final_score"], (int, float))
+        assert isinstance(result["base_score"], (int, float))
+        assert isinstance(result["deductions"], list)
+        assert isinstance(result["summary"], str)
+        
+        # Verify deductions are non-empty when threats exist
+        assert len(result["deductions"]) > 0
+        
+        # Verify each deduction has required keys
+        for deduction in result["deductions"]:
+            assert "reason" in deduction
+            assert "points" in deduction
+            assert isinstance(deduction["reason"], str)
+            assert isinstance(deduction["points"], (int, float))
+    
+    def test_audit_trail_no_deductions(self):
+        """Test audit trail with no deductions has empty list."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        quality = StarlinkConnectionQuality(metrics)
+        result = quality.calculate_quality_score(return_details=True)
+        
+        assert result["deductions"] == []
+        assert "No deductions" in result["summary"]
+    
+    def test_audit_trail_summary_single_threat(self):
+        """Test human-readable summary with single threat."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        active_threats = [{'id': 'threat1', 'severity': 'high'}]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        result = quality.calculate_quality_score(return_details=True)
+        
+        assert "summary" in result
+        assert "10" in result["summary"]  # 10 points deducted
+        assert "1 active threat" in result["summary"]
+        assert "1 high" in result["summary"]
+    
+    def test_audit_trail_summary_multiple_threats(self):
+        """Test human-readable summary with multiple threats."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        active_threats = [
+            {'id': 'threat1', 'severity': 'low'},
+            {'id': 'threat2', 'severity': 'high'},
+            {'id': 'threat3', 'severity': 'medium'}
+        ]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        result = quality.calculate_quality_score(return_details=True)
+        
+        summary = result["summary"]
+        assert "17.5" in summary  # Total deduction
+        assert "3 active threats" in summary
+        assert "1 high" in summary
+        assert "1 medium" in summary
+        assert "1 low" in summary
+    
+    def test_audit_trail_summary_mixed_penalties(self):
+        """Test summary includes all penalty types."""
+        metrics = ConnectionMetrics(packet_loss=10.0, latency=200.0)
+        active_threats = [{'id': 'threat1', 'severity': 'medium'}]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        result = quality.calculate_quality_score(return_details=True)
+        
+        summary = result["summary"]
+        # 10 (packet loss) + 5 (latency) + 5 (threat) = 20 points total
+        assert "20" in summary
+        assert "1 active threat" in summary
+    
     def test_stability_perfect(self):
         """Test stability calculation with perfect metrics."""
         metrics = ConnectionMetrics(packet_loss=0.0, latency=0.0)
