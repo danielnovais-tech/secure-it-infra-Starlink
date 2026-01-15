@@ -124,7 +124,6 @@ class TestStarlinkConnectionQuality:
         score = quality.calculate_quality_score()
         # Score should be clamped to 0, not negative
         assert score == 0.0
-        assert score >= 0
     
     def test_quality_score_threats_with_all_penalties(self):
         """Test quality score with threats and all other penalties combined."""

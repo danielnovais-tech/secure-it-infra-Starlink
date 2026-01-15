@@ -186,14 +186,14 @@ class StarlinkConnectionQuality:
             base_score -= threat_deduction
             deductions.append(f"threats({len(self.active_threats)}): -{threat_deduction}")
             logger.info(
-                f"Quality score impacted by {len(self.active_threats)} active threat(s), "
-                f"deducting {threat_deduction} points"
+                "Quality score impacted by %d active threat(s), deducting %s points",
+                len(self.active_threats), threat_deduction
             )
         
         final_score = max(0, min(100, base_score))
         
         if deductions:
-            logger.debug(f"Quality score deductions: {', '.join(deductions)}. Final score: {final_score}")
+            logger.debug("Quality score deductions: %s. Final score: %s", ', '.join(deductions), final_score)
         
         return final_score
     
@@ -214,9 +214,7 @@ class StarlinkConnectionQuality:
         for threat in self.active_threats:
             if isinstance(threat, dict) and 'severity' in threat:
                 # Weighted threat based on severity
-                severity = threat.get('severity', 'medium')
-                if isinstance(severity, str):
-                    severity = severity.lower()
+                severity = str(threat.get('severity', 'medium')).lower()
                 
                 if severity not in THREAT_SEVERITY_MULTIPLIERS:
                     raise ValueError(
