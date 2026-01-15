@@ -2350,3 +2350,604 @@ class StarlinkSecurityFoundation:
         """
         return list(self.rbac_audit_log)
 
+
+# ============================================================================
+# Operational Maturity Extensions
+# ============================================================================
+
+class ClusterNode:
+    """Represents a node in a high-availability cluster."""
+    
+    def __init__(self, node_id: str, address: str, is_leader: bool = False):
+        self.node_id = node_id
+        self.address = address
+        self.is_leader = is_leader
+        self.last_heartbeat = datetime.now()
+        self.healthy = True
+
+
+class ClusterManager:
+    """
+    Manages high-availability clustering with leader election.
+    Enables distributed deployment with automatic failover.
+    """
+    
+    def __init__(self, node_id: str, heartbeat_interval: int = 5):
+        self.node_id = node_id
+        self.heartbeat_interval = heartbeat_interval
+        self.nodes: Dict[str, ClusterNode] = {}
+        self.leader_id: Optional[str] = None
+        self._lock = threading.RLock()
+        self._running = False
+        self._heartbeat_thread: Optional[threading.Thread] = None
+    
+    def register_node(self, node_id: str, address: str):
+        """Register a node in the cluster."""
+        with self._lock:
+            self.nodes[node_id] = ClusterNode(node_id, address)
+    
+    def elect_leader(self) -> str:
+        """
+        Perform leader election (simple implementation - lowest node_id wins).
+        In production, use Raft, Paxos, or ZooKeeper.
+        """
+        with self._lock:
+            healthy_nodes = [n for n in self.nodes.values() if n.healthy]
+            if not healthy_nodes:
+                return None
+            
+            # Simple leader election: lexicographically smallest node_id
+            leader = min(healthy_nodes, key=lambda n: n.node_id)
+            self.leader_id = leader.node_id
+            leader.is_leader = True
+            
+            # Mark others as followers
+            for node in healthy_nodes:
+                if node.node_id != leader.node_id:
+                    node.is_leader = False
+            
+            return self.leader_id
+    
+    def is_leader(self) -> bool:
+        """Check if current node is the leader."""
+        with self._lock:
+            return self.leader_id == self.node_id
+    
+    def update_heartbeat(self, node_id: str):
+        """Update heartbeat timestamp for a node."""
+        with self._lock:
+            if node_id in self.nodes:
+                self.nodes[node_id].last_heartbeat = datetime.now()
+    
+    def check_health(self):
+        """Check health of all nodes and trigger re-election if needed."""
+        with self._lock:
+            timeout = timedelta(seconds=self.heartbeat_interval * 3)
+            now = datetime.now()
+            
+            for node in self.nodes.values():
+                was_healthy = node.healthy
+                node.healthy = (now - node.last_heartbeat) < timeout
+                
+                if was_healthy and not node.healthy:
+                    logging.warning(f"Node {node.node_id} became unhealthy")
+                    if node.is_leader:
+                        logging.warning("Leader is unhealthy, triggering re-election")
+                        self.elect_leader()
+    
+    def start(self):
+        """Start cluster management with heartbeat monitoring."""
+        self._running = True
+        self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
+        self._heartbeat_thread.start()
+    
+    def stop(self):
+        """Stop cluster management."""
+        self._running = False
+        if self._heartbeat_thread:
+            self._heartbeat_thread.join(timeout=5)
+    
+    def _heartbeat_loop(self):
+        """Background thread for heartbeat monitoring."""
+        while self._running:
+            self.check_health()
+            self.update_heartbeat(self.node_id)
+            time.sleep(self.heartbeat_interval)
+
+
+class GeoReplication:
+    """
+    Manages geo-replicated backups for disaster recovery.
+    Supports multi-region state persistence with integrity verification.
+    """
+    
+    def __init__(self, primary_region: str, replica_regions: List[str]):
+        self.primary_region = primary_region
+        self.replica_regions = replica_regions
+        self.backup_locations: Dict[str, Path] = {}
+    
+    def add_backup_location(self, region: str, path: Path):
+        """Register a backup location for a region."""
+        self.backup_locations[region] = path
+        path.mkdir(parents=True, exist_ok=True)
+    
+    def save_with_replication(self, state_data: bytes, checksum: str) -> Dict[str, bool]:
+        """
+        Save state data to all regions with integrity verification.
+        
+        Returns:
+            Dictionary mapping region to success status
+        """
+        results = {}
+        
+        # Save to primary
+        if self.primary_region in self.backup_locations:
+            primary_path = self.backup_locations[self.primary_region]
+            results[self.primary_region] = self._save_to_location(
+                primary_path, state_data, checksum
+            )
+        
+        # Replicate to all regions
+        for region in self.replica_regions:
+            if region in self.backup_locations:
+                replica_path = self.backup_locations[region]
+                results[region] = self._save_to_location(
+                    replica_path, state_data, checksum
+                )
+        
+        return results
+    
+    def restore_with_verification(self, region: str = None) -> Optional[bytes]:
+        """
+        Restore state data with integrity verification.
+        Falls back to other regions if primary fails.
+        """
+        # Try specified region first
+        if region and region in self.backup_locations:
+            data = self._load_from_location(self.backup_locations[region])
+            if data:
+                return data
+        
+        # Try primary region
+        if self.primary_region in self.backup_locations:
+            data = self._load_from_location(self.backup_locations[self.primary_region])
+            if data:
+                return data
+        
+        # Fall back to replicas
+        for region in self.replica_regions:
+            if region in self.backup_locations:
+                data = self._load_from_location(self.backup_locations[region])
+                if data:
+                    logging.info(f"Restored state from replica region: {region}")
+                    return data
+        
+        return None
+    
+    def _save_to_location(self, path: Path, data: bytes, checksum: str) -> bool:
+        """Save data to a location with checksum."""
+        try:
+            state_file = path / "state.pkl"
+            checksum_file = path / "state.sha256"
+            
+            with open(state_file, "wb") as f:
+                f.write(data)
+            
+            with open(checksum_file, "w") as f:
+                f.write(checksum)
+            
+            return True
+        except Exception as e:
+            logging.error(f"Failed to save to {path}: {e}")
+            return False
+    
+    def _load_from_location(self, path: Path) -> Optional[bytes]:
+        """Load data from a location and verify checksum."""
+        try:
+            state_file = path / "state.pkl"
+            checksum_file = path / "state.sha256"
+            
+            if not state_file.exists() or not checksum_file.exists():
+                return None
+            
+            with open(state_file, "rb") as f:
+                data = f.read()
+            
+            with open(checksum_file, "r") as f:
+                expected_checksum = f.read().strip()
+            
+            # Verify checksum
+            actual_checksum = hashlib.sha256(data).hexdigest()
+            if actual_checksum != expected_checksum:
+                logging.error(f"Checksum mismatch for {path}")
+                return None
+            
+            return data
+        except Exception as e:
+            logging.error(f"Failed to load from {path}: {e}")
+            return None
+
+
+class WorkerPool:
+    """
+    Thread pool for parallel scoring with adaptive batching.
+    Enables concurrent ML scoring with configurable workers.
+    """
+    
+    def __init__(self, num_workers: int = 4, max_batch_size: int = 100):
+        self.num_workers = num_workers
+        self.max_batch_size = max_batch_size
+        self.task_queue = queue.Queue()
+        self.workers: List[threading.Thread] = []
+        self._running = False
+        self._batch_lock = threading.Lock()
+        self._pending_batch: List[Any] = []
+        self._batch_timer: Optional[threading.Timer] = None
+    
+    def start(self):
+        """Start worker threads."""
+        self._running = True
+        for i in range(self.num_workers):
+            worker = threading.Thread(target=self._worker_loop, daemon=True, name=f"Worker-{i}")
+            worker.start()
+            self.workers.append(worker)
+    
+    def stop(self):
+        """Stop all worker threads."""
+        self._running = False
+        for _ in range(self.num_workers):
+            self.task_queue.put(None)  # Poison pill
+        for worker in self.workers:
+            worker.join(timeout=5)
+    
+    def submit(self, task: Callable, *args, **kwargs):
+        """Submit a task to the pool."""
+        self.task_queue.put((task, args, kwargs))
+    
+    def submit_batch(self, items: List[Any], batch_task: Callable):
+        """Submit items for adaptive batching."""
+        with self._batch_lock:
+            self._pending_batch.extend(items)
+            
+            # Process batch if it reaches max size
+            if len(self._pending_batch) >= self.max_batch_size:
+                self._process_batch(batch_task)
+            else:
+                # Schedule batch processing after timeout
+                if self._batch_timer:
+                    self._batch_timer.cancel()
+                self._batch_timer = threading.Timer(0.1, lambda: self._process_batch(batch_task))
+                self._batch_timer.start()
+    
+    def _process_batch(self, batch_task: Callable):
+        """Process accumulated batch."""
+        with self._batch_lock:
+            if not self._pending_batch:
+                return
+            
+            batch = self._pending_batch[:]
+            self._pending_batch.clear()
+            
+            if self._batch_timer:
+                self._batch_timer.cancel()
+                self._batch_timer = None
+        
+        self.submit(batch_task, batch)
+    
+    def _worker_loop(self):
+        """Worker thread main loop."""
+        while self._running:
+            try:
+                item = self.task_queue.get(timeout=1)
+                if item is None:  # Poison pill
+                    break
+                
+                task, args, kwargs = item
+                task(*args, **kwargs)
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logging.error(f"Worker error: {e}")
+
+
+class MultiTenantRBAC:
+    """
+    Multi-tenant RBAC with per-tenant audit chains.
+    Extends base RBAC for enterprise multi-tenancy support.
+    """
+    
+    def __init__(self):
+        self.tenant_permissions: Dict[str, Dict[str, Set[str]]] = {}
+        self.tenant_audit_logs: Dict[str, List[Dict[str, Any]]] = {}
+        self._lock = threading.RLock()
+    
+    def add_tenant(self, tenant_id: str):
+        """Register a new tenant."""
+        with self._lock:
+            if tenant_id not in self.tenant_permissions:
+                self.tenant_permissions[tenant_id] = {}
+                self.tenant_audit_logs[tenant_id] = []
+    
+    def set_tenant_role_permissions(self, tenant_id: str, role: str, permissions: Set[str]):
+        """Set permissions for a role within a tenant."""
+        with self._lock:
+            if tenant_id not in self.tenant_permissions:
+                self.add_tenant(tenant_id)
+            self.tenant_permissions[tenant_id][role] = permissions
+    
+    def check_tenant_permission(self, tenant_id: str, role: str, permission: str) -> bool:
+        """Check if a role has a permission within a tenant."""
+        with self._lock:
+            if tenant_id not in self.tenant_permissions:
+                return False
+            if role not in self.tenant_permissions[tenant_id]:
+                return False
+            return permission in self.tenant_permissions[tenant_id][role]
+    
+    def log_tenant_decision(self, tenant_id: str, role: str, action: str, 
+                          allowed: bool, reason: str = ""):
+        """Log an RBAC decision for a tenant."""
+        with self._lock:
+            if tenant_id not in self.tenant_audit_logs:
+                self.add_tenant(tenant_id)
+            
+            entry = {
+                "timestamp": datetime.now().isoformat(),
+                "tenant_id": tenant_id,
+                "role": role,
+                "action": action,
+                "allowed": allowed,
+                "reason": reason
+            }
+            self.tenant_audit_logs[tenant_id].append(entry)
+    
+    def get_tenant_audit_log(self, tenant_id: str) -> List[Dict[str, Any]]:
+        """Get audit log for a specific tenant."""
+        with self._lock:
+            return list(self.tenant_audit_logs.get(tenant_id, []))
+
+
+class ComplianceProfile:
+    """
+    Pre-packaged compliance formatter profiles.
+    Supports PCI DSS, HIPAA, ISO 27001, SOC 2.
+    """
+    
+    PROFILES = {
+        "PCI_DSS": {
+            "standard": "PCI DSS v4.0",
+            "required_fields": ["timestamp", "actor", "action", "resource", "outcome"],
+            "retention_days": 365,
+            "encryption_required": True
+        },
+        "HIPAA": {
+            "standard": "HIPAA Security Rule",
+            "required_fields": ["timestamp", "actor", "action", "resource", "outcome", "phi_accessed"],
+            "retention_days": 2555,  # 7 years
+            "encryption_required": True
+        },
+        "ISO_27001": {
+            "standard": "ISO/IEC 27001:2022",
+            "required_fields": ["timestamp", "actor", "action", "resource", "outcome"],
+            "retention_days": 1095,  # 3 years
+            "encryption_required": True
+        },
+        "SOC_2": {
+            "standard": "SOC 2 Type II",
+            "required_fields": ["timestamp", "actor", "action", "resource", "outcome", "control_objective"],
+            "retention_days": 365,
+            "encryption_required": True
+        }
+    }
+    
+    @classmethod
+    def get_profile(cls, profile_name: str) -> Dict[str, Any]:
+        """Get compliance profile configuration."""
+        return cls.PROFILES.get(profile_name, {})
+    
+    @classmethod
+    def create_formatter(cls, profile_name: str) -> 'AuditFormatter':
+        """Create an audit formatter for a compliance profile."""
+        profile = cls.get_profile(profile_name)
+        if not profile:
+            raise ValueError(f"Unknown compliance profile: {profile_name}")
+        
+        class ProfileFormatter(AuditFormatter):
+            def format_audit_entry(self, entry: Dict[str, Any]) -> str:
+                return json.dumps({
+                    "standard": profile["standard"],
+                    **entry
+                }, indent=2)
+            
+            def get_standard_name(self) -> str:
+                return profile["standard"]
+        
+        return ProfileFormatter()
+
+
+class ChaosTestingFramework:
+    """
+    Chaos testing framework for resilience validation.
+    Simulates failures, latency, and resource constraints.
+    """
+    
+    def __init__(self):
+        self.active_faults: List[Dict[str, Any]] = []
+        self._lock = threading.Lock()
+    
+    def inject_latency(self, component: str, delay_ms: int, duration_sec: int = 60):
+        """Inject artificial latency into a component."""
+        with self._lock:
+            self.active_faults.append({
+                "type": "latency",
+                "component": component,
+                "delay_ms": delay_ms,
+                "expires_at": datetime.now() + timedelta(seconds=duration_sec)
+            })
+    
+    def inject_failure(self, component: str, failure_rate: float, duration_sec: int = 60):
+        """Inject random failures into a component."""
+        with self._lock:
+            self.active_faults.append({
+                "type": "failure",
+                "component": component,
+                "failure_rate": failure_rate,  # 0.0 to 1.0
+                "expires_at": datetime.now() + timedelta(seconds=duration_sec)
+            })
+    
+    def inject_resource_constraint(self, resource_type: str, limit: int, duration_sec: int = 60):
+        """Inject resource constraints (e.g., memory, CPU)."""
+        with self._lock:
+            self.active_faults.append({
+                "type": "resource_constraint",
+                "resource_type": resource_type,
+                "limit": limit,
+                "expires_at": datetime.now() + timedelta(seconds=duration_sec)
+            })
+    
+    def should_fail(self, component: str) -> bool:
+        """Check if a component should fail based on active faults."""
+        import random
+        
+        with self._lock:
+            now = datetime.now()
+            self.active_faults = [f for f in self.active_faults if f["expires_at"] > now]
+            
+            for fault in self.active_faults:
+                if fault["component"] == component and fault["type"] == "failure":
+                    return random.random() < fault["failure_rate"]
+        
+        return False
+    
+    def get_latency(self, component: str) -> int:
+        """Get injected latency for a component in milliseconds."""
+        with self._lock:
+            now = datetime.now()
+            self.active_faults = [f for f in self.active_faults if f["expires_at"] > now]
+            
+            for fault in self.active_faults:
+                if fault["component"] == component and fault["type"] == "latency":
+                    return fault["delay_ms"]
+        
+        return 0
+    
+    def clear_faults(self):
+        """Clear all active faults."""
+        with self._lock:
+            self.active_faults.clear()
+
+
+class UnifiedCLI:
+    """
+    Unified CLI/API interface for operational tasks.
+    Provides dry-run mode and command history.
+    """
+    
+    def __init__(self, foundation: 'StarlinkSecurityFoundation'):
+        self.foundation = foundation
+        self.command_history: List[Dict[str, Any]] = []
+        self._lock = threading.Lock()
+    
+    def execute(self, command: str, args: Dict[str, Any], dry_run: bool = False) -> Dict[str, Any]:
+        """
+        Execute a command with optional dry-run mode.
+        
+        Args:
+            command: Command name (rotate_key, reload_config, export_audit, ingest_feed)
+            args: Command arguments
+            dry_run: If True, simulate without making changes
+            
+        Returns:
+            Command result with success status and output
+        """
+        with self._lock:
+            # Log command
+            cmd_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "command": command,
+                "args": args,
+                "dry_run": dry_run
+            }
+            
+            try:
+                if dry_run:
+                    result = self._simulate_command(command, args)
+                    cmd_entry["status"] = "simulated"
+                    cmd_entry["output"] = result
+                else:
+                    result = self._execute_command(command, args)
+                    cmd_entry["status"] = "executed"
+                    cmd_entry["output"] = result
+                
+                self.command_history.append(cmd_entry)
+                return {"success": True, **result}
+            
+            except Exception as e:
+                cmd_entry["status"] = "failed"
+                cmd_entry["error"] = str(e)
+                self.command_history.append(cmd_entry)
+                return {"success": False, "error": str(e)}
+    
+    def _simulate_command(self, command: str, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Simulate command execution without making changes."""
+        simulations = {
+            "rotate_key": lambda: {"message": "Would rotate encryption key and create backup"},
+            "reload_config": lambda: {"message": f"Would reload config from {args.get('path', 'default')}"},
+            "export_audit": lambda: {"message": f"Would export audit to {args.get('output', 'audit.json')}"},
+            "ingest_feed": lambda: {"message": f"Would ingest threat feed from {args.get('source', 'unknown')}"}
+        }
+        
+        if command in simulations:
+            return simulations[command]()
+        else:
+            return {"message": f"Unknown command: {command}"}
+    
+    def _execute_command(self, command: str, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute command on the foundation."""
+        if command == "rotate_key":
+            self.foundation.rotate_encryption_key()
+            return {"message": "Encryption key rotated successfully"}
+        
+        elif command == "reload_config":
+            path = args.get("path")
+            self.foundation.reload_config(path)
+            return {"message": "Configuration reloaded successfully"}
+        
+        elif command == "export_audit":
+            output = args.get("output", "audit.json")
+            formatter = args.get("formatter", "ISO27001")
+            
+            # Get formatter
+            if formatter in ComplianceProfile.PROFILES:
+                fmt = ComplianceProfile.create_formatter(formatter)
+            else:
+                fmt = self.foundation.audit_formatters[0] if self.foundation.audit_formatters else None
+            
+            if fmt:
+                self.foundation.export_compliance_audit(fmt, output)
+                return {"message": f"Audit exported to {output}"}
+            else:
+                return {"message": "No formatter available"}
+        
+        elif command == "ingest_feed":
+            connector_type = args.get("connector_type", "STIX")
+            config = args.get("config", {})
+            
+            if connector_type == "STIX":
+                connector = STIXTAXIIConnector(config)
+            elif connector_type == "MISP":
+                connector = MISPConnector(config)
+            else:
+                return {"message": f"Unknown connector type: {connector_type}"}
+            
+            indicators = self.foundation.integrate_threat_feed(connector)
+            return {"message": f"Ingested {len(indicators)} threat indicators"}
+        
+        else:
+            raise ValueError(f"Unknown command: {command}")
+    
+    def get_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get command history."""
+        with self._lock:
+            return self.command_history[-limit:]
+
