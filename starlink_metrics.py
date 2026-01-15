@@ -5,7 +5,45 @@ This module provides functionality to monitor and calculate quality metrics
 for Starlink satellite internet connections based on packet loss and latency.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List, Optional, Callable, Dict
+from enum import Enum
+from collections import deque
+from statistics import mean
+
+
+class ServiceLevel(Enum):
+    """Service level classification for connection quality."""
+    STABLE = "Stable"
+    DEGRADED = "Degraded"
+    CRITICAL = "Critical"
+    OFFLINE = "Offline"
+
+
+@dataclass
+class QualityThresholds:
+    """Configurable thresholds for quality score calculation."""
+    packet_loss_threshold: float = 5.0  # Percentage
+    packet_loss_penalty: float = 10.0  # Points to deduct
+    latency_threshold: float = 150.0  # Milliseconds
+    latency_penalty: float = 5.0  # Points to deduct
+
+
+@dataclass
+class StabilityThresholds:
+    """Configurable thresholds for stability score calculation."""
+    max_latency: float = 500.0  # Milliseconds - latency ceiling
+    packet_loss_weight: float = 0.7  # Weight for packet loss factor (0.0-1.0)
+    latency_weight: float = 0.3  # Weight for latency factor (0.0-1.0)
+    packet_loss_multiplier: float = 2.0  # Multiplier for packet loss penalty
+
+
+@dataclass
+class AlertThresholds:
+    """Thresholds for triggering alerts."""
+    critical_stability: float = 0.3  # Trigger alert when stability falls below
+    degraded_stability: float = 0.5  # Trigger warning when stability falls below
+    stable_stability: float = 0.7  # Stable connection threshold
 
 
 @dataclass
@@ -27,23 +65,46 @@ class StarlinkConnectionQuality:
     Calculate and monitor Starlink connection quality metrics.
     
     This class evaluates connection quality based on packet loss and latency,
-    providing stability scores and overall quality assessments.
+    providing stability scores and overall quality assessments with configurable
+    thresholds and alert capabilities.
     """
     
-    def __init__(self, metrics: ConnectionMetrics):
+    def __init__(
+        self,
+        metrics: ConnectionMetrics,
+        quality_thresholds: Optional[QualityThresholds] = None,
+        stability_thresholds: Optional[StabilityThresholds] = None,
+        alert_thresholds: Optional[AlertThresholds] = None,
+        alert_callback: Optional[Callable[[str, Dict], None]] = None,
+        history_window_size: int = 0
+    ):
         """
         Initialize the connection quality calculator.
         
         Args:
             metrics: ConnectionMetrics object containing packet_loss and latency
+            quality_thresholds: Optional custom quality thresholds
+            stability_thresholds: Optional custom stability thresholds
+            alert_thresholds: Optional custom alert thresholds
+            alert_callback: Optional callback function for alerts (receives alert_level, data)
+            history_window_size: Size of sliding window for historical smoothing (0 = disabled)
         """
         self.metrics = metrics
+        self.quality_thresholds = quality_thresholds or QualityThresholds()
+        self.stability_thresholds = stability_thresholds or StabilityThresholds()
+        self.alert_thresholds = alert_thresholds or AlertThresholds()
+        self.alert_callback = alert_callback
+        
+        # Historical tracking for smoothing
+        self.history_window_size = history_window_size
+        self.stability_history: deque = deque(maxlen=history_window_size if history_window_size > 0 else None)
     
     def calculate_quality_score(self) -> float:
         """
         Calculate overall connection quality score (0-100).
         
-        The base score starts at 100 and is reduced based on:
+        The base score starts at 100 and is reduced based on configurable thresholds.
+        Default penalties:
         - Packet loss > 5%: -10 points
         - Latency > 150ms: -5 points
         
@@ -52,10 +113,10 @@ class StarlinkConnectionQuality:
         """
         base_score = 100.0
         
-        if self.metrics.packet_loss > 5:
-            base_score -= 10
-        if self.metrics.latency > 150:
-            base_score -= 5
+        if self.metrics.packet_loss > self.quality_thresholds.packet_loss_threshold:
+            base_score -= self.quality_thresholds.packet_loss_penalty
+        if self.metrics.latency > self.quality_thresholds.latency_threshold:
+            base_score -= self.quality_thresholds.latency_penalty
         
         return max(0, min(100, base_score))
     
@@ -63,7 +124,8 @@ class StarlinkConnectionQuality:
         """
         Calculate connection stability score based on packet loss and latency.
         
-        This method heavily penalizes packet loss (70% weight) and considers
+        Uses configurable weights and thresholds for flexible calculation.
+        Default: heavily penalizes packet loss (70% weight) and considers
         latency (30% weight) with a 500ms threshold.
         
         Args:
@@ -74,33 +136,120 @@ class StarlinkConnectionQuality:
             Stability score between 0.0 and 1.0
         """
         # Heavily penalize packet loss
-        loss_factor = max(0, 1 - packet_loss * 2)
-        # 500ms as the latency limit
-        latency_factor = max(0, 1 - latency / 500)
-        return (loss_factor * 0.7 + latency_factor * 0.3)
+        loss_factor = max(
+            0,
+            1 - packet_loss * self.stability_thresholds.packet_loss_multiplier
+        )
+        # Latency factor based on configurable maximum
+        latency_factor = max(
+            0,
+            1 - latency / self.stability_thresholds.max_latency
+        )
+        
+        return (
+            loss_factor * self.stability_thresholds.packet_loss_weight +
+            latency_factor * self.stability_thresholds.latency_weight
+        )
     
-    def calculate_stability_score(self) -> float:
+    def calculate_stability_score(self, use_smoothing: bool = True) -> float:
         """
         Calculate stability score using stored metrics.
+        
+        Args:
+            use_smoothing: If True and history is enabled, return smoothed average
         
         Returns:
             Stability score between 0.0 and 1.0
         """
         # Convert percentage to decimal for calculation
         packet_loss_decimal = self.metrics.packet_loss / 100.0
-        return self._calculate_stability(packet_loss_decimal, self.metrics.latency)
+        current_stability = self._calculate_stability(
+            packet_loss_decimal,
+            self.metrics.latency
+        )
+        
+        # Add to history if enabled
+        if self.history_window_size > 0:
+            self.stability_history.append(current_stability)
+            
+            # Return smoothed average if requested and we have history
+            if use_smoothing and len(self.stability_history) > 0:
+                return mean(self.stability_history)
+        
+        return current_stability
+    
+    def get_service_level(self, stability: float) -> ServiceLevel:
+        """
+        Map stability score to service level classification.
+        
+        Args:
+            stability: Stability score (0.0-1.0)
+            
+        Returns:
+            ServiceLevel enum value
+        """
+        if stability >= self.alert_thresholds.stable_stability:
+            return ServiceLevel.STABLE
+        elif stability >= self.alert_thresholds.degraded_stability:
+            return ServiceLevel.DEGRADED
+        elif stability >= self.alert_thresholds.critical_stability:
+            return ServiceLevel.CRITICAL
+        else:
+            return ServiceLevel.OFFLINE
+    
+    def _trigger_alert(self, alert_level: str, data: Dict) -> None:
+        """
+        Trigger an alert if callback is configured.
+        
+        Args:
+            alert_level: Level of alert ("critical", "degraded", "warning")
+            data: Dictionary with alert context
+        """
+        if self.alert_callback:
+            self.alert_callback(alert_level, data)
+    
+    def check_and_alert(self, stability: float) -> Optional[str]:
+        """
+        Check stability against alert thresholds and trigger alerts if needed.
+        
+        Args:
+            stability: Current stability score
+            
+        Returns:
+            Alert level if triggered, None otherwise
+        """
+        alert_level = None
+        
+        if stability < self.alert_thresholds.critical_stability:
+            alert_level = "critical"
+        elif stability < self.alert_thresholds.degraded_stability:
+            alert_level = "degraded"
+        
+        if alert_level:
+            self._trigger_alert(alert_level, {
+                "stability": stability,
+                "packet_loss": self.metrics.packet_loss,
+                "latency": self.metrics.latency,
+                "service_level": self.get_service_level(stability).value
+            })
+        
+        return alert_level
     
     def get_connection_status(self) -> dict:
         """
         Get comprehensive connection status information.
         
         Returns:
-            Dictionary containing quality score, stability score, and metrics
+            Dictionary containing quality score, stability score, service level, and metrics
         """
         quality = self.calculate_quality_score()
         stability = self.calculate_stability_score()
+        service_level = self.get_service_level(stability)
         
-        # Determine connection status based on scores
+        # Check for alerts
+        alert_level = self.check_and_alert(stability)
+        
+        # Determine connection status based on scores (legacy compatibility)
         if quality >= 90 and stability >= 0.9:
             status = "Excellent"
         elif quality >= 75 and stability >= 0.7:
@@ -110,13 +259,22 @@ class StarlinkConnectionQuality:
         else:
             status = "Poor"
         
-        return {
+        result = {
             "status": status,
             "quality_score": quality,
             "stability_score": stability,
+            "service_level": service_level.value,
             "packet_loss": self.metrics.packet_loss,
             "latency": self.metrics.latency
         }
+        
+        if alert_level:
+            result["alert_level"] = alert_level
+        
+        if self.history_window_size > 0 and len(self.stability_history) > 0:
+            result["stability_history_size"] = len(self.stability_history)
+        
+        return result
 
 
 def monitor_connection(packet_loss: float, latency: float) -> dict:
