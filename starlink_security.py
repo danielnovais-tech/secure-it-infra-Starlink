@@ -364,7 +364,7 @@ class InMemoryStateStore(StateStore):
 class ThreatScorer(ABC):
     """
     Abstract base class for ML-based threat scoring.
-    Enables pluggable ML models for anomaly detection.
+    Enables pluggable ML models for anomaly detection with explainability.
     """
     
     @abstractmethod
@@ -392,6 +392,26 @@ class ThreatScorer(ABC):
             List of score dictionaries
         """
         pass
+    
+    def get_feature_importance(self) -> Dict[str, float]:
+        """
+        Get feature importance for explainability.
+        Optional method for scorers that support explainability.
+        
+        Returns:
+            Dictionary mapping feature names to importance scores (0-1)
+        """
+        return {}  # Default: no explainability
+    
+    def is_healthy(self) -> bool:
+        """
+        Check if the scorer is healthy and operational.
+        Used for graceful degradation.
+        
+        Returns:
+            True if scorer is operational, False otherwise
+        """
+        return True  # Default: always healthy
 
 
 class RuleBasedThreatScorer(ThreatScorer):
@@ -418,6 +438,136 @@ class RuleBasedThreatScorer(ThreatScorer):
     def score_batch(self, events: List['SecurityEvent']) -> List[Dict[str, Any]]:
         """Score multiple events."""
         return [self.score(event) for event in events]
+    
+    def get_feature_importance(self) -> Dict[str, float]:
+        """Get feature importance for rule-based scorer."""
+        return {
+            "severity": 1.0,
+            "source": 0.3,
+            "event_type": 0.2
+        }
+
+
+class HybridThreatScorer(ThreatScorer):
+    """
+    Hybrid threat scorer combining rule-based and ML scoring.
+    Provides configurable weighting and explainability.
+    Implements graceful degradation if ML scorer fails.
+    """
+    
+    def __init__(self, ml_scorer: Optional[ThreatScorer] = None, 
+                 rule_weight: float = 0.3, ml_weight: float = 0.7):
+        """
+        Initialize hybrid scorer.
+        
+        Args:
+            ml_scorer: ML-based scorer (optional, uses rule-based if None)
+            rule_weight: Weight for rule-based score (0-1)
+            ml_weight: Weight for ML score (0-1)
+        """
+        self.rule_scorer = RuleBasedThreatScorer()
+        self.ml_scorer = ml_scorer
+        self.rule_weight = rule_weight
+        self.ml_weight = ml_weight
+        self._ml_healthy = True
+        self.logger = logging.getLogger("starlink_security.hybrid_scorer")
+    
+    def score(self, event: 'SecurityEvent') -> Dict[str, Any]:
+        """
+        Score using hybrid approach with graceful degradation.
+        
+        Args:
+            event: Security event to score
+            
+        Returns:
+            Combined score with explainability factors
+        """
+        # Always get rule-based score
+        rule_result = self.rule_scorer.score(event)
+        rule_risk = rule_result["risk"]
+        
+        # Try ML scoring with graceful degradation
+        ml_risk = None
+        ml_factors = {}
+        
+        if self.ml_scorer and self._ml_healthy:
+            try:
+                ml_result = self.ml_scorer.score(event)
+                ml_risk = ml_result["risk"]
+                ml_factors = ml_result.get("factors", {})
+            except Exception as e:
+                self.logger.warning(f"ML scorer failed, falling back to rules: {e}")
+                self._ml_healthy = False
+        
+        # Compute hybrid risk
+        if ml_risk is not None:
+            risk = (self.rule_weight * rule_risk) + (self.ml_weight * ml_risk)
+            scoring_method = "hybrid"
+        else:
+            risk = rule_risk
+            scoring_method = "rule_based_fallback"
+        
+        # Combine factors for explainability
+        factors = {
+            "scoring_method": scoring_method,
+            "rule_risk": rule_risk,
+            "rule_factors": rule_result["factors"],
+        }
+        
+        if ml_risk is not None:
+            factors["ml_risk"] = ml_risk
+            factors["ml_factors"] = ml_factors
+            factors["weights"] = {
+                "rule": self.rule_weight,
+                "ml": self.ml_weight
+            }
+        
+        return {"risk": risk, "factors": factors}
+    
+    def score_batch(self, events: List['SecurityEvent']) -> List[Dict[str, Any]]:
+        """Score multiple events with hybrid approach."""
+        return [self.score(event) for event in events]
+    
+    def get_feature_importance(self) -> Dict[str, float]:
+        """
+        Get combined feature importance from both scorers.
+        
+        Returns:
+            Dictionary of feature importance scores
+        """
+        importance = self.rule_scorer.get_feature_importance()
+        
+        if self.ml_scorer and self._ml_healthy:
+            try:
+                ml_importance = self.ml_scorer.get_feature_importance()
+                # Combine importances with weights
+                for feature, value in ml_importance.items():
+                    if feature in importance:
+                        importance[feature] = (
+                            self.rule_weight * importance[feature] +
+                            self.ml_weight * value
+                        )
+                    else:
+                        importance[feature] = self.ml_weight * value
+            except Exception as e:
+                self.logger.warning(f"Failed to get ML feature importance: {e}")
+        
+        return importance
+    
+    def is_healthy(self) -> bool:
+        """Check if hybrid scorer is healthy."""
+        rule_healthy = self.rule_scorer.is_healthy()
+        
+        if self.ml_scorer:
+            try:
+                ml_healthy = self.ml_scorer.is_healthy()
+                self._ml_healthy = ml_healthy
+                return rule_healthy  # Can still function with rules only
+            except Exception:
+                self._ml_healthy = False
+                return rule_healthy
+        
+        return rule_healthy
 
 
 class AuditFormatter(ABC):
@@ -790,12 +940,17 @@ class StarlinkSecurityFoundation:
             self.logger.error(f"Failed to rotate encryption key: {e}")
             raise IOError(f"Key rotation failed: {e}") from e
     
+    @requires_permission("config_reload")
     def reload_config(self) -> bool:
         """
         Reload configuration from file at runtime (hot reload).
+        Requires 'config_reload' permission when RBAC is enabled.
         
         Returns:
             True if config was reloaded successfully, False otherwise
+            
+        Raises:
+            PermissionError: If caller lacks config_reload permission
         """
         if not self.config_path:
             self.logger.warning("No config path set, cannot reload")
@@ -876,8 +1031,15 @@ class StarlinkSecurityFoundation:
         self._config_reload_thread.start()
         self.logger.info("Config hot-reload thread started")
     
+    @requires_permission("state_export")
     def save_state(self) -> None:
-        """Save current state to disk for resilience and recovery."""
+        """
+        Save current state to disk for resilience and recovery.
+        Requires 'state_export' permission when RBAC is enabled.
+        
+        Raises:
+            PermissionError: If caller lacks state_export permission
+        """
         try:
             state = {
                 "active_threats": list(self.active_threats),
@@ -1069,6 +1231,7 @@ class StarlinkSecurityFoundation:
     def score_threat(self, event: SecurityEvent) -> Dict[str, Any]:
         """
         Score a security event for threat level using configured scorer.
+        Includes graceful degradation if scorer fails.
         
         Args:
             event: Security event to score
@@ -1077,12 +1240,54 @@ class StarlinkSecurityFoundation:
             Score dictionary with 'risk' and 'factors'
         """
         try:
+            # Check if scorer is healthy
+            if not self.threat_scorer.is_healthy():
+                self.logger.warning("Threat scorer unhealthy, attempting recovery")
+            
             score = self.threat_scorer.score(event)
             self.logger.debug(f"Threat scored: {event.event_type} -> risk={score['risk']}")
             return score
         except Exception as e:
-            self.logger.error(f"Threat scoring failed: {e}")
-            return {"risk": 0.5, "factors": {"error": str(e)}}
+            self.logger.error(f"Threat scoring failed, using fallback: {e}")
+            # Fallback to simple severity-based scoring
+            severity_risk = {"critical": 1.0, "high": 0.8, "medium": 0.5, "low": 0.2}
+            fallback_risk = severity_risk.get(event.severity.lower(), 0.5)
+            return {
+                "risk": fallback_risk,
+                "factors": {
+                    "error": str(e),
+                    "fallback_method": "severity_based",
+                    "severity": event.severity
+                }
+            }
+    
+    def get_scorer_explainability(self) -> Dict[str, Any]:
+        """
+        Get explainability information from the threat scorer.
+        Provides feature importance and scoring method insights.
+        
+        Returns:
+            Dictionary with explainability data including feature importance
+        """
+        try:
+            feature_importance = self.threat_scorer.get_feature_importance()
+            is_healthy = self.threat_scorer.is_healthy()
+            
+            scorer_type = type(self.threat_scorer).__name__
+            
+            return {
+                "scorer_type": scorer_type,
+                "is_healthy": is_healthy,
+                "feature_importance": feature_importance,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to get scorer explainability: {e}")
+            return {
+                "scorer_type": "unknown",
+                "is_healthy": False,
+                "error": str(e)
+            }
     
     def _load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
         """
