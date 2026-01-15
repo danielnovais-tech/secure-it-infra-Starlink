@@ -3,7 +3,7 @@ Repository dedicated to security solutions for managed enterprise infrastructure
 
 ## Security Scoring System
 
-This repository includes a security scoring system that adjusts scores based on security levels with advanced features including configurable multipliers, audit trails, and boundary handling.
+This repository includes a comprehensive security scoring system that adjusts scores based on security levels with advanced features including configurable multipliers, audit trails, export capabilities, historical tracking, and schema validation.
 
 ### Features
 
@@ -14,18 +14,33 @@ This repository includes a security scoring system that adjusts scores based on 
   - NORMAL: 100% of base score (no adjustment)
 - **Configurable Multipliers**: Override default multipliers via:
   - Custom multipliers dictionary
-  - JSON configuration file
-  - Environment-based configuration
+  - JSON configuration file with schema validation
+  - Validates multipliers (non-negative, numeric)
+  - Warns on unusual values (e.g., multipliers > 2.0)
 - **Audit Trail**: Complete audit trail of all scoring operations with:
   - Reason for adjustment
   - Points change details
   - Original and adjusted scores
   - Security level applied
+  - ISO timestamps
+  - Historical comparison data
+  - Configurable detail levels (summary/full)
+- **Audit Trail Export**:
+  - Export to JSON format for downstream analytics
+  - Export to CSV format for dashboards and reporting
+  - Preserves all audit metadata
+- **Historical Comparison**:
+  - Track score changes over time
+  - Automatic delta calculation from previous runs
+  - Narrative descriptions of changes
 - **Boundary Handling**:
   - Zero scores remain zero regardless of multiplier
   - Optional max score cap for very high scores
   - Graceful handling of unknown security levels (defaults to 1.0x)
-- **Input Validation**: Prevents negative base scores with appropriate error handling
+- **Input Validation**: 
+  - Prevents negative base scores with appropriate error handling
+  - Schema validation for configuration files
+  - Clear error messages for misconfiguration
 
 ### Installation
 
@@ -86,15 +101,95 @@ scorer = SecurityScorer(SecurityLevel.CRITICAL)
 scorer.calculate_score(100.0)
 scorer.calculate_score(250.0)
 
-# Get audit trail
-audit_trail = scorer.get_audit_trail()
+# Get audit trail with full detail
+audit_trail = scorer.get_audit_trail(detail_level="full")
 for entry in audit_trail:
     print(entry)
-    # Output: {'reason': 'CRITICAL security level multiplier', 
-    #          'points': '-30.0 (0.7x applied)', 
-    #          'security_level': 'critical',
-    #          'original_score': 100.0,
-    #          'adjusted_score': 70.0}
+    # Output includes: reason, points, security_level, original_score,
+    #                  adjusted_score, timestamp, and historical_delta
+
+# Get summary view
+summary = scorer.get_audit_trail(detail_level="summary")
+# Returns only reason and adjusted_score for each entry
+```
+
+#### Historical Comparison
+
+```python
+scorer = SecurityScorer(SecurityLevel.ELEVATED)
+
+# Track changes over multiple runs
+previous_score = None
+for base in [100.0, 120.0, 90.0]:
+    current = scorer.calculate_score(base, previous_score=previous_score)
+    previous_score = current
+
+# Audit trail includes historical deltas
+trail = scorer.get_audit_trail()
+# Entry format: "ELEVATED security level multiplier (Score increased by 18.0 compared to last run)"
+```
+
+#### Exporting Audit Trail
+
+```python
+scorer = SecurityScorer(SecurityLevel.CRITICAL)
+scorer.calculate_score(100.0, previous_score=120.0)
+scorer.calculate_score(250.0, previous_score=180.0)
+
+# Export to JSON for analytics
+scorer.export_audit_trail_json("audit_log.json", detail_level="full")
+
+# Export to CSV for dashboards
+scorer.export_audit_trail_csv("audit_log.csv")
+```
+
+JSON export format:
+```json
+{
+  "security_level": "critical",
+  "export_timestamp": "2026-01-15T16:00:00.000000",
+  "entries": [
+    {
+      "reason": "CRITICAL security level multiplier (Score decreased by 50.0 compared to last run)",
+      "points": "-30.0 (0.7x applied)",
+      "security_level": "critical",
+      "original_score": 100.0,
+      "adjusted_score": 70.0,
+      "timestamp": "2026-01-15T16:00:00.000000",
+      "previous_score": 120.0,
+      "historical_delta": -50.0
+    }
+  ]
+}
+```
+
+#### Configuration File with Schema Validation
+
+Create a `config.json` file with validation:
+```json
+{
+  "multipliers": {
+    "critical": 0.6,
+    "elevated": 0.85,
+    "normal": 1.0
+  }
+}
+```
+
+The system validates:
+- All security levels are valid (critical, elevated, normal)
+- All multipliers are numeric
+- All multipliers are non-negative
+- Warns if multipliers are unusually high (> 2.0)
+
+```python
+from security_scoring import SecurityScorer, ConfigValidationError
+
+try:
+    scorer = SecurityScorer(SecurityLevel.CRITICAL, config_file="config.json")
+    score = scorer.calculate_score(100.0)
+except ConfigValidationError as e:
+    print(f"Invalid configuration: {e}")
 ```
 
 #### Boundary Cases
@@ -124,13 +219,18 @@ python3 example.py
 python3 -m unittest test_security_scoring.py -v
 ```
 
-All 21 tests should pass.
+All 34 tests should pass, including:
+- Config schema validation tests
+- Audit trail export tests (JSON/CSV)
+- Historical comparison tests
+- Detail level tests
+- Integration tests
 
 ### Files
 
-- `security_scoring.py`: Main module with SecurityLevel enum, SecurityScorer class, and AuditEntry class
-- `test_security_scoring.py`: Comprehensive unit tests (21 test cases)
-- `example.py`: Example usage demonstrations including all features
+- `security_scoring.py`: Main module with SecurityLevel enum, SecurityScorer class, AuditEntry class, and config validation
+- `test_security_scoring.py`: Comprehensive unit tests (34 test cases) including integration tests
+- `example.py`: Example usage demonstrations including all features (8 scenarios)
 - `config.json`: Sample configuration file for custom multipliers
 - `requirements.txt`: Project dependencies (Python 3.12+)
 
@@ -143,9 +243,35 @@ All 21 tests should pass.
 
 #### SecurityScorer (Class)
 - `__init__(security_level, custom_multipliers=None, config_file=None)`: Initialize scorer
-- `calculate_score(base_score, max_score=None)`: Calculate adjusted score
-- `get_audit_trail()`: Get list of audit entries
+  - Raises `ConfigValidationError` if config file is invalid
+- `calculate_score(base_score, max_score=None, previous_score=None)`: Calculate adjusted score
+  - `previous_score`: Optional previous score for historical comparison
+- `get_audit_trail(detail_level="full")`: Get list of audit entries
+  - `detail_level`: "summary" or "full"
 - `clear_audit_trail()`: Clear the audit trail
+- `export_audit_trail_json(filepath, detail_level="full")`: Export audit trail to JSON
+- `export_audit_trail_csv(filepath)`: Export audit trail to CSV
 
 #### AuditEntry (Class)
-- `to_dict()`: Convert audit entry to dictionary format
+- `to_dict(detail_level="full")`: Convert audit entry to dictionary format
+  - Returns different fields based on detail_level
+
+#### Utility Functions
+- `validate_config_schema(config)`: Validate configuration dictionary
+  - Raises `ConfigValidationError` for invalid configs
+
+### Integration Tests
+
+The test suite includes integration tests that verify the complete workflow:
+
+```python
+# Example integration test workflow
+scorer = SecurityScorer(SecurityLevel.CRITICAL, config_file="config.json")
+score1 = scorer.calculate_score(100.0)
+score2 = scorer.calculate_score(250.0, previous_score=200.0)
+score3 = scorer.calculate_score(500.0, max_score=400.0)
+scorer.export_audit_trail_json("output.json")
+scorer.export_audit_trail_csv("output.csv")
+```
+
+This ensures the entire pipeline (config loading → scoring → audit tracking → export) works correctly.

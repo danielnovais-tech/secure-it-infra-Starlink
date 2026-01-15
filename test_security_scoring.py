@@ -2,11 +2,71 @@
 Unit tests for the Security Scoring Module
 """
 
+import csv
 import json
 import os
 import tempfile
 import unittest
-from security_scoring import SecurityLevel, SecurityScorer, AuditEntry
+from security_scoring import (
+    SecurityLevel, SecurityScorer, AuditEntry, 
+    validate_config_schema, ConfigValidationError
+)
+
+
+class TestConfigValidation(unittest.TestCase):
+    """Test cases for configuration validation."""
+    
+    def test_valid_config(self):
+        """Test that valid config passes validation."""
+        config = {
+            "multipliers": {
+                "critical": 0.7,
+                "elevated": 0.9,
+                "normal": 1.0
+            }
+        }
+        # Should not raise
+        validate_config_schema(config)
+    
+    def test_missing_multipliers_key(self):
+        """Test that config without multipliers key raises error."""
+        config = {"other_key": "value"}
+        with self.assertRaises(ConfigValidationError) as context:
+            validate_config_schema(config)
+        self.assertIn("multipliers", str(context.exception))
+    
+    def test_invalid_security_level(self):
+        """Test that invalid security level raises error."""
+        config = {
+            "multipliers": {
+                "invalid_level": 0.5
+            }
+        }
+        with self.assertRaises(ConfigValidationError) as context:
+            validate_config_schema(config)
+        self.assertIn("Invalid security level", str(context.exception))
+    
+    def test_negative_multiplier(self):
+        """Test that negative multiplier raises error."""
+        config = {
+            "multipliers": {
+                "critical": -0.5
+            }
+        }
+        with self.assertRaises(ConfigValidationError) as context:
+            validate_config_schema(config)
+        self.assertIn("non-negative", str(context.exception))
+    
+    def test_non_numeric_multiplier(self):
+        """Test that non-numeric multiplier raises error."""
+        config = {
+            "multipliers": {
+                "critical": "not_a_number"
+            }
+        }
+        with self.assertRaises(ConfigValidationError) as context:
+            validate_config_schema(config)
+        self.assertIn("must be a number", str(context.exception))
 
 
 class TestSecurityLevel(unittest.TestCase):
@@ -240,6 +300,187 @@ class TestSecurityScorer(unittest.TestCase):
         self.assertIn("CRITICAL", entry["reason"])
         self.assertIn("multiplier", entry["reason"])
         self.assertIn("0.7", entry["points"])
+    
+    def test_invalid_config_raises_error(self):
+        """Test that invalid config file raises ConfigValidationError."""
+        # Create an invalid config file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            config = {
+                "multipliers": {
+                    "critical": -0.5  # Negative multiplier
+                }
+            }
+            json.dump(config, f)
+            config_path = f.name
+        
+        try:
+            with self.assertRaises(ConfigValidationError):
+                SecurityScorer(SecurityLevel.CRITICAL, config_file=config_path)
+        finally:
+            os.unlink(config_path)
+    
+    def test_detail_level_summary(self):
+        """Test get_audit_trail with summary detail level."""
+        scorer = SecurityScorer(SecurityLevel.CRITICAL)
+        scorer.calculate_score(100.0)
+        
+        summary_trail = scorer.get_audit_trail(detail_level="summary")
+        self.assertEqual(len(summary_trail), 1)
+        self.assertIn("reason", summary_trail[0])
+        self.assertIn("adjusted_score", summary_trail[0])
+        # Should not include full details
+        self.assertNotIn("original_score", summary_trail[0])
+    
+    def test_detail_level_full(self):
+        """Test get_audit_trail with full detail level."""
+        scorer = SecurityScorer(SecurityLevel.ELEVATED)
+        scorer.calculate_score(100.0)
+        
+        full_trail = scorer.get_audit_trail(detail_level="full")
+        self.assertEqual(len(full_trail), 1)
+        self.assertIn("reason", full_trail[0])
+        self.assertIn("adjusted_score", full_trail[0])
+        self.assertIn("original_score", full_trail[0])
+        self.assertIn("timestamp", full_trail[0])
+    
+    def test_previous_score_comparison(self):
+        """Test historical comparison with previous score."""
+        scorer = SecurityScorer(SecurityLevel.CRITICAL)
+        scorer.calculate_score(100.0, previous_score=120.0)
+        
+        audit_trail = scorer.get_audit_trail()
+        entry = audit_trail[0]
+        
+        self.assertEqual(entry["previous_score"], 120.0)
+        self.assertIn("historical_delta", entry)
+        self.assertEqual(entry["historical_delta"], 70.0 - 120.0)
+        self.assertIn("decreased", entry["reason"])
+    
+    def test_export_json(self):
+        """Test exporting audit trail to JSON."""
+        scorer = SecurityScorer(SecurityLevel.CRITICAL)
+        scorer.calculate_score(100.0)
+        scorer.calculate_score(200.0)
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json_path = f.name
+        
+        try:
+            scorer.export_audit_trail_json(json_path)
+            
+            with open(json_path, 'r') as f:
+                data = json.load(f)
+            
+            self.assertEqual(data["security_level"], "critical")
+            self.assertIn("export_timestamp", data)
+            self.assertEqual(len(data["entries"]), 2)
+        finally:
+            os.unlink(json_path)
+    
+    def test_export_csv(self):
+        """Test exporting audit trail to CSV."""
+        scorer = SecurityScorer(SecurityLevel.ELEVATED)
+        scorer.calculate_score(100.0)
+        scorer.calculate_score(200.0, previous_score=180.0)
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            csv_path = f.name
+        
+        try:
+            scorer.export_audit_trail_csv(csv_path)
+            
+            with open(csv_path, 'r') as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+            
+            self.assertEqual(len(rows), 2)
+            self.assertIn('timestamp', rows[0])
+            self.assertIn('adjusted_score', rows[0])
+        finally:
+            os.unlink(csv_path)
+
+
+class TestIntegration(unittest.TestCase):
+    """Integration tests for the security scoring system."""
+    
+    def test_end_to_end_with_config_file(self):
+        """Test complete workflow: config loading + scoring + audit export."""
+        # Create a config file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            config = {
+                "multipliers": {
+                    "critical": 0.6,
+                    "elevated": 0.8,
+                    "normal": 1.0
+                }
+            }
+            json.dump(config, f)
+            config_path = f.name
+        
+        # Create output files
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json_output = f.name
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+            csv_output = f.name
+        
+        try:
+            # Initialize scorer with config
+            scorer = SecurityScorer(SecurityLevel.CRITICAL, config_file=config_path)
+            
+            # Perform multiple scoring operations
+            score1 = scorer.calculate_score(100.0)
+            score2 = scorer.calculate_score(250.0, previous_score=200.0)
+            score3 = scorer.calculate_score(500.0, max_score=400.0)
+            
+            # Verify scores
+            self.assertEqual(score1, 60.0)  # 100 * 0.6
+            self.assertEqual(score2, 150.0)  # 250 * 0.6
+            self.assertEqual(score3, 300.0)  # min(500 * 0.6, 400)
+            
+            # Verify audit trail
+            trail = scorer.get_audit_trail()
+            self.assertEqual(len(trail), 3)
+            
+            # Export to JSON
+            scorer.export_audit_trail_json(json_output)
+            with open(json_output, 'r') as f:
+                json_data = json.load(f)
+            self.assertEqual(len(json_data["entries"]), 3)
+            
+            # Export to CSV
+            scorer.export_audit_trail_csv(csv_output)
+            with open(csv_output, 'r') as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+            self.assertEqual(len(rows), 3)
+            
+        finally:
+            os.unlink(config_path)
+            os.unlink(json_output)
+            os.unlink(csv_output)
+    
+    def test_workflow_with_historical_tracking(self):
+        """Test workflow with historical score tracking."""
+        scorer = SecurityScorer(SecurityLevel.ELEVATED)
+        
+        # Simulate multiple runs with historical tracking
+        previous = None
+        for base in [100.0, 120.0, 90.0]:
+            current = scorer.calculate_score(base, previous_score=previous)
+            previous = current
+        
+        # Verify audit trail includes historical comparisons
+        trail = scorer.get_audit_trail(detail_level="full")
+        self.assertEqual(len(trail), 3)
+        
+        # First entry has no previous score
+        self.assertNotIn("previous_score", trail[0])
+        
+        # Second and third entries have previous scores
+        self.assertIn("previous_score", trail[1])
+        self.assertIn("historical_delta", trail[1])
+        self.assertIn("previous_score", trail[2])
+        self.assertIn("historical_delta", trail[2])
 
 
 if __name__ == '__main__':
