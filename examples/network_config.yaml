@@ -1,0 +1,143 @@
+# Network Security Configuration for Starlink Connections
+# Tailored for enterprise satellite connectivity
+
+# Network Interface Settings
+interfaces:
+  starlink:
+    name: "Starlink Primary"
+    type: "satellite"
+    priority: 1
+    monitoring_enabled: true
+    
+  backup:
+    name: "Cellular Backup"
+    type: "cellular"
+    priority: 2
+    monitoring_enabled: true
+
+# Firewall Rules
+firewall:
+  default_policy: "deny"
+  
+  inbound_rules:
+    - name: "Allow SSH from Management Network"
+      protocol: "tcp"
+      port: 22
+      source: "192.168.100.0/24"
+      action: "allow"
+      
+    - name: "Allow HTTPS"
+      protocol: "tcp"
+      port: 443
+      source: "any"
+      action: "allow"
+      
+    - name: "Allow HTTP (Redirect to HTTPS)"
+      protocol: "tcp"
+      port: 80
+      source: "any"
+      action: "allow"
+  
+  outbound_rules:
+    - name: "Allow DNS"
+      protocol: "udp"
+      port: 53
+      destination: "any"
+      action: "allow"
+      
+    - name: "Allow HTTPS Outbound"
+      protocol: "tcp"
+      port: 443
+      destination: "any"
+      action: "allow"
+      
+    - name: "Allow NTP"
+      protocol: "udp"
+      port: 123
+      destination: "any"
+      action: "allow"
+
+# VPN Configuration
+vpn:
+  enabled: true
+  protocol: "WireGuard"
+  encryption: "ChaCha20-Poly1305"
+  allowed_peers:
+    - name: "Remote Office 1"
+      public_key: "AAAA...ZZZZ"
+      allowed_ips: "10.0.1.0/24"
+      
+    - name: "Remote Office 2"
+      public_key: "BBBB...YYYY"
+      allowed_ips: "10.0.2.0/24"
+
+# Network Monitoring
+monitoring:
+  connection_check_interval: 60
+  latency_monitoring: true
+  bandwidth_monitoring: true
+  packet_loss_monitoring: true
+  
+  thresholds:
+    max_latency_ms: 100
+    max_packet_loss_percent: 1.0
+    min_bandwidth_mbps: 50
+    
+  alerts:
+    on_connection_loss: true
+    on_high_latency: true
+    on_bandwidth_degradation: true
+
+# Quality of Service (QoS)
+qos:
+  enabled: true
+  priority_classes:
+    - name: "Critical"
+      priority: 1
+      bandwidth_percent: 40
+      protocols: ["ssh", "https"]
+      
+    - name: "High"
+      priority: 2
+      bandwidth_percent: 30
+      protocols: ["vpn", "dns"]
+      
+    - name: "Normal"
+      priority: 3
+      bandwidth_percent: 20
+      protocols: ["http"]
+      
+    - name: "Low"
+      priority: 4
+      bandwidth_percent: 10
+      protocols: ["bulk-transfer"]
+
+# Intrusion Detection
+ids:
+  enabled: true
+  mode: "active"  # active or passive
+  detection_methods:
+    - "signature-based"
+    - "anomaly-based"
+  alert_on:
+    - "port-scan"
+    - "brute-force"
+    - "dos-attack"
+    - "suspicious-traffic"
+
+# Network Segmentation
+segmentation:
+  enabled: true
+  vlans:
+    - id: 10
+      name: "Management"
+      subnet: "192.168.10.0/24"
+      
+    - id: 20
+      name: "Production"
+      subnet: "192.168.20.0/24"
+      
+    - id: 30
+      name: "Guest"
+      subnet: "192.168.30.0/24"
+      isolated: true
