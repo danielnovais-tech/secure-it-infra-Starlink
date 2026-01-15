@@ -1,55 +1,12 @@
-# Core dependencies
-PyYAML>=6.0.1
-cryptography>=41.0.0
-requests>=2.31.0
-python-dateutil>=2.8.0
-python-json-logger>=2.0.0
-aiohttp>=3.13.3
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-# No external dependencies required for the core system
-# All modules use Python standard library only
-aiohttp>=3.13.3
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-# No external dependencies required
-# The tool uses only Python standard library modules
-pytest>=7.0.0
-pytest-asyncio>=0.21.0
-# VPN Manager Dependencies
-# For Starlink infrastructure security VPN management
-
-# YAML parsing
-PyYAML>=6.0.1
-
-# Optional dependencies for advanced features
-# Uncomment if needed:
-
-# For email notifications
-# smtplib (built-in)
-
-# For webhook notifications
-# requests>=2.31.0
-
-# For systemd integration
-# python-systemd>=235
 # Secure IT Infrastructure - Starlink
-# Python dependencies
+# Core runtime dependencies only
+# Note: The starlink_metrics module uses only Python standard library
 
-# Core runtime dependencies
-aiohttp>=3.13.3
-cryptography>=41.0.0
-psutil>=5.9.0
-PyYAML>=6.0.1
-requests>=2.31.0
-python-dateutil>=2.8.0
-python-json-logger>=2.0.0
-
-# Testing
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-
-# Optional dependencies (uncomment if needed)
-# requests>=2.31.0  # For webhook notifications
-# python-systemd>=235  # For systemd integration
-# python-json-logger>=2.0.7  # For enhanced logging
+# Optional runtime dependencies (uncomment if needed in your environment)
+# PyYAML>=6.0.1
+# cryptography>=41.0.0
+# requests>=2.31.0
+# python-dateutil>=2.8.0
+# python-json-logger>=2.0.0
+# aiohttp>=3.13.3
+# psutil>=5.9.0
