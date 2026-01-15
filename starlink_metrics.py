@@ -5,11 +5,14 @@ This module provides functionality to monitor and calculate quality metrics
 for Starlink satellite internet connections based on packet loss and latency.
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import List, Optional, Callable, Dict, Any
 from enum import Enum
 from collections import deque
 from statistics import mean
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceLevel(Enum):
@@ -127,7 +130,11 @@ class StarlinkConnectionQuality:
             alert_thresholds: Optional custom alert thresholds
             alert_callback: Optional callback function for alerts (receives alert_level, data)
             history_window_size: Size of sliding window for historical smoothing (0 = disabled)
-            active_threats: Optional list of active security threats
+            active_threats: Optional list of active security threats. Can be:
+                - List of strings (each deducts threat_penalty points)
+                - List of dicts with 'severity' key for weighted deduction:
+                  {'id': 'threat1', 'severity': 'high'} where severity can be
+                  'low' (50% of threat_penalty), 'medium' (100%), 'high' (200%)
         """
         self.metrics = metrics
         self.quality_thresholds = quality_thresholds or QualityThresholds()
@@ -149,19 +156,65 @@ class StarlinkConnectionQuality:
         - Packet loss > 5%: -10 points
         - Latency > 150ms: -5 points
         - Each active threat: -5 points (configurable via threat_penalty)
+          - Threats can have weighted severity: low (50%), medium (100%), high (200%)
         
         Returns:
             Quality score between 0 and 100
         """
         base_score = 100.0
+        deductions = []
         
         if self.metrics.packet_loss > self.quality_thresholds.packet_loss_threshold:
-            base_score -= self.quality_thresholds.packet_loss_penalty
+            deduction = self.quality_thresholds.packet_loss_penalty
+            base_score -= deduction
+            deductions.append(f"packet_loss: -{deduction}")
+            
         if self.metrics.latency > self.quality_thresholds.latency_threshold:
-            base_score -= self.quality_thresholds.latency_penalty
-        base_score -= len(self.active_threats) * self.quality_thresholds.threat_penalty
+            deduction = self.quality_thresholds.latency_penalty
+            base_score -= deduction
+            deductions.append(f"latency: -{deduction}")
+            
+        if len(self.active_threats) > 0:
+            threat_deduction = self._calculate_threat_deduction()
+            base_score -= threat_deduction
+            deductions.append(f"threats({len(self.active_threats)}): -{threat_deduction}")
+            logger.info(
+                f"Quality score impacted by {len(self.active_threats)} active threat(s), "
+                f"deducting {threat_deduction} points"
+            )
         
-        return max(0, min(100, base_score))
+        final_score = max(0, min(100, base_score))
+        
+        if deductions:
+            logger.debug(f"Quality score deductions: {', '.join(deductions)}. Final score: {final_score}")
+        
+        return final_score
+    
+    def _calculate_threat_deduction(self) -> float:
+        """
+        Calculate total deduction for active threats, supporting weighted severity.
+        
+        Returns:
+            Total points to deduct for all active threats
+        """
+        severity_multipliers = {
+            'low': 0.5,
+            'medium': 1.0,
+            'high': 2.0
+        }
+        
+        total_deduction = 0.0
+        for threat in self.active_threats:
+            if isinstance(threat, dict) and 'severity' in threat:
+                # Weighted threat based on severity
+                severity = threat.get('severity', 'medium').lower()
+                multiplier = severity_multipliers.get(severity, 1.0)
+                total_deduction += self.quality_thresholds.threat_penalty * multiplier
+            else:
+                # Default threat (string or dict without severity)
+                total_deduction += self.quality_thresholds.threat_penalty
+        
+        return total_deduction
     
     def _calculate_stability(self, packet_loss: float, latency: float) -> float:
         """

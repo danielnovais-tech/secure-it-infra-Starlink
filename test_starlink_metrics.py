@@ -115,6 +115,69 @@ class TestStarlinkConnectionQuality:
         # Base 100 - (2 threats * 10 points each) = 80
         assert quality.calculate_quality_score() == 80.0
     
+    def test_quality_score_very_high_threats(self):
+        """Test quality score with very high number of threats doesn't go negative."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        # 50 threats * 5 points each = 250 points deduction
+        active_threats = [f"threat{i}" for i in range(50)]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        score = quality.calculate_quality_score()
+        # Score should be clamped to 0, not negative
+        assert score == 0.0
+        assert score >= 0
+    
+    def test_quality_score_threats_with_all_penalties(self):
+        """Test quality score with threats and all other penalties combined."""
+        metrics = ConnectionMetrics(packet_loss=10.0, latency=200.0)
+        active_threats = [f"threat{i}" for i in range(15)]  # 15 * 5 = 75
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        # Base 100 - 10 (packet_loss) - 5 (latency) - 75 (threats) = 10
+        assert quality.calculate_quality_score() == 10.0
+    
+    def test_quality_score_extreme_threats_with_penalties(self):
+        """Test that score is properly clamped at 0 with extreme threat count and penalties."""
+        metrics = ConnectionMetrics(packet_loss=50.0, latency=500.0)
+        active_threats = [f"threat{i}" for i in range(20)]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        score = quality.calculate_quality_score()
+        # With all penalties, this would go well below 0, but should be clamped
+        assert score == 0.0
+    
+    def test_quality_score_weighted_threats_low_severity(self):
+        """Test quality score with low severity threats (50% penalty)."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        active_threats = [
+            {'id': 'threat1', 'severity': 'low'},
+            {'id': 'threat2', 'severity': 'low'}
+        ]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        # Base 100 - (2 threats * 5 * 0.5) = 95
+        assert quality.calculate_quality_score() == 95.0
+    
+    def test_quality_score_weighted_threats_high_severity(self):
+        """Test quality score with high severity threats (200% penalty)."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        active_threats = [
+            {'id': 'threat1', 'severity': 'high'},
+            {'id': 'threat2', 'severity': 'high'}
+        ]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        # Base 100 - (2 threats * 5 * 2.0) = 80
+        assert quality.calculate_quality_score() == 80.0
+    
+    def test_quality_score_mixed_severity_threats(self):
+        """Test quality score with mixed severity threats."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        active_threats = [
+            {'id': 'threat1', 'severity': 'low'},     # 5 * 0.5 = 2.5
+            {'id': 'threat2', 'severity': 'medium'},  # 5 * 1.0 = 5.0
+            {'id': 'threat3', 'severity': 'high'},    # 5 * 2.0 = 10.0
+            'simple_threat'                            # 5 * 1.0 = 5.0
+        ]
+        quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
+        # Base 100 - (2.5 + 5.0 + 10.0 + 5.0) = 77.5
+        assert quality.calculate_quality_score() == 77.5
+    
     def test_stability_perfect(self):
         """Test stability calculation with perfect metrics."""
         metrics = ConnectionMetrics(packet_loss=0.0, latency=0.0)
