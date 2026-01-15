@@ -1,0 +1,182 @@
+# Alert Rules Configuration
+# Define when and how to trigger security alerts
+
+# Alert Severity Levels
+severity_levels:
+  CRITICAL:
+    notification_channels: ["email", "sms", "webhook", "pager"]
+    escalation_time_minutes: 5
+    
+  HIGH:
+    notification_channels: ["email", "webhook"]
+    escalation_time_minutes: 15
+    
+  MEDIUM:
+    notification_channels: ["email"]
+    escalation_time_minutes: 60
+    
+  LOW:
+    notification_channels: ["email"]
+    escalation_time_minutes: 240
+
+# Alert Rules
+rules:
+  # Authentication Alerts
+  - name: "Multiple Failed Login Attempts"
+    category: "authentication"
+    severity: "HIGH"
+    conditions:
+      failed_attempts: 5
+      time_window_minutes: 10
+    action: "trigger_alert"
+    
+  - name: "Suspicious Login Location"
+    category: "authentication"
+    severity: "MEDIUM"
+    conditions:
+      unusual_location: true
+      unusual_time: true
+    action: "trigger_alert"
+    
+  # Network Alerts
+  - name: "Connection Loss Detected"
+    category: "network"
+    severity: "CRITICAL"
+    conditions:
+      connection_status: "down"
+      duration_seconds: 30
+    action: "trigger_alert"
+    
+  - name: "High Latency Detected"
+    category: "network"
+    severity: "MEDIUM"
+    conditions:
+      latency_ms: 500
+      consecutive_checks: 3
+    action: "trigger_alert"
+    
+  - name: "Port Scan Detected"
+    category: "network"
+    severity: "HIGH"
+    conditions:
+      scanned_ports: 10
+      time_window_seconds: 60
+    action: "trigger_alert"
+    
+  # Encryption Alerts
+  - name: "Encryption Disabled"
+    category: "encryption"
+    severity: "CRITICAL"
+    conditions:
+      encryption_enabled: false
+    action: "trigger_alert"
+    
+  - name: "Weak Cipher Detected"
+    category: "encryption"
+    severity: "HIGH"
+    conditions:
+      weak_cipher: true
+    action: "trigger_alert"
+    
+  # Vulnerability Alerts
+  - name: "Critical Vulnerability Detected"
+    category: "vulnerability"
+    severity: "CRITICAL"
+    conditions:
+      vulnerability_severity: "CRITICAL"
+    action: "trigger_alert"
+    
+  - name: "Default Credentials Detected"
+    category: "vulnerability"
+    severity: "CRITICAL"
+    conditions:
+      default_credentials: true
+    action: "trigger_alert"
+    
+  # Access Control Alerts
+  - name: "Unauthorized Access Attempt"
+    category: "access_control"
+    severity: "HIGH"
+    conditions:
+      access_denied: true
+      repeated_attempts: 3
+    action: "trigger_alert"
+    
+  - name: "Privilege Escalation Attempt"
+    category: "access_control"
+    severity: "CRITICAL"
+    conditions:
+      unauthorized_privilege_change: true
+    action: "trigger_alert"
+    
+  # Configuration Alerts
+  - name: "Security Configuration Changed"
+    category: "configuration"
+    severity: "MEDIUM"
+    conditions:
+      config_changed: true
+      critical_setting: true
+    action: "trigger_alert"
+    
+  - name: "Compliance Violation Detected"
+    category: "configuration"
+    severity: "HIGH"
+    conditions:
+      compliance_check_failed: true
+    action: "trigger_alert"
+
+# Notification Templates
+notification_templates:
+  email:
+    subject: "[{severity}] Security Alert: {alert_title}"
+    body: |
+      Security Alert Detected
+      
+      Severity: {severity}
+      Title: {alert_title}
+      Description: {description}
+      Timestamp: {timestamp}
+      
+      Details:
+      {context}
+      
+      Recommended Action:
+      {recommendation}
+      
+      Alert ID: {alert_id}
+      
+  sms:
+    message: "[{severity}] {alert_title} - Alert ID: {alert_id}"
+    
+  webhook:
+    url: "https://alerts.example.com/webhook"
+    method: "POST"
+    payload:
+      alert_id: "{alert_id}"
+      severity: "{severity}"
+      title: "{alert_title}"
+      description: "{description}"
+      timestamp: "{timestamp}"
+      context: "{context}"
+
+# Alert Handling
+handling:
+  auto_acknowledge: false
+  auto_resolve: false
+  deduplication_window_minutes: 10
+  max_alerts_per_rule_per_hour: 5
+  
+  escalation:
+    enabled: true
+    escalation_chain:
+      - level: 1
+        wait_minutes: 15
+        notify: ["on-call-engineer"]
+        
+      - level: 2
+        wait_minutes: 30
+        notify: ["team-lead", "security-team"]
+        
+      - level: 3
+        wait_minutes: 60
+        notify: ["cto", "ciso"]
