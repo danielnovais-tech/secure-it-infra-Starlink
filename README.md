@@ -113,6 +113,36 @@ summary = scorer.get_audit_trail(detail_level="summary")
 # Returns only reason and adjusted_score for each entry
 ```
 
+**Example Output - Full Detail:**
+```python
+[
+  {
+    'reason': 'CRITICAL security level multiplier',
+    'points': '-30.0 (0.7x applied)',
+    'security_level': 'critical',
+    'original_score': 100.0,
+    'adjusted_score': 70.0,
+    'timestamp': '2026-01-15T16:00:00.123456'
+  },
+  {
+    'reason': 'CRITICAL security level multiplier',
+    'points': '-75.0 (0.7x applied)',
+    'security_level': 'critical',
+    'original_score': 250.0,
+    'adjusted_score': 175.0,
+    'timestamp': '2026-01-15T16:00:01.234567'
+  }
+]
+```
+
+**Example Output - Summary Detail:**
+```python
+[
+  {'reason': 'CRITICAL security level multiplier', 'adjusted_score': 70.0},
+  {'reason': 'CRITICAL security level multiplier', 'adjusted_score': 175.0}
+]
+```
+
 #### Historical Comparison
 
 ```python
@@ -129,6 +159,40 @@ trail = scorer.get_audit_trail()
 # Entry format: "ELEVATED security level multiplier (Score increased by 18.0 compared to last run)"
 ```
 
+**Example Output:**
+```python
+[
+  {
+    'reason': 'ELEVATED security level multiplier',
+    'points': '-10.0 (0.9x applied)',
+    'security_level': 'elevated',
+    'original_score': 100.0,
+    'adjusted_score': 90.0,
+    'timestamp': '2026-01-15T16:00:00.000000'
+  },
+  {
+    'reason': 'ELEVATED security level multiplier (Score increased by 18.0 compared to last run)',
+    'points': '-12.0 (0.9x applied)',
+    'security_level': 'elevated',
+    'original_score': 120.0,
+    'adjusted_score': 108.0,
+    'timestamp': '2026-01-15T16:00:01.000000',
+    'previous_score': 90.0,
+    'historical_delta': 18.0
+  },
+  {
+    'reason': 'ELEVATED security level multiplier (Score decreased by 27.0 compared to last run)',
+    'points': '-9.0 (0.9x applied)',
+    'security_level': 'elevated',
+    'original_score': 90.0,
+    'adjusted_score': 81.0,
+    'timestamp': '2026-01-15T16:00:02.000000',
+    'previous_score': 108.0,
+    'historical_delta': -27.0
+  }
+]
+```
+
 #### Exporting Audit Trail
 
 ```python
@@ -143,7 +207,7 @@ scorer.export_audit_trail_json("audit_log.json", detail_level="full")
 scorer.export_audit_trail_csv("audit_log.csv")
 ```
 
-JSON export format:
+**JSON Export Example Output:**
 ```json
 {
   "security_level": "critical",
@@ -158,9 +222,26 @@ JSON export format:
       "timestamp": "2026-01-15T16:00:00.000000",
       "previous_score": 120.0,
       "historical_delta": -50.0
+    },
+    {
+      "reason": "CRITICAL security level multiplier (Score increased by 5.0 compared to last run)",
+      "points": "-75.0 (0.7x applied)",
+      "security_level": "critical",
+      "original_score": 250.0,
+      "adjusted_score": 175.0,
+      "timestamp": "2026-01-15T16:00:01.000000",
+      "previous_score": 180.0,
+      "historical_delta": -5.0
     }
   ]
 }
+```
+
+**CSV Export Example Output:**
+```csv
+timestamp,reason,points,security_level,original_score,adjusted_score,previous_score,historical_delta
+2026-01-15T16:00:00.000000,CRITICAL security level multiplier (Score decreased by 50.0 compared to last run),-30.0 (0.7x applied),critical,100.0,70.0,120.0,-50.0
+2026-01-15T16:00:01.000000,CRITICAL security level multiplier (Score increased by 5.0 compared to last run),-75.0 (0.7x applied),critical,250.0,175.0,180.0,-5.0
 ```
 
 #### Configuration File with Schema Validation
@@ -275,3 +356,68 @@ scorer.export_audit_trail_csv("output.csv")
 ```
 
 This ensures the entire pipeline (config loading → scoring → audit tracking → export) works correctly.
+
+## Roadmap
+
+### ✅ Implemented (Current Release)
+
+- **Core Functionality**
+  - Security level enumeration (CRITICAL, ELEVATED, NORMAL)
+  - Score adjustment with configurable multipliers
+  - Dictionary-based multiplier lookup
+  
+- **Configuration & Validation**
+  - JSON configuration file support
+  - Schema validation with `ConfigValidationError`
+  - Custom multiplier overrides
+  - Non-negative multiplier validation
+  - Warnings for unusual values
+
+- **Audit Trail System**
+  - Complete audit logging with timestamps
+  - Historical comparison tracking
+  - Configurable verbosity levels (summary/full)
+  - Export to JSON format
+  - Export to CSV format
+  
+- **Robustness**
+  - Input validation (negative score prevention)
+  - Graceful handling of unknown security levels
+  - Optional max score capping
+  - Boundary case handling (zero scores, very high scores)
+  
+- **Testing & Quality**
+  - 34 comprehensive unit tests
+  - Integration tests for complete workflows
+  - CodeQL security scanning (0 vulnerabilities)
+  - Python 3.12+ compatibility
+
+### 🔮 Planned (Future Enhancements)
+
+- **Internationalization (i18n)**
+  - Multi-language support for audit trail messages
+  - Localized error messages
+  
+- **Dashboard Integration**
+  - Real-time monitoring connectors
+  - Grafana/Prometheus integration
+  - REST API endpoints
+  
+- **Performance Optimization**
+  - Benchmarking under high-volume scoring
+  - Batch scoring operations
+  - Async scoring support
+  
+- **Advanced Features**
+  - Custom scoring algorithms
+  - Machine learning-based threat level prediction
+  - Automated threshold tuning
+  
+- **Enterprise Features**
+  - Role-based access control
+  - Multi-tenancy support
+  - Compliance reporting (SOC2, ISO 27001)
+
+### 💡 Contributions Welcome
+
+We welcome contributions in any of the planned areas or new feature suggestions. Please open an issue to discuss major changes before submitting a pull request.
