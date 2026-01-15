@@ -27,6 +27,17 @@ class QualityThresholds:
     packet_loss_penalty: float = 10.0  # Points to deduct
     latency_threshold: float = 150.0  # Milliseconds
     latency_penalty: float = 5.0  # Points to deduct
+    
+    def __post_init__(self):
+        """Validate threshold values."""
+        if not 0 <= self.packet_loss_threshold <= 100:
+            raise ValueError("packet_loss_threshold must be between 0 and 100")
+        if self.packet_loss_penalty < 0:
+            raise ValueError("packet_loss_penalty must be non-negative")
+        if self.latency_threshold < 0:
+            raise ValueError("latency_threshold must be non-negative")
+        if self.latency_penalty < 0:
+            raise ValueError("latency_penalty must be non-negative")
 
 
 @dataclass
@@ -36,6 +47,19 @@ class StabilityThresholds:
     packet_loss_weight: float = 0.7  # Weight for packet loss factor (0.0-1.0)
     latency_weight: float = 0.3  # Weight for latency factor (0.0-1.0)
     packet_loss_multiplier: float = 2.0  # Multiplier for packet loss penalty
+    
+    def __post_init__(self):
+        """Validate threshold values."""
+        if not 0.0 <= self.packet_loss_weight <= 1.0:
+            raise ValueError("packet_loss_weight must be between 0.0 and 1.0")
+        if not 0.0 <= self.latency_weight <= 1.0:
+            raise ValueError("latency_weight must be between 0.0 and 1.0")
+        if abs(self.packet_loss_weight + self.latency_weight - 1.0) > 0.01:
+            raise ValueError("packet_loss_weight and latency_weight must sum to 1.0")
+        if self.max_latency <= 0:
+            raise ValueError("max_latency must be positive")
+        if self.packet_loss_multiplier <= 0:
+            raise ValueError("packet_loss_multiplier must be positive")
 
 
 @dataclass
@@ -44,6 +68,17 @@ class AlertThresholds:
     critical_stability: float = 0.3  # Trigger alert when stability falls below
     degraded_stability: float = 0.5  # Trigger warning when stability falls below
     stable_stability: float = 0.7  # Stable connection threshold
+    
+    def __post_init__(self):
+        """Validate threshold values."""
+        if not 0.0 <= self.critical_stability <= 1.0:
+            raise ValueError("critical_stability must be between 0.0 and 1.0")
+        if not 0.0 <= self.degraded_stability <= 1.0:
+            raise ValueError("degraded_stability must be between 0.0 and 1.0")
+        if not 0.0 <= self.stable_stability <= 1.0:
+            raise ValueError("stable_stability must be between 0.0 and 1.0")
+        if not (self.critical_stability < self.degraded_stability < self.stable_stability):
+            raise ValueError("Thresholds must be in ascending order: critical < degraded < stable")
 
 
 @dataclass

@@ -37,6 +37,52 @@ class TestConfigurableThresholds:
         score = quality.calculate_quality_score()
         assert score == 100.0
     
+    def test_quality_thresholds_validation(self):
+        """Test QualityThresholds validation."""
+        # Invalid packet loss threshold
+        with pytest.raises(ValueError, match="packet_loss_threshold must be between 0 and 100"):
+            QualityThresholds(packet_loss_threshold=150.0)
+        
+        # Negative penalty
+        with pytest.raises(ValueError, match="packet_loss_penalty must be non-negative"):
+            QualityThresholds(packet_loss_penalty=-5.0)
+        
+        # Negative latency threshold
+        with pytest.raises(ValueError, match="latency_threshold must be non-negative"):
+            QualityThresholds(latency_threshold=-100.0)
+    
+    def test_stability_thresholds_validation(self):
+        """Test StabilityThresholds validation."""
+        # Invalid weight range
+        with pytest.raises(ValueError, match="packet_loss_weight must be between 0.0 and 1.0"):
+            StabilityThresholds(packet_loss_weight=1.5, latency_weight=-0.5)
+        
+        # Weights don't sum to 1.0
+        with pytest.raises(ValueError, match="must sum to 1.0"):
+            StabilityThresholds(packet_loss_weight=0.6, latency_weight=0.6)
+        
+        # Negative max_latency
+        with pytest.raises(ValueError, match="max_latency must be positive"):
+            StabilityThresholds(max_latency=-500.0)
+        
+        # Negative multiplier
+        with pytest.raises(ValueError, match="packet_loss_multiplier must be positive"):
+            StabilityThresholds(packet_loss_multiplier=0)
+    
+    def test_alert_thresholds_validation(self):
+        """Test AlertThresholds validation."""
+        # Invalid range
+        with pytest.raises(ValueError, match="critical_stability must be between 0.0 and 1.0"):
+            AlertThresholds(critical_stability=1.5)
+        
+        # Thresholds not in ascending order
+        with pytest.raises(ValueError, match="ascending order"):
+            AlertThresholds(critical_stability=0.7, degraded_stability=0.5, stable_stability=0.3)
+        
+        # Equal thresholds
+        with pytest.raises(ValueError, match="ascending order"):
+            AlertThresholds(critical_stability=0.5, degraded_stability=0.5, stable_stability=0.7)
+    
     def test_custom_stability_thresholds(self):
         """Test using custom stability thresholds."""
         metrics = ConnectionMetrics(packet_loss=10.0, latency=300.0)
