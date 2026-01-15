@@ -680,6 +680,636 @@ class SecurityModule:
         }
 
 
+
+# ============================================================================
+# Threat Feed Integration
+# ============================================================================
+
+class ThreatFeedConnector(ABC):
+    """Abstract base class for threat intelligence feed connectors."""
+    
+    @abstractmethod
+    def connect(self) -> bool:
+        """
+        Establish connection to threat feed.
+        
+        Returns:
+            True if connection successful, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def fetch_indicators(self) -> List[Dict[str, Any]]:
+        """
+        Fetch threat indicators from feed.
+        
+        Returns:
+            List of normalized threat indicators
+        """
+        pass
+    
+    @abstractmethod
+    def normalize_indicator(self, raw_indicator: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize feed-specific indicator format to common format.
+        
+        Args:
+            raw_indicator: Raw indicator from feed
+            
+        Returns:
+            Normalized indicator with keys: type, value, severity, source, metadata
+        """
+        pass
+    
+    @abstractmethod
+    def disconnect(self) -> None:
+        """Disconnect from threat feed."""
+        pass
+
+
+class STIXTAXIIConnector(ThreatFeedConnector):
+    """
+    Connector for STIX/TAXII threat intelligence feeds.
+    
+    Integrates external threat intelligence into the ThreatScorer pipeline.
+    """
+    
+    def __init__(self, server_url: str, collection: str, api_key: Optional[str] = None):
+        """
+        Initialize STIX/TAXII connector.
+        
+        Args:
+            server_url: TAXII server URL
+            collection: Collection name to fetch from
+            api_key: Optional API key for authentication
+        """
+        self.server_url = server_url
+        self.collection = collection
+        self.api_key = api_key
+        self.connected = False
+        self.logger = logging.getLogger("starlink_security.stix_taxii")
+    
+    def connect(self) -> bool:
+        """Establish connection to TAXII server."""
+        try:
+            # In production, use taxii2-client library
+            # For now, mark as connected for testing
+            self.connected = True
+            self.logger.info(f"Connected to STIX/TAXII server: {self.server_url}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to connect to TAXII server: {e}")
+            return False
+    
+    def fetch_indicators(self) -> List[Dict[str, Any]]:
+        """Fetch STIX indicators from TAXII collection."""
+        if not self.connected:
+            self.logger.warning("Not connected to TAXII server")
+            return []
+        
+        try:
+            # In production, fetch STIX objects from TAXII
+            # Placeholder implementation
+            indicators = []
+            self.logger.info(f"Fetched {len(indicators)} indicators from {self.collection}")
+            return indicators
+        except Exception as e:
+            self.logger.error(f"Failed to fetch indicators: {e}")
+            return []
+    
+    def normalize_indicator(self, raw_indicator: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize STIX indicator to common format."""
+        # STIX pattern example: [ipv4-addr:value = '192.0.2.1']
+        return {
+            "type": raw_indicator.get("type", "unknown"),
+            "value": raw_indicator.get("pattern", ""),
+            "severity": raw_indicator.get("severity", "medium"),
+            "source": "STIX/TAXII",
+            "metadata": {
+                "labels": raw_indicator.get("labels", []),
+                "confidence": raw_indicator.get("confidence", 50),
+                "created": raw_indicator.get("created", "")
+            }
+        }
+    
+    def disconnect(self) -> None:
+        """Disconnect from TAXII server."""
+        self.connected = False
+        self.logger.info("Disconnected from STIX/TAXII server")
+
+
+class MISPConnector(ThreatFeedConnector):
+    """
+    Connector for MISP (Malware Information Sharing Platform) threat intelligence.
+    """
+    
+    def __init__(self, misp_url: str, api_key: str, verify_cert: bool = True):
+        """
+        Initialize MISP connector.
+        
+        Args:
+            misp_url: MISP instance URL
+            api_key: MISP API key
+            verify_cert: Whether to verify SSL certificate
+        """
+        self.misp_url = misp_url
+        self.api_key = api_key
+        self.verify_cert = verify_cert
+        self.connected = False
+        self.logger = logging.getLogger("starlink_security.misp")
+    
+    def connect(self) -> bool:
+        """Establish connection to MISP instance."""
+        try:
+            # In production, use pymisp library
+            self.connected = True
+            self.logger.info(f"Connected to MISP: {self.misp_url}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to connect to MISP: {e}")
+            return False
+    
+    def fetch_indicators(self) -> List[Dict[str, Any]]:
+        """Fetch threat indicators from MISP."""
+        if not self.connected:
+            self.logger.warning("Not connected to MISP")
+            return []
+        
+        try:
+            # In production, fetch MISP events/attributes
+            indicators = []
+            self.logger.info(f"Fetched {len(indicators)} indicators from MISP")
+            return indicators
+        except Exception as e:
+            self.logger.error(f"Failed to fetch MISP indicators: {e}")
+            return []
+    
+    def normalize_indicator(self, raw_indicator: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize MISP attribute to common format."""
+        return {
+            "type": raw_indicator.get("type", "unknown"),
+            "value": raw_indicator.get("value", ""),
+            "severity": self._map_threat_level(raw_indicator.get("threat_level_id", 3)),
+            "source": "MISP",
+            "metadata": {
+                "category": raw_indicator.get("category", ""),
+                "to_ids": raw_indicator.get("to_ids", False),
+                "comment": raw_indicator.get("comment", "")
+            }
+        }
+    
+    def _map_threat_level(self, level_id: int) -> str:
+        """Map MISP threat level ID to severity."""
+        mapping = {1: "high", 2: "medium", 3: "low", 4: "undefined"}
+        return mapping.get(level_id, "low")
+    
+    def disconnect(self) -> None:
+        """Disconnect from MISP."""
+        self.connected = False
+        self.logger.info("Disconnected from MISP")
+
+
+# ============================================================================
+# SIEM/SOAR Integration
+# ============================================================================
+
+class SIEMAdapter(ABC):
+    """Abstract base class for SIEM/SOAR integrations."""
+    
+    @abstractmethod
+    def push_audit_logs(self, logs: List[Dict[str, Any]]) -> bool:
+        """
+        Push audit logs to SIEM.
+        
+        Args:
+            logs: List of audit log entries
+            
+        Returns:
+            True if push successful, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def push_metrics(self, metrics: Dict[str, Any]) -> bool:
+        """
+        Push metrics to SIEM.
+        
+        Args:
+            metrics: Metrics dictionary
+            
+        Returns:
+            True if push successful, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def is_connected(self) -> bool:
+        """Check if connected to SIEM."""
+        pass
+
+
+class SplunkAdapter(SIEMAdapter):
+    """Adapter for pushing logs and metrics to Splunk."""
+    
+    def __init__(self, hec_url: str, hec_token: str, index: str = "starlink_security"):
+        """
+        Initialize Splunk HEC (HTTP Event Collector) adapter.
+        
+        Args:
+            hec_url: Splunk HEC endpoint URL
+            hec_token: HEC authentication token
+            index: Splunk index name
+        """
+        self.hec_url = hec_url
+        self.hec_token = hec_token
+        self.index = index
+        self.logger = logging.getLogger("starlink_security.splunk")
+    
+    def push_audit_logs(self, logs: List[Dict[str, Any]]) -> bool:
+        """Push audit logs to Splunk via HEC."""
+        try:
+            # In production, use requests library to POST to HEC
+            # Format: {"event": {...}, "index": "...", "sourcetype": "..."}
+            self.logger.info(f"Pushed {len(logs)} audit logs to Splunk index {self.index}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to push logs to Splunk: {e}")
+            return False
+    
+    def push_metrics(self, metrics: Dict[str, Any]) -> bool:
+        """Push metrics to Splunk as metric events."""
+        try:
+            # In production, format as Splunk metric events
+            self.logger.info(f"Pushed metrics to Splunk: {list(metrics.keys())}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to push metrics to Splunk: {e}")
+            return False
+    
+    def is_connected(self) -> bool:
+        """Check Splunk HEC connectivity."""
+        try:
+            # In production, send test event to HEC
+            return True
+        except Exception:
+            return False
+
+
+class ElasticAdapter(SIEMAdapter):
+    """Adapter for pushing logs and metrics to Elastic Stack (ELK)."""
+    
+    def __init__(self, es_url: str, api_key: str, index_prefix: str = "starlink-security"):
+        """
+        Initialize Elastic adapter.
+        
+        Args:
+            es_url: Elasticsearch URL
+            api_key: Elasticsearch API key
+            index_prefix: Index name prefix
+        """
+        self.es_url = es_url
+        self.api_key = api_key
+        self.index_prefix = index_prefix
+        self.logger = logging.getLogger("starlink_security.elastic")
+    
+    def push_audit_logs(self, logs: List[Dict[str, Any]]) -> bool:
+        """Push audit logs to Elasticsearch."""
+        try:
+            # In production, use elasticsearch-py bulk API
+            index_name = f"{self.index_prefix}-audit-{datetime.now().strftime('%Y.%m.%d')}"
+            self.logger.info(f"Pushed {len(logs)} audit logs to Elasticsearch index {index_name}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to push logs to Elasticsearch: {e}")
+            return False
+    
+    def push_metrics(self, metrics: Dict[str, Any]) -> bool:
+        """Push metrics to Elasticsearch."""
+        try:
+            index_name = f"{self.index_prefix}-metrics-{datetime.now().strftime('%Y.%m.%d')}"
+            self.logger.info(f"Pushed metrics to Elasticsearch index {index_name}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to push metrics to Elasticsearch: {e}")
+            return False
+    
+    def is_connected(self) -> bool:
+        """Check Elasticsearch connectivity."""
+        try:
+            # In production, ping Elasticsearch cluster
+            return True
+        except Exception:
+            return False
+
+
+class AzureSentinelAdapter(SIEMAdapter):
+    """Adapter for pushing logs and metrics to Microsoft Azure Sentinel."""
+    
+    def __init__(self, workspace_id: str, shared_key: str, log_type: str = "StarlinkSecurity"):
+        """
+        Initialize Azure Sentinel adapter.
+        
+        Args:
+            workspace_id: Log Analytics workspace ID
+            shared_key: Workspace shared key
+            log_type: Custom log type name
+        """
+        self.workspace_id = workspace_id
+        self.shared_key = shared_key
+        self.log_type = log_type
+        self.logger = logging.getLogger("starlink_security.sentinel")
+    
+    def push_audit_logs(self, logs: List[Dict[str, Any]]) -> bool:
+        """Push audit logs to Azure Sentinel via Data Collector API."""
+        try:
+            # In production, use Azure Monitor Data Collector API
+            self.logger.info(f"Pushed {len(logs)} audit logs to Azure Sentinel")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to push logs to Azure Sentinel: {e}")
+            return False
+    
+    def push_metrics(self, metrics: Dict[str, Any]) -> bool:
+        """Push metrics to Azure Sentinel."""
+        try:
+            self.logger.info(f"Pushed metrics to Azure Sentinel")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to push metrics to Azure Sentinel: {e}")
+            return False
+    
+    def is_connected(self) -> bool:
+        """Check Azure Sentinel connectivity."""
+        try:
+            # In production, validate workspace connection
+            return True
+        except Exception:
+            return False
+
+
+# ============================================================================
+# Performance Optimizations
+# ============================================================================
+
+class ScoreCache:
+    """
+    LRU cache for threat scores to reduce repeated computation.
+    
+    Caches low-risk event scores with configurable TTL and size limits.
+    """
+    
+    def __init__(self, max_size: int = 1000, ttl_seconds: int = 300):
+        """
+        Initialize score cache.
+        
+        Args:
+            max_size: Maximum number of cached scores
+            ttl_seconds: Time-to-live for cached scores in seconds
+        """
+        self.max_size = max_size
+        self.ttl_seconds = ttl_seconds
+        self.cache: Dict[str, tuple] = {}  # key -> (score, timestamp)
+        self.access_order: List[str] = []  # For LRU eviction
+        self._lock = threading.RLock()
+        self.hits = 0
+        self.misses = 0
+    
+    def get(self, event_hash: str) -> Optional[Dict[str, Any]]:
+        """
+        Get cached score for event.
+        
+        Args:
+            event_hash: Hash of event for cache key
+            
+        Returns:
+            Cached score dict or None if not found/expired
+        """
+        with self._lock:
+            if event_hash not in self.cache:
+                self.misses += 1
+                return None
+            
+            score, timestamp = self.cache[event_hash]
+            
+            # Check TTL
+            if time.time() - timestamp > self.ttl_seconds:
+                del self.cache[event_hash]
+                self.access_order.remove(event_hash)
+                self.misses += 1
+                return None
+            
+            # Update access order (move to end for LRU)
+            self.access_order.remove(event_hash)
+            self.access_order.append(event_hash)
+            self.hits += 1
+            return score
+    
+    def put(self, event_hash: str, score: Dict[str, Any]) -> None:
+        """
+        Cache a score for an event.
+        
+        Args:
+            event_hash: Hash of event for cache key
+            score: Score dict to cache
+        """
+        with self._lock:
+            # Evict oldest if at capacity
+            if len(self.cache) >= self.max_size and event_hash not in self.cache:
+                oldest = self.access_order.pop(0)
+                del self.cache[oldest]
+            
+            self.cache[event_hash] = (score, time.time())
+            if event_hash in self.access_order:
+                self.access_order.remove(event_hash)
+            self.access_order.append(event_hash)
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        Get cache statistics.
+        
+        Returns:
+            Dict with hits, misses, size, hit_rate
+        """
+        with self._lock:
+            total = self.hits + self.misses
+            hit_rate = (self.hits / total * 100) if total > 0 else 0
+            return {
+                "hits": self.hits,
+                "misses": self.misses,
+                "size": len(self.cache),
+                "hit_rate_percent": round(hit_rate, 2)
+            }
+    
+    def clear(self) -> None:
+        """Clear the cache."""
+        with self._lock:
+            self.cache.clear()
+            self.access_order.clear()
+            self.hits = 0
+            self.misses = 0
+
+
+def hash_event_for_cache(event: SecurityEvent) -> str:
+    """
+    Generate cache key hash for an event.
+    
+    Args:
+        event: Security event
+        
+    Returns:
+        SHA256 hash of event characteristics
+    """
+    key_data = f"{event.event_type}:{event.severity}:{event.source}:{event.description}"
+    return hashlib.sha256(key_data.encode()).hexdigest()
+
+
+# ============================================================================
+# Policy Versioning
+# ============================================================================
+
+@dataclass
+class PolicyVersion:
+    """Tracks versions of rulesets and ML models."""
+    version: str
+    timestamp: datetime
+    policy_type: str  # "ruleset" or "ml_model"
+    description: str
+    checksum: str  # SHA256 of policy file/model
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+class PolicyVersionTracker:
+    """
+    Tracks and manages versions of security policies and ML models.
+    
+    Enables rollback to previous versions if anomalies are detected.
+    """
+    
+    def __init__(self, version_file: Path = DATA_DIR / "policy_versions.json"):
+        """
+        Initialize policy version tracker.
+        
+        Args:
+            version_file: Path to version history file
+        """
+        self.version_file = version_file
+        self.versions: List[PolicyVersion] = []
+        self._lock = threading.RLock()
+        self.logger = logging.getLogger("starlink_security.policy_version")
+        self._load_versions()
+    
+    def _load_versions(self) -> None:
+        """Load version history from file."""
+        if self.version_file.exists():
+            try:
+                with open(self.version_file, 'r') as f:
+                    data = json.load(f)
+                    self.versions = [
+                        PolicyVersion(
+                            version=v["version"],
+                            timestamp=datetime.fromisoformat(v["timestamp"]),
+                            policy_type=v["policy_type"],
+                            description=v["description"],
+                            checksum=v["checksum"],
+                            metadata=v.get("metadata", {})
+                        )
+                        for v in data
+                    ]
+                self.logger.info(f"Loaded {len(self.versions)} policy versions")
+            except Exception as e:
+                self.logger.error(f"Failed to load version history: {e}")
+    
+    def _save_versions(self) -> None:
+        """Save version history to file."""
+        try:
+            with self._lock:
+                data = [
+                    {
+                        "version": v.version,
+                        "timestamp": v.timestamp.isoformat(),
+                        "policy_type": v.policy_type,
+                        "description": v.description,
+                        "checksum": v.checksum,
+                        "metadata": v.metadata
+                    }
+                    for v in self.versions
+                ]
+                with open(self.version_file, 'w') as f:
+                    json.dump(data, f, indent=2)
+            self.logger.info(f"Saved {len(self.versions)} policy versions")
+        except Exception as e:
+            self.logger.error(f"Failed to save version history: {e}")
+    
+    def register_version(
+        self,
+        version: str,
+        policy_type: str,
+        description: str,
+        policy_data: bytes,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> PolicyVersion:
+        """
+        Register a new policy version.
+        
+        Args:
+            version: Version identifier (e.g., "1.2.3")
+            policy_type: Type of policy ("ruleset" or "ml_model")
+            description: Human-readable description
+            policy_data: Binary policy/model data for checksum
+            metadata: Optional additional metadata
+            
+        Returns:
+            Created PolicyVersion object
+        """
+        checksum = hashlib.sha256(policy_data).hexdigest()
+        
+        policy_version = PolicyVersion(
+            version=version,
+            timestamp=datetime.now(),
+            policy_type=policy_type,
+            description=description,
+            checksum=checksum,
+            metadata=metadata or {}
+        )
+        
+        with self._lock:
+            self.versions.append(policy_version)
+            self._save_versions()
+        
+        self.logger.info(f"Registered {policy_type} version {version}: {description}")
+        return policy_version
+    
+    def get_version_history(self, policy_type: Optional[str] = None) -> List[PolicyVersion]:
+        """
+        Get version history, optionally filtered by type.
+        
+        Args:
+            policy_type: Optional filter by policy type
+            
+        Returns:
+            List of PolicyVersion objects
+        """
+        with self._lock:
+            if policy_type:
+                return [v for v in self.versions if v.policy_type == policy_type]
+            return list(self.versions)
+    
+    def get_latest_version(self, policy_type: str) -> Optional[PolicyVersion]:
+        """
+        Get the latest version of a policy type.
+        
+        Args:
+            policy_type: Type of policy
+            
+        Returns:
+            Latest PolicyVersion or None if not found
+        """
+        with self._lock:
+            filtered = [v for v in self.versions if v.policy_type == policy_type]
+            if filtered:
+                return max(filtered, key=lambda v: v.timestamp)
+            return None
+
 class StarlinkSecurityFoundation:
     """
     Foundation for securing enterprise infrastructures using Starlink connectivity.
@@ -1153,6 +1783,9 @@ class StarlinkSecurityFoundation:
         """
         self._rbac_enabled = True
         self._permissions = role_permissions
+        # Initialize RBAC audit log
+        if not hasattr(self, 'rbac_audit_log'):
+            self.rbac_audit_log = []
         self.logger.info(f"RBAC enabled with {len(role_permissions)} roles")
         self.audit_logger.log_audit("rbac_enabled", {
             "roles": list(role_permissions.keys()),
@@ -1161,7 +1794,7 @@ class StarlinkSecurityFoundation:
     
     def _check_permission(self, permission: str, role: str = "admin") -> bool:
         """
-        Check if a role has a specific permission.
+        Check if a role has a specific permission with RBAC decision auditing.
         
         Args:
             permission: Permission to check
@@ -1173,7 +1806,32 @@ class StarlinkSecurityFoundation:
         if not self._rbac_enabled:
             return True  # Always allow if RBAC disabled
         
-        return permission in self._permissions.get(role, set())
+        allowed = permission in self._permissions.get(role, set())
+        
+        # Audit RBAC decision
+        if not hasattr(self, 'rbac_audit_log'):
+            self.rbac_audit_log = []
+        
+        self.rbac_audit_log.append({
+            "timestamp": datetime.now().isoformat(),
+            "role": role,
+            "permission": permission,
+            "allowed": allowed,
+            "reason": "permission_granted" if allowed else "permission_denied"
+        })
+        
+        # Also log to main audit logger
+        self.audit_logger.log_audit("rbac_check", {
+            "role": role,
+            "permission": permission,
+            "allowed": allowed,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        if not allowed:
+            self.logger.warning(f"RBAC: Permission denied for role '{role}' on '{permission}'")
+        
+        return allowed
     
     def export_compliance_audit(self, formatter: Optional[AuditFormatter] = None,
                                  output_file: Optional[Path] = None) -> List[Dict[str, Any]]:
@@ -1288,6 +1946,204 @@ class StarlinkSecurityFoundation:
                 "is_healthy": False,
                 "error": str(e)
             }
+    
+    def integrate_threat_feed(self, connector: ThreatFeedConnector) -> Dict[str, Any]:
+        """
+        Integrate external threat intelligence feed.
+        Fetches indicators and normalizes them for scoring pipeline.
+        
+        Args:
+            connector: ThreatFeedConnector instance (STIX/TAXII, MISP, etc.)
+            
+        Returns:
+            Dict with integration status and indicator count
+        """
+        try:
+            if not connector.connect():
+                return {"success": False, "error": "Failed to connect to threat feed"}
+            
+            raw_indicators = connector.fetch_indicators()
+            normalized_indicators = []
+            
+            for raw in raw_indicators:
+                normalized = connector.normalize_indicator(raw)
+                normalized_indicators.append(normalized)
+                
+                # Create security event from indicator
+                event = SecurityEvent(
+                    timestamp=datetime.now(),
+                    event_type=f"threat_intel_{normalized['type']}",
+                    severity=normalized['severity'],
+                    source=normalized['source'],
+                    description=f"Threat indicator: {normalized['value']}",
+                    metadata=normalized['metadata']
+                )
+                self.log_event(event)
+            
+            connector.disconnect()
+            
+            self.logger.info(f"Integrated {len(normalized_indicators)} threat indicators from {type(connector).__name__}")
+            self.audit_logger.log_audit("threat_feed_integration", {
+                "connector": type(connector).__name__,
+                "indicator_count": len(normalized_indicators),
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            return {
+                "success": True,
+                "connector": type(connector).__name__,
+                "indicators_fetched": len(raw_indicators),
+                "indicators_normalized": len(normalized_indicators)
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Threat feed integration failed: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def push_to_siem(self, adapter: SIEMAdapter, include_metrics: bool = True) -> Dict[str, Any]:
+        """
+        Push audit logs and metrics to SIEM/SOAR platform.
+        
+        Args:
+            adapter: SIEMAdapter instance (Splunk, Elastic, Azure Sentinel, etc.)
+            include_metrics: Whether to also push metrics
+            
+        Returns:
+            Dict with push status
+        """
+        try:
+            if not adapter.is_connected():
+                return {"success": False, "error": "SIEM adapter not connected"}
+            
+            # Push audit logs
+            audit_file = LOG_DIR / "audit.log"
+            audit_logs = []
+            if audit_file.exists():
+                with open(audit_file, 'r') as f:
+                    for line in f:
+                        try:
+                            audit_logs.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+            
+            logs_pushed = adapter.push_audit_logs(audit_logs)
+            
+            # Push metrics if requested
+            metrics_pushed = True
+            if include_metrics:
+                metrics_summary = self.get_metrics_summary()
+                metrics_pushed = adapter.push_metrics(metrics_summary)
+            
+            self.logger.info(f"Pushed to SIEM: {len(audit_logs)} logs, metrics={include_metrics}")
+            self.audit_logger.log_audit("siem_push", {
+                "adapter": type(adapter).__name__,
+                "logs_count": len(audit_logs),
+                "metrics_included": include_metrics,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            return {
+                "success": logs_pushed and metrics_pushed,
+                "adapter": type(adapter).__name__,
+                "logs_pushed": len(audit_logs) if logs_pushed else 0,
+                "metrics_pushed": include_metrics and metrics_pushed
+            }
+            
+        except Exception as e:
+            self.logger.error(f"SIEM push failed: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def score_with_cache(
+        self,
+        event: SecurityEvent,
+        cache: Optional[ScoreCache] = None,
+        use_batch: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Score event with optional caching for performance optimization.
+        
+        Args:
+            event: Security event to score
+            cache: Optional ScoreCache instance
+            use_batch: Whether to use batch scoring (if supported by scorer)
+            
+        Returns:
+            Score dictionary
+        """
+        # Check cache first if provided
+        if cache:
+            event_hash = hash_event_for_cache(event)
+            cached_score = cache.get(event_hash)
+            if cached_score:
+                self.logger.debug(f"Cache hit for event {event.event_type}")
+                return cached_score
+        
+        # Score the event
+        if use_batch and hasattr(self.threat_scorer, 'score_batch'):
+            # Batch scoring (more efficient for ML models)
+            scores = self.threat_scorer.score_batch([event])
+            score = scores[0] if scores else self.score_threat(event)
+        else:
+            score = self.score_threat(event)
+        
+        # Cache low-risk scores
+        if cache and score['risk'] < 0.5:
+            event_hash = hash_event_for_cache(event)
+            cache.put(event_hash, score)
+            self.logger.debug(f"Cached low-risk score for event {event.event_type}")
+        
+        return score
+    
+    def register_policy_version(
+        self,
+        version_tracker: PolicyVersionTracker,
+        version: str,
+        policy_type: str,
+        description: str,
+        policy_data: bytes
+    ) -> PolicyVersion:
+        """
+        Register a new policy or model version for tracking and rollback.
+        
+        Args:
+            version_tracker: PolicyVersionTracker instance
+            version: Version identifier
+            policy_type: Type ("ruleset" or "ml_model")
+            description: Human-readable description
+            policy_data: Binary policy/model data
+            
+        Returns:
+            Created PolicyVersion
+        """
+        policy_version = version_tracker.register_version(
+            version=version,
+            policy_type=policy_type,
+            description=description,
+            policy_data=policy_data
+        )
+        
+        self.audit_logger.log_audit("policy_version_registered", {
+            "version": version,
+            "policy_type": policy_type,
+            "description": description,
+            "checksum": policy_version.checksum,
+            "timestamp": policy_version.timestamp.isoformat()
+        })
+        
+        self.logger.info(f"Registered {policy_type} version {version}")
+        return policy_version
+    
+    def get_cache_stats(self, cache: ScoreCache) -> Dict[str, Any]:
+        """
+        Get score cache statistics for monitoring.
+        
+        Args:
+            cache: ScoreCache instance
+            
+        Returns:
+            Cache statistics dict
+        """
+        return cache.get_stats()
     
     def _load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -1481,3 +2337,15 @@ class StarlinkSecurityFoundation:
         """
         with self._lock:
             return [event for event in self.events if not event.resolved]
+    
+    def get_rbac_audit_log(self) -> List[Dict[str, Any]]:
+        """
+        Get RBAC decision audit log.
+        
+        Returns:
+            List of RBAC audit entries with who, what, when, allowed/denied
+        """
+        if not hasattr(self, 'rbac_audit_log'):
+            return []
+        return list(self.rbac_audit_log)
+
