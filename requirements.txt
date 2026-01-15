@@ -1,3 +1,7 @@
+# Secure IT Infrastructure - Starlink
+# Python dependencies
+# Note: This is a minimal implementation using only Python standard library
+# No external dependencies required for basic functionality
 # No external dependencies required for basic functionality
 # All functionality uses Python standard library
 # Python dependencies for secure-it-infra-Starlink
