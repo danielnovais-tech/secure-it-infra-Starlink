@@ -1,3 +1,5 @@
+# No external dependencies required for the core system
+# All modules use Python standard library only
 aiohttp>=3.13.3
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
