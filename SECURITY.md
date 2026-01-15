@@ -180,7 +180,6 @@ def rate_limit(max_calls=10, time_window=60):
     """Rate limiter decorator for alert callbacks."""
     calls = []
     
-    @wraps
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):

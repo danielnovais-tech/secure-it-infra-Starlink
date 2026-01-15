@@ -56,7 +56,7 @@ class TestNetworkScenarios:
             (5.0, 120.0, "Stable"),
             (10.0, 180.0, "Stable"),
             (15.0, 240.0, "Degraded"),
-            (25.0, 350.0, "Critical")  # Changed from Degraded
+            (25.0, 350.0, "Critical")
         ]
         
         quality = StarlinkConnectionQuality(
@@ -108,10 +108,10 @@ class TestNetworkScenarios:
         handover_sequence = [
             (1.5, 60.0, "Stable"),
             (2.0, 65.0, "Stable"),
-            (50.0, 500.0, "Offline"),  # Handover
-            (40.0, 450.0, "Offline"),  # Changed from Critical - recovering
-            (15.0, 200.0, "Degraded"),  # Improving
-            (5.0, 100.0, "Stable"),     # Recovered
+            (50.0, 500.0, "Offline"),  # Handover interruption
+            (40.0, 450.0, "Offline"),  # Still recovering
+            (15.0, 200.0, "Degraded"),  # Connection improving
+            (5.0, 100.0, "Stable"),     # Fully recovered
         ]
         
         quality = StarlinkConnectionQuality(
@@ -169,9 +169,9 @@ class TestAlertScenarios:
         
         # Degrade connection progressively
         scenarios = [
-            (5.0, 100.0, False),   # Should not alert
-            (15.0, 250.0, False),  # Changed - still stable at 0.646
-            (35.0, 420.0, True),   # Should alert (critical)
+            (5.0, 100.0, False),   # Should not alert (stable)
+            (15.0, 250.0, False),  # Still stable, no alert triggered
+            (35.0, 420.0, True),   # Critical degradation - should alert
         ]
         
         for packet_loss, latency, should_alert in scenarios:
