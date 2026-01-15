@@ -2,7 +2,6 @@
 Tests for Starlink Network Monitoring System
 """
 import pytest
-import json
 from starlink_monitor import (
     StarlinkMonitor,
     NetworkMetrics,
