@@ -3,6 +3,15 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
+name = "starlink-metrics"
+version = "1.0.0"
+description = "Comprehensive connection metrics monitoring for Starlink satellite internet"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["starlink", "metrics", "monitoring", "network", "satellite", "prometheus", "cloudwatch"]
+authors = [
+  {name = "Starlink Metrics Team"}
 name = "secure-it-starlink"
 version = "0.1.0"
 description = "Comprehensive security tool foundation for Starlink-connected enterprise infrastructures"
@@ -51,6 +60,9 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
 ]
 
 dependencies = [
@@ -67,6 +79,12 @@ dependencies = []
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=0.990",
+]
+aws = [
+    "boto3>=1.26.0",
 ]
 
 [project.urls]
@@ -94,6 +112,17 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
+Documentation = "https://github.com/danielnovais-tech/secure-it-infra-Starlink/blob/main/README.md"
+Repository = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
+"Bug Tracker" = "https://github.com/danielnovais-tech/secure-it-infra-Starlink/issues"
+
+[tool.black]
+line-length = 120
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+
+[tool.isort]
+profile = "black"
+line_length = 120
 Repository = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -124,5 +153,14 @@ python_functions = ["test_*"]
 python_version = "3.8"
 warn_return_any = true
 warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    ".",
+]
+python_files = "test_*.py"
 disallow_untyped_defs = true
 addopts = "-v --tb=short"
