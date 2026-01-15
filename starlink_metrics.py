@@ -27,6 +27,7 @@ class QualityThresholds:
     packet_loss_penalty: float = 10.0  # Points to deduct
     latency_threshold: float = 150.0  # Milliseconds
     latency_penalty: float = 5.0  # Points to deduct
+    threat_penalty: float = 5.0  # Points to deduct per active threat
     
     def __post_init__(self):
         """Validate threshold values."""
@@ -38,6 +39,8 @@ class QualityThresholds:
             raise ValueError("latency_threshold must be non-negative")
         if self.latency_penalty < 0:
             raise ValueError("latency_penalty must be non-negative")
+        if self.threat_penalty < 0:
+            raise ValueError("threat_penalty must be non-negative")
 
 
 @dataclass
@@ -145,7 +148,7 @@ class StarlinkConnectionQuality:
         Default penalties:
         - Packet loss > 5%: -10 points
         - Latency > 150ms: -5 points
-        - Each active threat: -5 points
+        - Each active threat: -5 points (configurable via threat_penalty)
         
         Returns:
             Quality score between 0 and 100
@@ -156,7 +159,7 @@ class StarlinkConnectionQuality:
             base_score -= self.quality_thresholds.packet_loss_penalty
         if self.metrics.latency > self.quality_thresholds.latency_threshold:
             base_score -= self.quality_thresholds.latency_penalty
-        base_score -= len(self.active_threats) * 5
+        base_score -= len(self.active_threats) * self.quality_thresholds.threat_penalty
         
         return max(0, min(100, base_score))
     

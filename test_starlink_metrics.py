@@ -6,6 +6,7 @@ import pytest
 from starlink_metrics import (
     ConnectionMetrics,
     StarlinkConnectionQuality,
+    QualityThresholds,
     monitor_connection
 )
 
@@ -100,6 +101,19 @@ class TestStarlinkConnectionQuality:
         metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
         quality = StarlinkConnectionQuality(metrics)
         assert quality.calculate_quality_score() == 100.0
+    
+    def test_quality_score_custom_threat_penalty(self):
+        """Test quality score with custom threat penalty."""
+        metrics = ConnectionMetrics(packet_loss=0.0, latency=20.0)
+        active_threats = ["threat1", "threat2"]
+        custom_thresholds = QualityThresholds(threat_penalty=10.0)
+        quality = StarlinkConnectionQuality(
+            metrics,
+            quality_thresholds=custom_thresholds,
+            active_threats=active_threats
+        )
+        # Base 100 - (2 threats * 10 points each) = 80
+        assert quality.calculate_quality_score() == 80.0
     
     def test_stability_perfect(self):
         """Test stability calculation with perfect metrics."""
