@@ -151,8 +151,8 @@ class StarlinkConnectionQuality:
         self.active_threats = active_threats or []
         
         # Historical tracking for smoothing
-        if history_window_size < 0:
-            raise ValueError("history_window_size must be non-negative")
+        if not isinstance(history_window_size, int) or history_window_size < 0:
+            raise ValueError("history_window_size must be a non-negative integer")
         self.history_window_size = history_window_size
         self.stability_history: deque = deque(maxlen=history_window_size if history_window_size > 0 else None)
     
@@ -201,15 +201,15 @@ class StarlinkConnectionQuality:
         if len(self.active_threats) > 0:
             threat_deductions = self._calculate_threat_deduction_with_details()
             for threat_deduction in threat_deductions:
-                penalty = threat_deduction['points']
-                base_score -= penalty
+                penalty = threat_deduction['points']  # Already negative
+                base_score += penalty  # Add the negative value (i.e., subtract)
                 deductions_list.append({
                     "reason": threat_deduction['reason'],
                     "threat_id": threat_deduction['threat_id'],
-                    "points": -penalty
+                    "points": penalty  # Already negative, no need to negate again
                 })
             
-            total_threat_deduction = sum(d['points'] for d in threat_deductions)
+            total_threat_deduction = abs(sum(d['points'] for d in threat_deductions))
             logger.info(
                 "Quality score impacted by %d active threat(s), deducting %s points",
                 len(self.active_threats), total_threat_deduction
@@ -229,17 +229,31 @@ class StarlinkConnectionQuality:
             if total_deduction > 0:
                 summary_parts.append(f"Score reduced by {total_deduction:g} points")
                 
-                # Count threats by severity
+                # Categorize deductions
+                packet_loss_deduction = 0
+                latency_deduction = 0
                 threat_counts = {'low': 0, 'medium': 0, 'high': 0}
+                
                 for d in deductions_list:
                     reason_lower = d['reason'].lower()
-                    if 'threat' in reason_lower:
+                    if 'packet loss' in reason_lower:
+                        packet_loss_deduction += abs(d['points'])
+                    elif 'latency' in reason_lower:
+                        latency_deduction += abs(d['points'])
+                    elif 'threat' in reason_lower:
                         if 'low severity' in reason_lower:
                             threat_counts['low'] += 1
                         elif 'high severity' in reason_lower:
                             threat_counts['high'] += 1
                         elif 'medium severity' in reason_lower:
                             threat_counts['medium'] += 1
+                
+                # Build detailed breakdown
+                causes = []
+                if packet_loss_deduction > 0:
+                    causes.append(f"packet loss ({packet_loss_deduction:g} points)")
+                if latency_deduction > 0:
+                    causes.append(f"latency ({latency_deduction:g} points)")
                 
                 total_threats = sum(threat_counts.values())
                 if total_threats > 0:
@@ -251,9 +265,13 @@ class StarlinkConnectionQuality:
                     if threat_counts['low'] > 0:
                         threat_breakdown.append(f"{threat_counts['low']} low")
                     
-                    summary_parts.append(f"due to {total_threats} active threat{'s' if total_threats > 1 else ''}")
+                    threat_desc = f"{total_threats} active threat{'s' if total_threats > 1 else ''}"
                     if threat_breakdown:
-                        summary_parts.append(f"({', '.join(threat_breakdown)})")
+                        threat_desc += f" ({', '.join(threat_breakdown)})"
+                    causes.append(threat_desc)
+                
+                if causes:
+                    summary_parts.append(f"due to {' and '.join(causes)}")
                 
                 summary = ' '.join(summary_parts) + '.'
             else:
@@ -315,7 +333,7 @@ class StarlinkConnectionQuality:
                 deductions.append({
                     "reason": f"{severity.capitalize()} severity threat",
                     "threat_id": threat_id,
-                    "points": penalty
+                    "points": -penalty  # Negative for deductions
                 })
             else:
                 # Default threat (string or dict without severity)
@@ -329,7 +347,7 @@ class StarlinkConnectionQuality:
                 deductions.append({
                     "reason": "Medium severity threat",
                     "threat_id": threat_id,
-                    "points": penalty
+                    "points": -penalty  # Negative for deductions
                 })
         
         return deductions
