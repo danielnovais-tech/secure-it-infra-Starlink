@@ -358,3 +358,119 @@ class TestSecurityMonitor:
         # Clear anomalies
         monitor.clear_anomalies()
         assert len(monitor.anomalies) == 0
+    
+    @pytest.mark.asyncio
+    async def test_metric_history_tracking(self, monitor, sample_metrics):
+        """Test that metric history is tracked correctly."""
+        # Initially history should be empty
+        assert len(monitor.metric_history) == 0
+        
+        # Update metrics
+        await monitor.update_metrics(sample_metrics)
+        
+        # History should have one entry
+        assert len(monitor.metric_history) == 1
+        assert "timestamp" in monitor.metric_history[0]
+        assert "metrics" in monitor.metric_history[0]
+        assert monitor.metric_history[0]["metrics"] == sample_metrics
+        
+        # Update with new metrics
+        new_metrics = sample_metrics.copy()
+        new_metrics["failed_login_attempts"] = 10
+        await monitor.update_metrics(new_metrics)
+        
+        # History should have two entries
+        assert len(monitor.metric_history) == 2
+        assert monitor.metric_history[1]["metrics"] == new_metrics
+    
+    def test_get_metric_history(self, monitor):
+        """Test retrieving metric history."""
+        # Add some history manually
+        monitor.metric_history = [
+            {"timestamp": "2024-01-01T00:00:00", "metrics": {"test": 1}},
+            {"timestamp": "2024-01-01T00:01:00", "metrics": {"test": 2}},
+            {"timestamp": "2024-01-01T00:02:00", "metrics": {"test": 3}},
+        ]
+        
+        # Get all history
+        all_history = monitor.get_metric_history()
+        assert len(all_history) == 3
+        
+        # Get limited history
+        limited_history = monitor.get_metric_history(limit=2)
+        assert len(limited_history) == 2
+        assert limited_history[0]["metrics"]["test"] == 2
+        assert limited_history[1]["metrics"]["test"] == 3
+    
+    def test_audit_trail(self, monitor):
+        """Test that audit trail is generated during score calculation."""
+        monitor.metrics = {
+            "failed_login_attempts": 5,
+            "unauthorized_access_attempts": 1
+        }
+        monitor.anomalies = [{"severity": "critical"}]
+        
+        score = monitor.get_security_score()
+        
+        # Should have audit trail entries
+        assert len(monitor.audit_trail) > 0
+        
+        # Check audit trail structure
+        for entry in monitor.audit_trail:
+            assert "reason" in entry
+            assert "points" in entry
+    
+    def test_get_audit_trail(self, monitor):
+        """Test retrieving audit trail."""
+        monitor.metrics = {"failed_login_attempts": 10}
+        monitor.get_security_score()
+        
+        audit = monitor.get_audit_trail()
+        assert len(audit) > 0
+        assert isinstance(audit, list)
+    
+    @pytest.mark.asyncio
+    async def test_configurable_thresholds(self, monitor):
+        """Test that thresholds can be configured."""
+        # Check default thresholds
+        assert monitor.thresholds["failed_login_attempts"] == 5
+        assert monitor.thresholds["unauthorized_access_attempts"] == 0
+        assert monitor.thresholds["network_intrusion_attempts"] == 0
+        
+        # Modify thresholds
+        monitor.thresholds["failed_login_attempts"] = 10
+        
+        # Test with metric below new threshold
+        monitor.metrics = {"failed_login_attempts": 8}
+        await monitor._detect_anomalies()
+        
+        # Should not trigger anomaly
+        assert len(monitor.anomalies) == 0
+        
+        # Test with metric above new threshold
+        monitor.metrics = {"failed_login_attempts": 12}
+        await monitor._detect_anomalies()
+        
+        # Should trigger anomaly
+        assert len(monitor.anomalies) == 1
+    
+    @pytest.mark.asyncio
+    async def test_detect_anomalies_at_threshold(self, monitor):
+        """Test that exactly at threshold does not trigger anomaly."""
+        # Set metrics exactly at threshold
+        monitor.metrics = {"failed_login_attempts": 5}
+        
+        await monitor._detect_anomalies()
+        
+        # Should not trigger (> 5, not >= 5)
+        assert len(monitor.anomalies) == 0
+    
+    @pytest.mark.asyncio
+    async def test_detect_anomalies_empty_metrics(self, monitor):
+        """Test anomaly detection with empty metrics dict."""
+        monitor.metrics = {}
+        
+        await monitor._detect_anomalies()
+        
+        # Should not crash and should have no anomalies
+        assert len(monitor.anomalies) == 0
