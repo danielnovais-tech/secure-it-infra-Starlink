@@ -1093,13 +1093,16 @@ class ScoreCache:
             
             # Check TTL
             if time.time() - timestamp > self.ttl_seconds:
+                # Remove from access_order first to avoid race condition
+                if event_hash in self.access_order:
+                    self.access_order.remove(event_hash)
                 del self.cache[event_hash]
-                self.access_order.remove(event_hash)
                 self.misses += 1
                 return None
             
             # Update access order (move to end for LRU)
-            self.access_order.remove(event_hash)
+            if event_hash in self.access_order:
+                self.access_order.remove(event_hash)
             self.access_order.append(event_hash)
             self.hits += 1
             return score
@@ -1353,6 +1356,7 @@ class StarlinkSecurityFoundation:
         # RBAC support (disabled by default, can be enabled via config)
         self._rbac_enabled = False
         self._permissions: Dict[str, Set[str]] = {}
+        self.rbac_audit_log: List[Dict[str, Any]] = []  # Initialize RBAC audit log
         
         # Configuration hot-reloading
         self.config_path = config_path
@@ -1783,9 +1787,6 @@ class StarlinkSecurityFoundation:
         """
         self._rbac_enabled = True
         self._permissions = role_permissions
-        # Initialize RBAC audit log
-        if not hasattr(self, 'rbac_audit_log'):
-            self.rbac_audit_log = []
         self.logger.info(f"RBAC enabled with {len(role_permissions)} roles")
         self.audit_logger.log_audit("rbac_enabled", {
             "roles": list(role_permissions.keys()),
@@ -1808,10 +1809,7 @@ class StarlinkSecurityFoundation:
         
         allowed = permission in self._permissions.get(role, set())
         
-        # Audit RBAC decision
-        if not hasattr(self, 'rbac_audit_log'):
-            self.rbac_audit_log = []
-        
+        # Audit RBAC decision (rbac_audit_log initialized in __init__)
         self.rbac_audit_log.append({
             "timestamp": datetime.now().isoformat(),
             "role": role,
@@ -1845,7 +1843,11 @@ class StarlinkSecurityFoundation:
         Returns:
             List of formatted audit entries
         """
-        formatter = formatter or self.audit_formatters[0]
+        if formatter is None:
+            if not self.audit_formatters:
+                self.logger.error("No audit formatters registered")
+                return []
+            formatter = self.audit_formatters[0]
         formatted_entries = []
         
         try:
@@ -2020,10 +2022,11 @@ class StarlinkSecurityFoundation:
             audit_logs = []
             if audit_file.exists():
                 with open(audit_file, 'r') as f:
-                    for line in f:
+                    for line_num, line in enumerate(f, 1):
                         try:
                             audit_logs.append(json.loads(line))
-                        except json.JSONDecodeError:
+                        except json.JSONDecodeError as e:
+                            self.logger.warning(f"Malformed audit log entry at line {line_num}: {e}")
                             continue
             
             logs_pushed = adapter.push_audit_logs(audit_logs)
@@ -2345,7 +2348,5 @@ class StarlinkSecurityFoundation:
         Returns:
             List of RBAC audit entries with who, what, when, allowed/denied
         """
-        if not hasattr(self, 'rbac_audit_log'):
-            return []
         return list(self.rbac_audit_log)
 
