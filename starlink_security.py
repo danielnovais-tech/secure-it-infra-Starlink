@@ -19,6 +19,14 @@ CONFIG_DIR = Path.home() / ".starlink_security" / "config"
 DATA_DIR = Path.home() / ".starlink_security" / "data"
 LOG_DIR = Path.home() / ".starlink_security" / "logs"
 
+# Default metric values
+DEFAULT_LATENCY = 0.0
+DEFAULT_JITTER = 0.0
+DEFAULT_PACKET_LOSS = 0.0
+DEFAULT_THROUGHPUT = 0.0
+DEFAULT_SECURITY_SCORE = 100.0
+DEFAULT_CONNECTION_STABILITY = 100.0
+
 
 def setup_directories() -> None:
     """
@@ -109,7 +117,14 @@ class StarlinkSecurityFoundation:
         self.encryption_key = self._initialize_encryption()
         self.running = True
         self.events_queue: queue.Queue = queue.Queue()
-        self.metrics = NetworkMetrics(0, 0, 0, 0, 100, 100)
+        self.metrics = NetworkMetrics(
+            DEFAULT_LATENCY,
+            DEFAULT_JITTER,
+            DEFAULT_PACKET_LOSS,
+            DEFAULT_THROUGHPUT,
+            DEFAULT_SECURITY_SCORE,
+            DEFAULT_CONNECTION_STABILITY
+        )
         self.active_threats: Set[str] = set()
         self.security_modules: Dict[str, Any] = {}
         self.events: List[SecurityEvent] = []
@@ -140,7 +155,12 @@ class StarlinkSecurityFoundation:
                     default_config.update(user_config)
             except (json.JSONDecodeError, IOError) as e:
                 # Log error but continue with defaults
-                pass
+                import warnings
+                warnings.warn(
+                    f"Failed to load configuration from {config_path}: {e}. "
+                    f"Using default configuration.",
+                    UserWarning
+                )
         
         return default_config
     
@@ -150,18 +170,36 @@ class StarlinkSecurityFoundation:
         
         Returns:
             Encryption key
+            
+        Raises:
+            IOError: If key file cannot be read or written
+            PermissionError: If key file permissions are insufficient
         """
+        import os
         key_file = CONFIG_DIR / "encryption.key"
         
         if key_file.exists():
-            with open(key_file, 'rb') as f:
-                return f.read()
+            try:
+                with open(key_file, 'rb') as f:
+                    return f.read()
+            except (IOError, PermissionError) as e:
+                raise IOError(
+                    f"Failed to read encryption key from {key_file}: {e}"
+                ) from e
         else:
             # Generate new key
-            key = Fernet.generate_key()
-            with open(key_file, 'wb') as f:
-                f.write(key)
-            return key
+            try:
+                key = Fernet.generate_key()
+                # Create file with restrictive permissions (owner read/write only)
+                with open(key_file, 'wb') as f:
+                    f.write(key)
+                # Set restrictive permissions (0o600 = owner read/write only)
+                os.chmod(key_file, 0o600)
+                return key
+            except (IOError, PermissionError) as e:
+                raise IOError(
+                    f"Failed to write encryption key to {key_file}: {e}"
+                ) from e
     
     def _initialize_modules(self) -> None:
         """
