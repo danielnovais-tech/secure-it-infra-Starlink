@@ -507,4 +507,3 @@ def monitor_connection(
     metrics = ConnectionMetrics(packet_loss=packet_loss, latency=latency)
     quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
     return quality.get_connection_status()
-    return quality.get_connection_status()
