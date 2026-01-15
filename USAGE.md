@@ -35,6 +35,9 @@ from starlink_security import (
 # Initialize the security foundation
 foundation = StarlinkSecurityFoundation()
 
+# Or initialize with a custom configuration file
+foundation = StarlinkSecurityFoundation(config_path="/path/to/config.json")
+
 # Log a security event
 event = SecurityEvent(
     timestamp=datetime.now(),
@@ -44,6 +47,9 @@ event = SecurityEvent(
     description="Unauthorized connection attempt detected"
 )
 foundation.log_event(event)
+
+# Add event to the queue for processing
+foundation.events_queue.put(event)
 
 # Update network metrics
 metrics = NetworkMetrics(
@@ -59,27 +65,55 @@ foundation.update_metrics(metrics)
 # Change security level
 foundation.set_security_level(SecurityLevel.ELEVATED)
 
+# Track active threats
+foundation.active_threats.add("port_scan_192.168.1.100")
+
+# Check security modules status
+print(foundation.security_modules)
+
 # Get unresolved events
 unresolved = foundation.get_unresolved_events()
 ```
 
-### Advanced Configuration
+### Configuration File Example
+
+Create a JSON configuration file:
+
+```json
+{
+    "security_level": "elevated",
+    "connection_type": "hybrid",
+    "monitoring_interval": 30,
+    "max_events_queue": 2000,
+    "encryption_enabled": true,
+    "custom_settings": {
+        "alert_threshold": 5,
+        "auto_response": true
+    }
+}
+```
+
+Then load it:
 
 ```python
-# Initialize with custom settings
-foundation = StarlinkSecurityFoundation(
-    security_level=SecurityLevel.CRITICAL,
-    connection_type=ConnectionType.HYBRID
-)
+foundation = StarlinkSecurityFoundation(config_path="config.json")
+print(foundation.config)
 ```
 
 ## Directory Structure
 
 The module automatically creates the following directories in your home directory:
 
-- `~/.starlink_security/config` - Configuration files
+- `~/.starlink_security/config` - Configuration files and encryption keys
 - `~/.starlink_security/data` - Data storage
 - `~/.starlink_security/logs` - Log files
+
+### Encryption
+
+The module automatically generates and stores an encryption key on first use at:
+- `~/.starlink_security/config/encryption.key`
+
+This key persists across instances and is used for secure communications.
 
 ## API Reference
 
@@ -88,11 +122,31 @@ The module automatically creates the following directories in your home director
 #### `StarlinkSecurityFoundation`
 Main class for security operations.
 
+**Initialization:**
+- `__init__(config_path: Optional[str] = None)` - Initialize with optional configuration file
+
+**Attributes:**
+- `config: Dict[str, Any]` - Configuration dictionary
+- `security_level: SecurityLevel` - Current security level
+- `connection_type: ConnectionType` - Current connection type
+- `encryption_key: bytes` - Encryption key for secure communications
+- `running: bool` - Running status flag
+- `events_queue: queue.Queue` - Queue for event processing
+- `metrics: NetworkMetrics` - Current network metrics
+- `active_threats: Set[str]` - Set of active threat identifiers
+- `security_modules: Dict[str, Any]` - Security modules and their status
+- `events: List[SecurityEvent]` - List of logged events
+
 **Methods:**
 - `log_event(event: SecurityEvent)` - Log a security event
 - `update_metrics(metrics: NetworkMetrics)` - Update network metrics
 - `set_security_level(level: SecurityLevel)` - Change security level
 - `get_unresolved_events()` - Get unresolved security events
+
+**Private Methods:**
+- `_load_config(config_path)` - Load configuration from file
+- `_initialize_encryption()` - Initialize encryption key
+- `_initialize_modules()` - Initialize security modules
 
 #### `SecurityLevel` (Enum)
 - `NORMAL` - Normal operations
@@ -142,7 +196,12 @@ except OSError as e:
 ## Requirements
 
 - Python 3.7+
-- No external dependencies (uses standard library only)
+- cryptography>=42.0.4
+
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
 ## License
 

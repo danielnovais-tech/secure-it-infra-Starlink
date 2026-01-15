@@ -5,11 +5,14 @@ Foundation for securing enterprise infrastructures using Starlink connectivity.
 Provides monitoring, enforcement, and response capabilities.
 """
 
+import json
+import queue
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
+from cryptography.fernet import Fernet
 
 # Define directories
 CONFIG_DIR = Path.home() / ".starlink_security" / "config"
@@ -86,14 +89,12 @@ class StarlinkSecurityFoundation:
     Provides monitoring, enforcement, and response capabilities.
     """
     
-    def __init__(self, security_level: SecurityLevel = SecurityLevel.NORMAL,
-                 connection_type: ConnectionType = ConnectionType.STARLINK_ONLY):
+    def __init__(self, config_path: Optional[str] = None):
         """
-        Initialize the Starlink Security Foundation.
+        Initialize the security foundation.
         
         Args:
-            security_level: Initial security level
-            connection_type: Type of Starlink connection
+            config_path: Path to configuration file (optional)
             
         Raises:
             PermissionError: If required directories cannot be created due to permissions.
@@ -102,10 +103,76 @@ class StarlinkSecurityFoundation:
         # Ensure required directories exist
         setup_directories()
         
-        self.security_level = security_level
-        self.connection_type = connection_type
+        self.config = self._load_config(config_path)
+        self.security_level = SecurityLevel.NORMAL
+        self.connection_type = ConnectionType.STARLINK_ONLY
+        self.encryption_key = self._initialize_encryption()
+        self.running = True
+        self.events_queue: queue.Queue = queue.Queue()
+        self.metrics = NetworkMetrics(0, 0, 0, 0, 100, 100)
+        self.active_threats: Set[str] = set()
+        self.security_modules: Dict[str, Any] = {}
         self.events: List[SecurityEvent] = []
-        self.metrics: Optional[NetworkMetrics] = None
+        self._initialize_modules()
+    
+    def _load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Load configuration from file or use defaults.
+        
+        Args:
+            config_path: Path to configuration file
+            
+        Returns:
+            Configuration dictionary
+        """
+        default_config = {
+            "security_level": "normal",
+            "connection_type": "starlink_only",
+            "monitoring_interval": 60,
+            "max_events_queue": 1000,
+            "encryption_enabled": True
+        }
+        
+        if config_path and Path(config_path).exists():
+            try:
+                with open(config_path, 'r') as f:
+                    user_config = json.load(f)
+                    default_config.update(user_config)
+            except (json.JSONDecodeError, IOError) as e:
+                # Log error but continue with defaults
+                pass
+        
+        return default_config
+    
+    def _initialize_encryption(self) -> bytes:
+        """
+        Initialize encryption key for secure communications.
+        
+        Returns:
+            Encryption key
+        """
+        key_file = CONFIG_DIR / "encryption.key"
+        
+        if key_file.exists():
+            with open(key_file, 'rb') as f:
+                return f.read()
+        else:
+            # Generate new key
+            key = Fernet.generate_key()
+            with open(key_file, 'wb') as f:
+                f.write(key)
+            return key
+    
+    def _initialize_modules(self) -> None:
+        """
+        Initialize security modules.
+        """
+        self.security_modules = {
+            "firewall": {"enabled": True, "status": "active"},
+            "intrusion_detection": {"enabled": True, "status": "active"},
+            "threat_analysis": {"enabled": True, "status": "active"},
+            "encryption": {"enabled": self.config.get("encryption_enabled", True), "status": "active"}
+        }
     
     def log_event(self, event: SecurityEvent) -> None:
         """
