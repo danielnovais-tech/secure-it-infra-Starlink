@@ -218,12 +218,15 @@ class TestStarlinkConnectionQuality:
         assert result["final_score"] == 82.5
         assert len(result["deductions"]) == 3
         
-        # Check individual deductions
-        assert result["deductions"][0]["reason"] == "Low severity threat (threat1)"
+        # Check individual deductions with new structure
+        assert result["deductions"][0]["reason"] == "Low severity threat"
+        assert result["deductions"][0]["threat_id"] == "threat1"
         assert result["deductions"][0]["points"] == -2.5
-        assert result["deductions"][1]["reason"] == "High severity threat (threat2)"
+        assert result["deductions"][1]["reason"] == "High severity threat"
+        assert result["deductions"][1]["threat_id"] == "threat2"
         assert result["deductions"][1]["points"] == -10.0
-        assert result["deductions"][2]["reason"] == "Medium severity threat (threat3)"
+        assert result["deductions"][2]["reason"] == "Medium severity threat"
+        assert result["deductions"][2]["threat_id"] == "threat3"
         assert result["deductions"][2]["points"] == -5.0
     
     def test_quality_score_audit_trail_with_all_penalties(self):

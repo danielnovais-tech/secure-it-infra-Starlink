@@ -205,6 +205,7 @@ class StarlinkConnectionQuality:
                 base_score -= penalty
                 deductions_list.append({
                     "reason": threat_deduction['reason'],
+                    "threat_id": threat_deduction['threat_id'],
                     "points": -penalty
                 })
             
@@ -216,9 +217,10 @@ class StarlinkConnectionQuality:
         
         final_score = max(0, min(100, base_score))
         
-        if deductions_list and logger.isEnabledFor(logging.DEBUG):
+        if deductions_list:
             deduction_summary = ', '.join(f"{d['reason']}: {d['points']}" for d in deductions_list)
-            logger.debug("Quality score deductions: %s. Final score: %s", deduction_summary, final_score)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Quality score deductions: %s. Final score: %s", deduction_summary, final_score)
         
         if return_details:
             # Generate human-readable summary
@@ -312,7 +314,8 @@ class StarlinkConnectionQuality:
                 penalty = self.quality_thresholds.threat_penalty * multiplier
                 threat_id = threat.get('id', 'unknown')
                 deductions.append({
-                    "reason": f"{severity.capitalize()} severity threat ({threat_id})",
+                    "reason": f"{severity.capitalize()} severity threat",
+                    "threat_id": threat_id,
                     "points": penalty
                 })
             else:
@@ -325,7 +328,8 @@ class StarlinkConnectionQuality:
                 else:
                     threat_id = str(threat)
                 deductions.append({
-                    "reason": f"Medium severity threat ({threat_id})",
+                    "reason": "Medium severity threat",
+                    "threat_id": threat_id,
                     "points": penalty
                 })
         
