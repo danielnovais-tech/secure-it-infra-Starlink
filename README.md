@@ -95,8 +95,9 @@ def alert_handler(level, data):
     print(f"Alert [{level}]: Stability={data['stability']:.3f}")
     print(f"Service Level: {data['service_level']}")
     if level == "critical":
-        # Trigger failover mechanism
-        initiate_failover()
+        # Trigger failover mechanism (implement your own logic)
+        # initiate_failover()
+        pass
 
 # Create quality monitor with alerts
 metrics = ConnectionMetrics(packet_loss=25.0, latency=380.0)
@@ -218,11 +219,14 @@ Facilitate proactive monitoring and failover:
 
 ```python
 def alert_handler(level, data):
+    """Example alert handler - implement your own logic."""
     if level == "critical":
-        trigger_failover()
-        send_notification("Critical: Connection failing")
+        # trigger_failover()  # Implement your failover logic
+        # send_notification("Critical: Connection failing")
+        print(f"CRITICAL: Connection failing - {data}")
     elif level == "degraded":
-        send_notification("Warning: Connection degraded")
+        # send_notification("Warning: Connection degraded")
+        print(f"WARNING: Connection degraded - {data}")
         
 quality = StarlinkConnectionQuality(
     metrics,
