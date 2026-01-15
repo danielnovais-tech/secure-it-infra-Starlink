@@ -204,3 +204,12 @@ class TestMonitorConnection:
         assert "stability_score" in status
         assert "packet_loss" in status
         assert "latency" in status
+    
+    def test_monitor_connection_with_active_threats(self):
+        """Test monitoring connection with active threats."""
+        active_threats = ["threat1", "threat2"]
+        status = monitor_connection(packet_loss=1.0, latency=30.0, active_threats=active_threats)
+        # Base 100 - (2 threats * 5) = 90
+        assert status["quality_score"] == 90.0
+        assert status["packet_loss"] == 1.0
+        assert status["latency"] == 30.0

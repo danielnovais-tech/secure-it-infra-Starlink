@@ -6,7 +6,7 @@ for Starlink satellite internet connections based on packet loss and latency.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Callable, Dict
+from typing import List, Optional, Callable, Dict, Any
 from enum import Enum
 from collections import deque
 from statistics import mean
@@ -112,7 +112,7 @@ class StarlinkConnectionQuality:
         alert_thresholds: Optional[AlertThresholds] = None,
         alert_callback: Optional[Callable[[str, Dict], None]] = None,
         history_window_size: int = 0,
-        active_threats: Optional[List] = None
+        active_threats: Optional[List[Any]] = None
     ):
         """
         Initialize the connection quality calculator.
@@ -317,17 +317,22 @@ class StarlinkConnectionQuality:
         return result
 
 
-def monitor_connection(packet_loss: float, latency: float) -> dict:
+def monitor_connection(
+    packet_loss: float,
+    latency: float,
+    active_threats: Optional[List[Any]] = None
+) -> dict:
     """
     Convenience function to monitor connection quality.
     
     Args:
         packet_loss: Packet loss percentage (0-100)
         latency: Latency in milliseconds
+        active_threats: Optional list of active security threats
         
     Returns:
         Dictionary with connection status information
     """
     metrics = ConnectionMetrics(packet_loss=packet_loss, latency=latency)
-    quality = StarlinkConnectionQuality(metrics)
+    quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
     return quality.get_connection_status()
