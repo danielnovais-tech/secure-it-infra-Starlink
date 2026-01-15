@@ -25,19 +25,19 @@ def setup_directories() -> None:
         PermissionError: If directories cannot be created due to insufficient permissions.
         OSError: If directories cannot be created due to other filesystem errors.
     """
-    try:
-        for directory in [CONFIG_DIR, DATA_DIR, LOG_DIR]:
+    for directory in [CONFIG_DIR, DATA_DIR, LOG_DIR]:
+        try:
             directory.mkdir(parents=True, exist_ok=True)
-    except PermissionError as e:
-        raise PermissionError(
-            f"Cannot create Starlink security directories due to insufficient permissions. "
-            f"Failed at: {e.filename or 'unknown location'}"
-        ) from e
-    except OSError as e:
-        raise OSError(
-            f"Cannot create Starlink security directories due to filesystem error: "
-            f"{e.strerror or 'unknown error'}. Failed at: {e.filename or 'unknown location'}"
-        ) from e
+        except PermissionError as e:
+            raise PermissionError(
+                f"Cannot create Starlink security directory '{directory}' due to insufficient permissions. "
+                f"Original error: {e}"
+            ) from e
+        except OSError as e:
+            raise OSError(
+                f"Cannot create Starlink security directory '{directory}' due to filesystem error. "
+                f"Original error: {e}"
+            ) from e
 
 
 class SecurityLevel(Enum):
