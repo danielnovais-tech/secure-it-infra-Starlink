@@ -16,9 +16,17 @@ CONFIG_DIR = Path.home() / ".starlink_security" / "config"
 DATA_DIR = Path.home() / ".starlink_security" / "data"
 LOG_DIR = Path.home() / ".starlink_security" / "logs"
 
-# Create directories if they don't exist
-for directory in [CONFIG_DIR, DATA_DIR, LOG_DIR]:
-    directory.mkdir(parents=True, exist_ok=True)
+
+def setup_directories() -> None:
+    """
+    Create required directories if they don't exist.
+    
+    Raises:
+        PermissionError: If directories cannot be created due to permissions.
+        OSError: If directories cannot be created due to other filesystem errors.
+    """
+    for directory in [CONFIG_DIR, DATA_DIR, LOG_DIR]:
+        directory.mkdir(parents=True, exist_ok=True)
 
 
 class SecurityLevel(Enum):
@@ -75,7 +83,14 @@ class StarlinkSecurityFoundation:
         Args:
             security_level: Initial security level
             connection_type: Type of Starlink connection
+            
+        Raises:
+            PermissionError: If required directories cannot be created due to permissions.
+            OSError: If required directories cannot be created due to other filesystem errors.
         """
+        # Ensure required directories exist
+        setup_directories()
+        
         self.security_level = security_level
         self.connection_type = connection_type
         self.events: List[SecurityEvent] = []
