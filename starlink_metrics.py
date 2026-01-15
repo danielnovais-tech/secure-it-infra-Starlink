@@ -6,10 +6,8 @@ for Starlink satellite internet connections based on packet loss and latency.
 """
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Callable, Dict, Any, Union
-from dataclasses import dataclass, field
-from typing import List, Optional, Callable, Dict
 from enum import Enum
 from collections import deque
 from statistics import mean
@@ -128,7 +126,6 @@ class StarlinkConnectionQuality:
         alert_callback: Optional[Callable[[str, Dict], None]] = None,
         history_window_size: int = 0,
         active_threats: Optional[List[Any]] = None
-        history_window_size: int = 0
     ):
         """
         Initialize the connection quality calculator.
@@ -154,11 +151,12 @@ class StarlinkConnectionQuality:
         self.active_threats = active_threats or []
         
         # Historical tracking for smoothing
+        if history_window_size < 0:
+            raise ValueError("history_window_size must be non-negative")
         self.history_window_size = history_window_size
         self.stability_history: deque = deque(maxlen=history_window_size if history_window_size > 0 else None)
     
     def calculate_quality_score(self, return_details: bool = False) -> Union[float, Dict[str, Any]]:
-    def calculate_quality_score(self) -> float:
         """
         Calculate overall connection quality score (0-100).
         
@@ -218,8 +216,8 @@ class StarlinkConnectionQuality:
         
         final_score = max(0, min(100, base_score))
         
-        if deductions_list:
-            deduction_summary = ', '.join([f"{d['reason']}: {d['points']}" for d in deductions_list])
+        if deductions_list and logger.isEnabledFor(logging.DEBUG):
+            deduction_summary = ', '.join(f"{d['reason']}: {d['points']}" for d in deductions_list)
             logger.debug("Quality score deductions: %s. Final score: %s", deduction_summary, final_score)
         
         if return_details:
@@ -228,7 +226,7 @@ class StarlinkConnectionQuality:
             summary_parts = []
             
             if total_deduction > 0:
-                summary_parts.append(f"Score reduced by {total_deduction} points")
+                summary_parts.append(f"Score reduced by {total_deduction:g} points")
                 
                 # Count threats by severity
                 threat_counts = {'low': 0, 'medium': 0, 'high': 0}
@@ -320,25 +318,18 @@ class StarlinkConnectionQuality:
             else:
                 # Default threat (string or dict without severity)
                 penalty = self.quality_thresholds.threat_penalty
-                threat_id = str(threat) if isinstance(threat, str) else threat.get('id', 'unknown')
+                if isinstance(threat, str):
+                    threat_id = threat
+                elif isinstance(threat, dict):
+                    threat_id = threat.get('id', 'unknown')
+                else:
+                    threat_id = str(threat)
                 deductions.append({
                     "reason": f"Medium severity threat ({threat_id})",
                     "points": penalty
                 })
         
         return deductions
-        
-        Returns:
-            Quality score between 0 and 100
-        """
-        base_score = 100.0
-        
-        if self.metrics.packet_loss > self.quality_thresholds.packet_loss_threshold:
-            base_score -= self.quality_thresholds.packet_loss_penalty
-        if self.metrics.latency > self.quality_thresholds.latency_threshold:
-            base_score -= self.quality_thresholds.latency_penalty
-        
-        return max(0, min(100, base_score))
     
     def _calculate_stability(self, packet_loss: float, latency: float) -> float:
         """
@@ -502,7 +493,6 @@ def monitor_connection(
     latency: float,
     active_threats: Optional[List[Any]] = None
 ) -> dict:
-def monitor_connection(packet_loss: float, latency: float) -> dict:
     """
     Convenience function to monitor connection quality.
     
@@ -516,5 +506,5 @@ def monitor_connection(packet_loss: float, latency: float) -> dict:
     """
     metrics = ConnectionMetrics(packet_loss=packet_loss, latency=latency)
     quality = StarlinkConnectionQuality(metrics, active_threats=active_threats)
-    quality = StarlinkConnectionQuality(metrics)
+    return quality.get_connection_status()
     return quality.get_connection_status()
