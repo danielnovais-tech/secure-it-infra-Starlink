@@ -201,12 +201,12 @@ class StarlinkConnectionQuality:
         if len(self.active_threats) > 0:
             threat_deductions = self._calculate_threat_deduction_with_details()
             for threat_deduction in threat_deductions:
-                penalty = threat_deduction['points']  # Already negative
-                base_score += penalty  # Add the negative value (i.e., subtract)
+                deduction_points = threat_deduction['points']  # Negative value
+                base_score += deduction_points  # Add negative value to reduce score
                 deductions_list.append({
                     "reason": threat_deduction['reason'],
                     "threat_id": threat_deduction['threat_id'],
-                    "points": penalty  # Already negative, no need to negate again
+                    "points": deduction_points
                 })
             
             total_threat_deduction = abs(sum(d['points'] for d in threat_deductions))
