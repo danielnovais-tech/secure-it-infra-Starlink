@@ -1,0 +1,6 @@
+report_url: "https://example.com/api/security/report"
+
+# Optional: provide a fixed Fernet key if you want reports to be decryptable later.
+# Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Example of a valid key (do not use in production):
+# fernet_key: "qXzvXcYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYw="
