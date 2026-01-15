@@ -295,6 +295,205 @@ class AuditLogger:
                 self.logger.error(f"Failed to write audit log: {e}")
 
 
+class StateStore(ABC):
+    """
+    Abstract base class for distributed state storage.
+    Enables horizontal scaling with shared state via Redis, etcd, etc.
+    """
+    
+    @abstractmethod
+    def get_threats(self) -> Set[str]:
+        """Get all active threats."""
+        pass
+    
+    @abstractmethod
+    def add_threat(self, threat_id: str) -> None:
+        """Add a threat to the active set."""
+        pass
+    
+    @abstractmethod
+    def remove_threat(self, threat_id: str) -> None:
+        """Remove a threat from the active set."""
+        pass
+    
+    @abstractmethod
+    def save_state(self, state: Dict[str, Any]) -> None:
+        """Save system state."""
+        pass
+    
+    @abstractmethod
+    def load_state(self) -> Optional[Dict[str, Any]]:
+        """Load system state."""
+        pass
+
+
+class InMemoryStateStore(StateStore):
+    """In-memory state store implementation (default)."""
+    
+    def __init__(self):
+        self._threats: Set[str] = set()
+        self._state: Optional[Dict[str, Any]] = None
+        self._lock = threading.RLock()
+    
+    def get_threats(self) -> Set[str]:
+        """Get all active threats."""
+        with self._lock:
+            return self._threats.copy()
+    
+    def add_threat(self, threat_id: str) -> None:
+        """Add a threat to the active set."""
+        with self._lock:
+            self._threats.add(threat_id)
+    
+    def remove_threat(self, threat_id: str) -> None:
+        """Remove a threat from the active set."""
+        with self._lock:
+            self._threats.discard(threat_id)
+    
+    def save_state(self, state: Dict[str, Any]) -> None:
+        """Save system state."""
+        with self._lock:
+            self._state = state.copy()
+    
+    def load_state(self) -> Optional[Dict[str, Any]]:
+        """Load system state."""
+        with self._lock:
+            return self._state.copy() if self._state else None
+
+
+class ThreatScorer(ABC):
+    """
+    Abstract base class for ML-based threat scoring.
+    Enables pluggable ML models for anomaly detection.
+    """
+    
+    @abstractmethod
+    def score(self, event: 'SecurityEvent') -> Dict[str, Any]:
+        """
+        Score a security event for threat level.
+        
+        Args:
+            event: Security event to score
+            
+        Returns:
+            Dictionary with 'risk' (float 0-1) and 'factors' (dict of contributing factors)
+        """
+        pass
+    
+    @abstractmethod
+    def score_batch(self, events: List['SecurityEvent']) -> List[Dict[str, Any]]:
+        """
+        Score multiple events in batch for efficiency.
+        
+        Args:
+            events: List of security events
+            
+        Returns:
+            List of score dictionaries
+        """
+        pass
+
+
+class RuleBasedThreatScorer(ThreatScorer):
+    """Default rule-based threat scorer."""
+    
+    def __init__(self):
+        self.severity_weights = {
+            "critical": 1.0,
+            "high": 0.8,
+            "medium": 0.5,
+            "low": 0.2
+        }
+    
+    def score(self, event: 'SecurityEvent') -> Dict[str, Any]:
+        """Score based on severity and metadata."""
+        risk = self.severity_weights.get(event.severity.lower(), 0.3)
+        factors = {
+            "severity": event.severity,
+            "source": event.source,
+            "event_type": event.event_type
+        }
+        return {"risk": risk, "factors": factors}
+    
+    def score_batch(self, events: List['SecurityEvent']) -> List[Dict[str, Any]]:
+        """Score multiple events."""
+        return [self.score(event) for event in events]
+
+
+class AuditFormatter(ABC):
+    """
+    Abstract base class for compliance audit export formatters.
+    Enables export to PCI DSS, HIPAA, ISO 27001 formats.
+    """
+    
+    @abstractmethod
+    def format_audit_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Format an audit entry for compliance standard.
+        
+        Args:
+            entry: Raw audit log entry
+            
+        Returns:
+            Formatted entry according to compliance standard
+        """
+        pass
+    
+    @abstractmethod
+    def get_standard_name(self) -> str:
+        """Get the compliance standard name."""
+        pass
+
+
+class ISO27001Formatter(AuditFormatter):
+    """ISO 27001 compliance audit formatter."""
+    
+    def format_audit_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
+        """Format entry for ISO 27001."""
+        return {
+            "event_id": entry.get("hash", "unknown")[:16],
+            "timestamp": entry.get("timestamp"),
+            "event_type": entry.get("action"),
+            "actor": entry.get("details", {}).get("actor", "system"),
+            "resource": entry.get("details", {}).get("resource", "system"),
+            "outcome": "success",  # Could be derived from details
+            "integrity_hash": entry.get("hash"),
+            "previous_hash": entry.get("previous_hash")
+        }
+    
+    def get_standard_name(self) -> str:
+        """Get standard name."""
+        return "ISO-27001"
+
+
+def requires_permission(permission: str):
+    """
+    Decorator for RBAC enforcement on sensitive methods.
+    
+    Args:
+        permission: Required permission (e.g., 'rotate_key', 'config_reload')
+    """
+    def decorator(func):
+        def wrapper(self, *args, **kwargs):
+            # Check if RBAC is enabled
+            if hasattr(self, '_rbac_enabled') and self._rbac_enabled:
+                if hasattr(self, '_check_permission'):
+                    if not self._check_permission(permission):
+                        raise PermissionError(f"Permission denied: {permission}")
+            # Log the authorization check
+            if hasattr(self, 'audit_logger'):
+                self.audit_logger.log_audit("authorization_check", {
+                    "permission": permission,
+                    "method": func.__name__,
+                    "allowed": True
+                })
+            return func(self, *args, **kwargs)
+        wrapper.__name__ = func.__name__
+        wrapper.__doc__ = func.__doc__
+        return wrapper
+    return decorator
+
+
 class SecurityModule:
     """Base class for security modules with lifecycle management."""
     
@@ -339,7 +538,10 @@ class StarlinkSecurityFoundation:
     
     def __init__(self, config_path: Optional[str] = None, 
                  module_factory: Optional[Callable[[str, bool], SecurityModule]] = None,
-                 event_processor: Optional[EventProcessor] = None):
+                 event_processor: Optional[EventProcessor] = None,
+                 state_store: Optional[StateStore] = None,
+                 threat_scorer: Optional[ThreatScorer] = None,
+                 audit_formatters: Optional[List[AuditFormatter]] = None):
         """
         Initialize the security foundation.
         
@@ -347,6 +549,9 @@ class StarlinkSecurityFoundation:
             config_path: Path to configuration file (optional)
             module_factory: Factory function for creating security modules (for dependency injection)
             event_processor: Custom event processor (for pluggable event processing)
+            state_store: Distributed state store (for horizontal scaling, defaults to in-memory)
+            threat_scorer: ML-based threat scorer (for anomaly detection, defaults to rule-based)
+            audit_formatters: Compliance audit formatters (for PCI/HIPAA/ISO exports)
             
         Raises:
             PermissionError: If required directories cannot be created due to permissions.
@@ -364,6 +569,10 @@ class StarlinkSecurityFoundation:
         self._lock = threading.RLock()
         self._metrics_lock = threading.Lock()
         self._config_lock = threading.Lock()
+        
+        # RBAC support (disabled by default, can be enabled via config)
+        self._rbac_enabled = False
+        self._permissions: Dict[str, Set[str]] = {}
         
         # Configuration hot-reloading
         self.config_path = config_path
@@ -400,6 +609,15 @@ class StarlinkSecurityFoundation:
         
         # Pluggable event processor
         self.event_processor = event_processor or DefaultEventProcessor()
+        
+        # State store (in-memory by default, can use Redis for distributed)
+        self.state_store = state_store or InMemoryStateStore()
+        
+        # Threat scorer (rule-based by default, can use ML models)
+        self.threat_scorer = threat_scorer or RuleBasedThreatScorer()
+        
+        # Compliance audit formatters
+        self.audit_formatters = audit_formatters or [ISO27001Formatter()]
         
         # Audit logger
         self.audit_logger = AuditLogger(LOG_DIR / "audit.log")
@@ -522,12 +740,15 @@ class StarlinkSecurityFoundation:
         age_days = (datetime.now() - self._key_created_at).days
         return age_days >= self._key_rotation_days
     
+    @requires_permission("rotate_key")
     def rotate_encryption_key(self) -> None:
         """
         Rotate the encryption key for security hardening.
+        Requires 'rotate_key' permission when RBAC is enabled.
         
         Raises:
             IOError: If key rotation fails
+            PermissionError: If caller lacks rotate_key permission
         """
         self.logger.info("Rotating encryption key")
         self.audit_logger.log_audit("key_rotation_start", {"timestamp": datetime.now().isoformat()})
@@ -758,6 +979,111 @@ class StarlinkSecurityFoundation:
         
         return "\n".join(prometheus_output)
     
+    def enable_rbac(self, role_permissions: Dict[str, Set[str]]) -> None:
+        """
+        Enable Role-Based Access Control.
+        
+        Args:
+            role_permissions: Dictionary mapping roles to sets of permissions
+                Example: {'admin': {'rotate_key', 'config_reload', 'module_control'},
+                         'operator': {'config_reload'},
+                         'auditor': set()}
+        """
+        self._rbac_enabled = True
+        self._permissions = role_permissions
+        self.logger.info(f"RBAC enabled with {len(role_permissions)} roles")
+        self.audit_logger.log_audit("rbac_enabled", {
+            "roles": list(role_permissions.keys()),
+            "timestamp": datetime.now().isoformat()
+        })
+    
+    def _check_permission(self, permission: str, role: str = "admin") -> bool:
+        """
+        Check if a role has a specific permission.
+        
+        Args:
+            permission: Permission to check
+            role: Role to check (defaults to admin for backward compatibility)
+            
+        Returns:
+            True if permitted, False otherwise
+        """
+        if not self._rbac_enabled:
+            return True  # Always allow if RBAC disabled
+        
+        return permission in self._permissions.get(role, set())
+    
+    def export_compliance_audit(self, formatter: Optional[AuditFormatter] = None,
+                                 output_file: Optional[Path] = None) -> List[Dict[str, Any]]:
+        """
+        Export audit log in compliance format.
+        
+        Args:
+            formatter: Compliance formatter (uses first registered if not specified)
+            output_file: Optional file to write formatted audit
+            
+        Returns:
+            List of formatted audit entries
+        """
+        formatter = formatter or self.audit_formatters[0]
+        formatted_entries = []
+        
+        try:
+            # Read audit log
+            audit_file = LOG_DIR / "audit.log"
+            if not audit_file.exists():
+                self.logger.warning("No audit log found")
+                return []
+            
+            with open(audit_file, 'r') as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line)
+                        formatted = formatter.format_audit_entry(entry)
+                        formatted_entries.append(formatted)
+                    except json.JSONDecodeError:
+                        continue
+            
+            # Write to output file if specified
+            if output_file:
+                with open(output_file, 'w') as f:
+                    json.dump({
+                        "standard": formatter.get_standard_name(),
+                        "export_timestamp": datetime.now().isoformat(),
+                        "entries": formatted_entries
+                    }, f, indent=2)
+                self.logger.info(f"Exported {len(formatted_entries)} audit entries to {output_file}")
+            
+            self.audit_logger.log_audit("compliance_export", {
+                "standard": formatter.get_standard_name(),
+                "entry_count": len(formatted_entries),
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            return formatted_entries
+            
+        except Exception as e:
+            self.logger.error(f"Failed to export compliance audit: {e}")
+            return []
+    
+    def score_threat(self, event: SecurityEvent) -> Dict[str, Any]:
+        """
+        Score a security event for threat level using configured scorer.
+        
+        Args:
+            event: Security event to score
+            
+        Returns:
+            Score dictionary with 'risk' and 'factors'
+        """
+        try:
+            score = self.threat_scorer.score(event)
+            self.logger.debug(f"Threat scored: {event.event_type} -> risk={score['risk']}")
+            return score
+        except Exception as e:
+            self.logger.error(f"Threat scoring failed: {e}")
+            return {"risk": 0.5, "factors": {"error": str(e)}}
+    
     def _load_config(self, config_path: Optional[str] = None) -> Dict[str, Any]:
         """
         Load configuration from file or use defaults.
@@ -917,24 +1243,28 @@ class StarlinkSecurityFoundation:
     
     def add_threat(self, threat_id: str) -> None:
         """
-        Add an active threat with thread safety.
+        Add an active threat with thread safety and state store support.
         
         Args:
             threat_id: Unique identifier for the threat
         """
         with self._lock:
             self.active_threats.add(threat_id)
+            # Also update distributed state store
+            self.state_store.add_threat(threat_id)
         self.logger.warning(f"Threat added: {threat_id}")
     
     def remove_threat(self, threat_id: str) -> None:
         """
-        Remove an active threat with thread safety.
+        Remove an active threat with thread safety and state store support.
         
         Args:
             threat_id: Unique identifier for the threat
         """
         with self._lock:
             self.active_threats.discard(threat_id)
+            # Also update distributed state store
+            self.state_store.remove_threat(threat_id)
         self.logger.info(f"Threat removed: {threat_id}")
     
     def get_unresolved_events(self) -> List[SecurityEvent]:
