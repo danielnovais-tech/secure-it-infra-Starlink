@@ -194,7 +194,12 @@ class StarlinkSecurityFoundation:
                 with open(key_file, 'wb') as f:
                     f.write(key)
                 # Set restrictive permissions (0o600 = owner read/write only)
-                os.chmod(key_file, 0o600)
+                # This works on Unix-like systems; on Windows, it has limited effect
+                try:
+                    os.chmod(key_file, 0o600)
+                except (OSError, NotImplementedError):
+                    # Windows or system doesn't support chmod, continue anyway
+                    pass
                 return key
             except (IOError, PermissionError) as e:
                 raise IOError(
