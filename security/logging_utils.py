@@ -29,7 +29,11 @@ class StructuredLogger:
             **kwargs
         }
         
-        log_method = getattr(self.logger, level.lower(), self.logger.info)
+        # Validate level is a string and get appropriate log method
+        if isinstance(level, str):
+            log_method = getattr(self.logger, level.lower(), self.logger.info)
+        else:
+            log_method = self.logger.info
         log_method(json.dumps(log_data))
     
     def info(self, message: str, **kwargs):

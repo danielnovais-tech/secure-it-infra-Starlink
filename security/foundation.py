@@ -3,7 +3,7 @@ Core StarlinkSecurityFoundation class
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Set, List, Callable
 from .types import SecurityLevel
 from .logging_utils import StructuredLogger
@@ -46,7 +46,7 @@ class StarlinkSecurityFoundation:
             'source': source,
             'message': message,
             'data': data or {},
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         # Record metrics

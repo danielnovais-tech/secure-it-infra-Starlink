@@ -10,6 +10,11 @@ from .types import THREAT_INTELLIGENCE_FEED_LIMIT, THREAT_SIMULATION_PROBABILITY
 from .logging_utils import StructuredLogger
 from .metrics import PerformanceTimer
 
+# Exponential backoff constants for resilience
+FEED_BASE_SLEEP_TIME = 300  # Base sleep time in seconds for failed feeds
+FEED_MAX_SLEEP_TIME = 3600  # Maximum sleep time in seconds (1 hour)
+FEED_MAX_BACKOFF_EXPONENT = 4  # Maximum exponent for backoff calculation
+
 
 class ThreatDetector:
     """Detect security threats and anomalies with resilience features."""
@@ -98,7 +103,11 @@ class ThreatDetector:
                     )
                 
                 # Use exponential backoff if feeds are failing
-                sleep_time = 3600 if self.feed_failures == 0 else min(3600, 300 * (2 ** min(self.feed_failures, 4)))
+                if self.feed_failures == 0:
+                    sleep_time = FEED_MAX_SLEEP_TIME
+                else:
+                    backoff_exponent = min(self.feed_failures, FEED_MAX_BACKOFF_EXPONENT)
+                    sleep_time = min(FEED_MAX_SLEEP_TIME, FEED_BASE_SLEEP_TIME * (2 ** backoff_exponent))
                 await asyncio.sleep(sleep_time)
                 
             except Exception as e:
