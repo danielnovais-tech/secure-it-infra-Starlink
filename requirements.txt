@@ -1,6 +1,8 @@
 # Python dependencies for secure-it-infra-Starlink
 # No external dependencies required for the core security scoring module
 # Python 3.12+ is required
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
 pytest>=7.0.0
 pytest-asyncio>=0.21.0
 # No external dependencies required for the core system
