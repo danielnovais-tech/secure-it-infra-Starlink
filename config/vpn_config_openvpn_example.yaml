@@ -1,0 +1,38 @@
+# Example VPN Configuration for OpenVPN
+# This is a minimal configuration example for OpenVPN setup
+
+vpn:
+  # Enable VPN management
+  enabled: true
+  
+  # VPN connection details
+  connection:
+    name: "openvpn-starlink"
+    type: "openvpn"
+    config_file: "/etc/openvpn/client.conf"
+    
+  # Monitoring settings
+  monitoring:
+    check_interval: 30
+    auto_reconnect: true
+    max_reconnect_attempts: 5
+    reconnect_delay: 10
+    enable_logging: true
+    log_file: "/var/log/vpn_manager.log"
+    
+  # Health check settings
+  health_check:
+    enabled: true
+    test_hosts:
+      - "8.8.8.8"
+    timeout: 5
+    failure_threshold: 3
+    
+  # Notifications (optional)
+  notifications:
+    enabled: false
+
+# Starlink-specific settings
+starlink:
+  priority_routing: true
+  interface: "eth0"

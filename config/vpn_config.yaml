@@ -1,0 +1,79 @@
+# VPN Configuration File
+# This file defines VPN connection settings for Starlink infrastructure security
+
+vpn:
+  # Enable or disable VPN management
+  enabled: true
+  
+  # VPN connection details
+  connection:
+    name: "starlink-secure-vpn"
+    type: "openvpn"  # Supported: openvpn, wireguard
+    config_file: "/etc/openvpn/client.conf"  # Path to VPN config file
+    
+  # Monitoring settings
+  monitoring:
+    # Check interval in seconds
+    check_interval: 30
+    
+    # Enable auto-reconnect on disconnection
+    auto_reconnect: true
+    
+    # Maximum reconnection attempts before giving up
+    max_reconnect_attempts: 5
+    
+    # Delay between reconnection attempts (seconds)
+    reconnect_delay: 10
+    
+    # Enable status logging
+    enable_logging: true
+    
+    # Log file path
+    log_file: "/var/log/vpn_manager.log"
+    
+  # Health check settings
+  health_check:
+    # Enable health checks
+    enabled: true
+    
+    # Test connectivity by pinging these hosts
+    test_hosts:
+      - "8.8.8.8"
+      - "1.1.1.1"
+    
+    # Timeout for ping tests (seconds)
+    timeout: 5
+    
+    # Consider VPN unhealthy if this many consecutive checks fail
+    failure_threshold: 3
+    
+  # Notification settings (optional)
+  notifications:
+    # Enable notifications
+    enabled: false
+    
+    # Notification channels
+    channels:
+      email:
+        enabled: false
+        recipients:
+          - "admin@example.com"
+      
+      webhook:
+        enabled: false
+        url: "https://hooks.example.com/vpn-alerts"
+
+# Starlink-specific settings
+starlink:
+  # Priority routing for Starlink interface
+  priority_routing: true
+  
+  # Interface name for Starlink connection
+  interface: "eth0"
+  
+  # Bypass VPN for certain traffic
+  bypass_rules:
+    # Local network ranges that should bypass VPN
+    local_networks:
+      - "192.168.0.0/16"
+      - "10.0.0.0/8"
