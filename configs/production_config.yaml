@@ -1,0 +1,51 @@
+# Production Environment Configuration Override
+# Merge this with default_config.yaml for production deployments
+
+metrics:
+  collection:
+    interval: 30  # More frequent collection in production
+    retention_days: 90  # Longer retention
+
+automated_responses:
+  threat_containment:
+    auto_execute: true  # Enable auto-execution in production
+  
+  policy_enforcement:
+    auto_execute: true
+
+logging:
+  structured:
+    level: WARNING  # Less verbose in production
+  
+  levels:
+    root: WARNING
+    security: ERROR
+    automated_responses: ERROR
+  
+  destinations:
+    - type: file
+      path: /var/log/secure-it-starlink/production.log
+      rotation: daily
+      max_size: 500MB
+      backup_count: 90
+    - type: console
+      enabled: false  # Disable console in production
+    - type: syslog
+      enabled: true
+      host: syslog.example.com
+      port: 514
+
+application:
+  environment: production
+  
+  alerts:
+    enabled: true
+    channels:
+      - type: email
+        enabled: true
+        recipients:
+          - ops-team@example.com
+          - security@example.com
+      - type: webhook
+        enabled: true
+        url: https://monitoring.example.com/webhook

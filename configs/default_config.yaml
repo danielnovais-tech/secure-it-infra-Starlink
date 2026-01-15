@@ -1,0 +1,207 @@
+# Default Configuration for Secure IT Starlink
+# Enterprise-grade security and monitoring for Starlink infrastructure
+
+# Metrics Configuration
+metrics:
+  # Security scoring configuration
+  security:
+    enabled: true
+    weight: 0.4
+    thresholds:
+      critical: 90
+      high: 70
+      medium: 50
+      low: 30
+    checks:
+      - firewall_status
+      - encryption_level
+      - authentication_strength
+      - vulnerability_count
+      - patch_level
+  
+  # Connection stability monitoring
+  connection:
+    enabled: true
+    weight: 0.3
+    thresholds:
+      excellent: 99.5
+      good: 98.0
+      fair: 95.0
+      poor: 90.0
+    metrics:
+      - uptime_percentage
+      - packet_loss
+      - latency
+      - jitter
+      - signal_strength
+    check_interval: 60  # seconds
+  
+  # Performance monitoring
+  performance:
+    enabled: true
+    weight: 0.3
+    thresholds:
+      excellent: 90
+      good: 75
+      fair: 60
+      poor: 40
+    metrics:
+      - throughput
+      - bandwidth_utilization
+      - cpu_usage
+      - memory_usage
+      - disk_io
+    check_interval: 30  # seconds
+  
+  # Metrics collection settings
+  collection:
+    interval: 60  # seconds
+    retention_days: 30
+    aggregation_window: 300  # seconds (5 minutes)
+
+# Automated Responses Configuration
+automated_responses:
+  # Threat containment
+  threat_containment:
+    enabled: true
+    auto_execute: false  # Require manual approval by default
+    actions:
+      - type: isolate_device
+        severity_threshold: high
+        cooldown: 300  # seconds
+      - type: block_ip
+        severity_threshold: critical
+        cooldown: 600
+      - type: quarantine_traffic
+        severity_threshold: high
+        cooldown: 300
+  
+  # Policy enforcement
+  policy_enforcement:
+    enabled: true
+    auto_execute: true
+    policies:
+      - name: bandwidth_limit
+        condition: bandwidth_usage > 90%
+        action: throttle_connection
+        threshold: 90
+      - name: unauthorized_access
+        condition: failed_auth_attempts > 5
+        action: block_source
+        threshold: 5
+      - name: malware_detection
+        condition: malware_detected
+        action: isolate_and_alert
+  
+  # Failover activation
+  failover:
+    enabled: true
+    auto_execute: true
+    triggers:
+      - type: connection_loss
+        threshold: 30  # seconds
+        action: switch_to_backup
+      - type: performance_degradation
+        threshold: 50  # percentage
+        action: load_balance
+      - type: security_breach
+        threshold: critical
+        action: emergency_shutdown
+    backup_links:
+      - name: backup_starlink_1
+        priority: 1
+      - name: cellular_backup
+        priority: 2
+      - name: terrestrial_backup
+        priority: 3
+
+# Logging Configuration
+logging:
+  # Structured logging settings
+  structured:
+    enabled: true
+    format: json
+    level: INFO
+    include_timestamp: true
+    include_hostname: true
+    include_process_id: true
+  
+  # Event correlation
+  correlation:
+    enabled: true
+    window_size: 300  # seconds (5 minutes)
+    correlation_fields:
+      - source_ip
+      - user_id
+      - device_id
+      - event_type
+    patterns:
+      - name: brute_force_attack
+        events:
+          - failed_login
+        count: 5
+        timeframe: 60
+      - name: data_exfiltration
+        events:
+          - large_upload
+          - after_hours_access
+        count: 2
+        timeframe: 300
+  
+  # Log destinations
+  destinations:
+    - type: file
+      path: ./logs/secure-it-starlink.log
+      rotation: daily
+      max_size: 100MB
+      backup_count: 30
+    - type: console
+      enabled: true
+      level: INFO
+    - type: syslog
+      enabled: false
+      host: localhost
+      port: 514
+  
+  # Log levels by component
+  levels:
+    root: INFO
+    metrics: INFO
+    automated_responses: WARNING
+    security: WARNING
+    performance: INFO
+
+# General Application Settings
+application:
+  name: secure-it-starlink
+  version: 1.0.0
+  environment: production
+  
+  # Monitoring settings
+  monitoring:
+    enabled: true
+    dashboard_port: 8080
+    api_port: 8081
+    health_check_interval: 30
+  
+  # Alert settings
+  alerts:
+    enabled: true
+    channels:
+      - type: email
+        enabled: false
+        recipients:
+          - admin@example.com
+      - type: sms
+        enabled: false
+      - type: webhook
+        enabled: false
+        url: https://example.com/webhook
+      - type: log
+        enabled: true
+  
+  # Database settings (for metrics storage)
+  database:
+    type: sqlite
+    path: ./data/metrics.db
+    connection_pool_size: 10
