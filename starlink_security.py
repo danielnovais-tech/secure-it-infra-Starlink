@@ -31,12 +31,12 @@ def setup_directories() -> None:
     except PermissionError as e:
         raise PermissionError(
             f"Cannot create Starlink security directories due to insufficient permissions. "
-            f"Failed at: {e.filename}"
+            f"Failed at: {e.filename or 'unknown location'}"
         ) from e
     except OSError as e:
         raise OSError(
-            f"Cannot create Starlink security directories due to filesystem error: {e.strerror}. "
-            f"Failed at: {e.filename}"
+            f"Cannot create Starlink security directories due to filesystem error: "
+            f"{e.strerror or 'unknown error'}. Failed at: {e.filename or 'unknown location'}"
         ) from e
 
 
