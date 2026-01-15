@@ -1,10 +1,17 @@
 # Starlink Security Foundation
 
-A Python module for securing enterprise infrastructures using Starlink connectivity, providing monitoring, enforcement, and response capabilities.
+A Python module for securing enterprise infrastructures using Starlink connectivity, providing monitoring, enforcement, and response capabilities with enterprise-grade features.
 
 ## Features
 
 - **Automatic Directory Setup**: Creates necessary configuration, data, and log directories
+- **Structured JSON Logging**: Comprehensive logging with both console and file outputs in JSON format
+- **Configuration Validation**: Schema validation for robust configuration management
+- **Thread Safety**: Full concurrent access support with locks for multi-threaded environments
+- **Lifecycle Management**: Explicit start() and stop() methods for clean module initialization and shutdown
+- **Metrics & Monitoring**: Exposed counters for observability (active threats, queue size, etc.)
+- **Dependency Injection**: Module factory pattern for testing and swapping implementations
+- **Security Hardening**: Encryption key rotation policies with automatic backup
 - **Security Levels**: Support for NORMAL, ELEVATED, CRITICAL, and RECOVERY operational modes
 - **Connection Types**: Handles STARLINK_ONLY, HYBRID, and FAILOVER connection configurations
 - **Event Logging**: Track and manage security events with metadata
@@ -20,7 +27,7 @@ from starlink_security import StarlinkSecurityFoundation
 
 ## Quick Start
 
-### Basic Usage
+### Basic Usage with Lifecycle Management
 
 ```python
 from datetime import datetime
@@ -35,8 +42,12 @@ from starlink_security import (
 # Initialize the security foundation
 foundation = StarlinkSecurityFoundation()
 
+# Start the foundation (activates all modules)
+foundation.start()
+
 # Or initialize with a custom configuration file
 foundation = StarlinkSecurityFoundation(config_path="/path/to/config.json")
+foundation.start()
 
 # Log a security event
 event = SecurityEvent(
@@ -65,19 +76,27 @@ foundation.update_metrics(metrics)
 # Change security level
 foundation.set_security_level(SecurityLevel.ELEVATED)
 
-# Track active threats
-foundation.active_threats.add("port_scan_192.168.1.100")
+# Track active threats (thread-safe)
+foundation.add_threat("port_scan_192.168.1.100")
+foundation.remove_threat("port_scan_192.168.1.100")
 
-# Check security modules status
-print(foundation.security_modules)
+# Get observability metrics
+metrics_summary = foundation.get_metrics_summary()
+print(f"Active threats: {metrics_summary['active_threats_count']}")
+print(f"Queue utilization: {metrics_summary['events_queue_utilization']:.2f}%")
+print(f"Key rotation needed: {metrics_summary['key_rotation_needed']}")
 
-# Get unresolved events
-unresolved = foundation.get_unresolved_events()
+# Rotate encryption key when needed
+if foundation._needs_key_rotation():
+    foundation.rotate_encryption_key()
+
+# Stop the foundation when done
+foundation.stop()
 ```
 
 ### Configuration File Example
 
-Create a JSON configuration file:
+Create a JSON configuration file with extended options:
 
 ```json
 {
@@ -86,6 +105,13 @@ Create a JSON configuration file:
     "monitoring_interval": 30,
     "max_events_queue": 2000,
     "encryption_enabled": true,
+    "key_rotation_days": 90,
+    "log_level": "DEBUG",
+    "modules": {
+        "firewall": {"enabled": true},
+        "intrusion_detection": {"enabled": true},
+        "threat_analysis": {"enabled": true}
+    },
     "custom_settings": {
         "alert_threshold": 5,
         "auto_response": true
@@ -97,7 +123,55 @@ Then load it:
 
 ```python
 foundation = StarlinkSecurityFoundation(config_path="config.json")
+foundation.start()
 print(foundation.config)
+```
+
+### Dependency Injection for Testing
+
+Use custom module implementations via dependency injection:
+
+```python
+from starlink_security import StarlinkSecurityFoundation, SecurityModule
+
+class CustomFirewallModule(SecurityModule):
+    def start(self):
+        super().start()
+        # Custom firewall logic
+        self.status = "custom_active"
+    
+    def stop(self):
+        # Custom cleanup
+        super().stop()
+
+def custom_module_factory(name, enabled):
+    if name == "firewall":
+        return CustomFirewallModule(name, enabled)
+    return SecurityModule(name, enabled)
+
+foundation = StarlinkSecurityFoundation(module_factory=custom_module_factory)
+foundation.start()
+```
+
+### Thread-Safe Operations
+
+All operations are thread-safe for concurrent environments:
+
+```python
+import threading
+
+def process_threats(foundation):
+    for i in range(100):
+        foundation.add_threat(f"threat_{i}")
+        # Process...
+        foundation.remove_threat(f"threat_{i}")
+
+# Run in multiple threads
+threads = [threading.Thread(target=process_threats, args=(foundation,)) for _ in range(5)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
 ```
 
 ## Directory Structure
@@ -106,47 +180,104 @@ The module automatically creates the following directories in your home director
 
 - `~/.starlink_security/config` - Configuration files and encryption keys
 - `~/.starlink_security/data` - Data storage
-- `~/.starlink_security/logs` - Log files
+- `~/.starlink_security/logs` - Structured JSON log files (daily rotation)
+
+### Logging
+
+The module provides structured logging with both console and file outputs:
+
+- **Console logging**: Human-readable format at INFO level
+- **File logging**: JSON format at DEBUG level in `~/.starlink_security/logs/starlink_security_YYYYMMDD.log`
+
+Example log entry:
+```json
+{
+    "timestamp": "2026-01-15T22:12:16.728000",
+    "level": "INFO",
+    "module": "starlink_security",
+    "function": "__init__",
+    "message": "Starlink Security Foundation initialized successfully"
+}
+```
 
 ### Encryption
 
 The module automatically generates and stores an encryption key on first use at:
 - `~/.starlink_security/config/encryption.key`
 
-This key persists across instances and is used for secure communications.
+This key persists across instances and is used for secure communications. The module supports automatic key rotation:
+
+```python
+# Check if rotation is needed (default: 90 days)
+if foundation._needs_key_rotation():
+    foundation.rotate_encryption_key()
+```
+
+Key backups are created at:
+- `~/.starlink_security/config/encryption.key.backup.YYYYMMDDHHMMSS`
 
 ## API Reference
 
 ### Classes
 
 #### `StarlinkSecurityFoundation`
-Main class for security operations.
+Main class for security operations with lifecycle management.
 
 **Initialization:**
-- `__init__(config_path: Optional[str] = None)` - Initialize with optional configuration file
+- `__init__(config_path: Optional[str] = None, module_factory: Optional[Callable] = None)` - Initialize with optional configuration file and module factory for dependency injection
 
 **Attributes:**
-- `config: Dict[str, Any]` - Configuration dictionary
+- `config: Dict[str, Any]` - Validated configuration dictionary
 - `security_level: SecurityLevel` - Current security level
 - `connection_type: ConnectionType` - Current connection type
 - `encryption_key: bytes` - Encryption key for secure communications
-- `running: bool` - Running status flag
-- `events_queue: queue.Queue` - Queue for event processing
-- `metrics: NetworkMetrics` - Current network metrics
-- `active_threats: Set[str]` - Set of active threat identifiers
-- `security_modules: Dict[str, Any]` - Security modules and their status
-- `events: List[SecurityEvent]` - List of logged events
+- `running: bool` - Running status flag (controlled by start/stop)
+- `events_queue: queue.Queue` - Thread-safe queue for event processing (with maxsize)
+- `metrics: NetworkMetrics` - Current network metrics (thread-safe access)
+- `active_threats: Set[str]` - Set of active threat identifiers (thread-safe)
+- `security_modules: Dict[str, SecurityModule]` - Security modules with lifecycle management
+- `events: List[SecurityEvent]` - List of logged events (thread-safe)
+- `logger: logging.Logger` - Structured logger instance
 
-**Methods:**
-- `log_event(event: SecurityEvent)` - Log a security event
-- `update_metrics(metrics: NetworkMetrics)` - Update network metrics
+**Lifecycle Methods:**
+- `start()` - Start all security modules and begin operations
+- `stop()` - Stop all security modules and cease operations
+
+**Core Methods:**
+- `log_event(event: SecurityEvent)` - Log a security event (thread-safe)
+- `update_metrics(metrics: NetworkMetrics)` - Update network metrics (thread-safe)
 - `set_security_level(level: SecurityLevel)` - Change security level
-- `get_unresolved_events()` - Get unresolved security events
+- `add_threat(threat_id: str)` - Add an active threat (thread-safe)
+- `remove_threat(threat_id: str)` - Remove an active threat (thread-safe)
+- `get_unresolved_events()` - Get unresolved security events (thread-safe)
+
+**Monitoring & Observability:**
+- `get_metrics_summary()` - Get comprehensive metrics for monitoring/observability
+  - Returns: active_threats_count, unresolved_events_count, queue_utilization, network_metrics, module status, key age, etc.
+
+**Security Methods:**
+- `rotate_encryption_key()` - Rotate encryption key with automatic backup
+- `_needs_key_rotation()` - Check if key rotation is needed based on age
 
 **Private Methods:**
-- `_load_config(config_path)` - Load configuration from file
-- `_initialize_encryption()` - Initialize encryption key
-- `_initialize_modules()` - Initialize security modules
+- `_load_config(config_path)` - Load and validate configuration from file
+- `_initialize_encryption()` - Initialize encryption key with age tracking
+- `_initialize_modules()` - Initialize security modules via factory pattern
+- `_default_module_factory(name, enabled)` - Default module factory
+
+#### `SecurityModule`
+Base class for security modules with lifecycle management.
+
+**Methods:**
+- `start()` - Start the module
+- `stop()` - Stop the module
+- `get_status()` - Get module status dictionary
+
+**Attributes:**
+- `name: str` - Module name
+- `enabled: bool` - Whether module is enabled
+- `status: str` - Current status (initialized, active, stopped)
+- `logger: logging.Logger` - Module-specific logger
 
 #### `SecurityLevel` (Enum)
 - `NORMAL` - Normal operations
