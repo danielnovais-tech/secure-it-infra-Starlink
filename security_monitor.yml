@@ -1,5 +1,6 @@
-# Security Monitor Configuration
+report_url: "https://example.com/api/security/report"
 
-report_url: "https://example.com/report"
-
-# fernet_key: b'generated_fernet_key_here'  # Replace with actual key
+# Optional: provide a fixed Fernet key if you want reports to be decryptable later.
+# Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Example of a valid key (do not use in production):
+# fernet_key: "qXzvXcYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYwYw="
