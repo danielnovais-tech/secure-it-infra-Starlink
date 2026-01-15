@@ -14,6 +14,14 @@ class SecurityLevel(Enum):
     NORMAL = "normal"
 
 
+# Score multipliers for each security level
+SECURITY_LEVEL_MULTIPLIERS = {
+    SecurityLevel.CRITICAL: 0.7,
+    SecurityLevel.ELEVATED: 0.9,
+    SecurityLevel.NORMAL: 1.0,
+}
+
+
 class SecurityScorer:
     """
     A class to calculate security scores based on security levels.
@@ -40,10 +48,12 @@ class SecurityScorer:
         
         Returns:
             float: The adjusted score based on security level.
-        """
-        if self.security_level == SecurityLevel.CRITICAL:
-            base_score *= 0.7
-        elif self.security_level == SecurityLevel.ELEVATED:
-            base_score *= 0.9
         
-        return base_score
+        Raises:
+            ValueError: If base_score is negative.
+        """
+        if base_score < 0:
+            raise ValueError("base_score must be non-negative")
+        
+        multiplier = SECURITY_LEVEL_MULTIPLIERS.get(self.security_level, 1.0)
+        return base_score * multiplier

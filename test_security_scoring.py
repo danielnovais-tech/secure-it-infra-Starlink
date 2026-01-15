@@ -87,6 +87,15 @@ class TestSecurityScorer(unittest.TestCase):
         result2 = scorer.calculate_score(base_score)
         
         self.assertEqual(result1, result2)
+    
+    def test_negative_base_score_raises_error(self):
+        """Test that negative base scores raise ValueError."""
+        scorer = SecurityScorer(SecurityLevel.NORMAL)
+        
+        with self.assertRaises(ValueError) as context:
+            scorer.calculate_score(-10.0)
+        
+        self.assertIn("non-negative", str(context.exception))
 
 
 if __name__ == '__main__':
