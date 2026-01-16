@@ -1,3 +1,4 @@
+cryptography>=42.0.4
 # Secure IT Infrastructure - Starlink
 # Core runtime dependencies only
 # Note: The starlink_metrics module uses only Python standard library
