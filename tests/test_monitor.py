@@ -6,7 +6,7 @@ Tests the core functionality without requiring actual API access.
 import sys
 import os
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from datetime import datetime
 
 # Add src to path
