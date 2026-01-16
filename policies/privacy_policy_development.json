@@ -1,0 +1,86 @@
+{
+  "$schema": "https://starlink-security.internal/schemas/privacy-policy-v1.0.0.json",
+  "version": "1.0.0",
+  "profile_name": "development",
+  "description": "Lenient privacy enforcement for development environments",
+  "created_at": "2026-01-16T20:00:00Z",
+  "updated_at": "2026-01-16T20:00:00Z",
+  "owner": "Platform Team",
+  
+  "enforcement_level": "lenient",
+  
+  "pii_fields": {
+    "suspect_fields": [
+      "user_id", "email", "username", "phone", "ip_address", "session_id"
+    ],
+    "required_tags": ["PII"],
+    "allow_untagged": true,
+    "require_redaction": false
+  },
+  
+  "phi_fields": {
+    "suspect_fields": [
+      "patient_id", "medical_record", "diagnosis", "health_data"
+    ],
+    "required_tags": ["PHI"],
+    "allow_untagged": true,
+    "require_redaction": false,
+    "retention_days": 30
+  },
+  
+  "confidential_fields": {
+    "suspect_fields": [
+      "password", "secret", "private_key", "api_secret"
+    ],
+    "required_tags": ["CONFIDENTIAL", "REDACTED"],
+    "allow_untagged": false,
+    "require_redaction": true,
+    "block_entirely": true
+  },
+  
+  "pattern_detection": {
+    "enabled": true,
+    "patterns": {
+      "password": {
+        "regex": "(?i)(password|passwd|pwd)['\"]?\\s*[:=]\\s*['\"]?[^\\s'\"]{6,}",
+        "severity": "warning",
+        "message": "Password value detected in development logs"
+      },
+      "api_key": {
+        "regex": "(?i)(api[_-]?key|apikey)['\"]?\\s*[:=]\\s*['\"]?[a-z0-9_-]{20,}",
+        "severity": "warning",
+        "message": "API key detected in development logs"
+      }
+    }
+  },
+  
+  "redaction_markers": {
+    "accepted": ["***", "REDACTED", "[REDACTED]", "XXX", "####"],
+    "minimum_length": 3
+  },
+  
+  "encryption_requirements": {
+    "require_encrypted_tag": false,
+    "allowed_encryption_methods": []
+  },
+  
+  "compliance": {
+    "frameworks": [],
+    "data_minimization": false,
+    "consent_required": false,
+    "audit_all_access": false
+  },
+  
+  "exceptions": {
+    "allowed_services": ["*"],
+    "allowed_components": ["*"],
+    "allowed_fields": []
+  },
+  
+  "reporting": {
+    "generate_audit_report": false,
+    "report_format": "text",
+    "include_samples": true,
+    "max_violations_per_report": 50
+  }
+}
