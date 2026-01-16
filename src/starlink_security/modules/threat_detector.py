@@ -18,6 +18,7 @@ class ThreatDetector(SecurityModule):
     def __init__(self, foundation: 'StarlinkSecurityFoundation'):
         super().__init__(foundation)
         self.check_interval = self.config.get('monitoring', {}).get('threat_check_interval', 60)
+        self._shutdown_event = asyncio.Event()
     
     def initialize(self) -> bool:
         """Initialize threat detection."""
@@ -36,11 +37,19 @@ class ThreatDetector(SecurityModule):
         self.logger.info("Starting threat detection")
         while self.running:
             await self._check_threats()
-            await asyncio.sleep(self.check_interval)
+            # Use wait_for with timeout to enable responsive shutdown
+            try:
+                await asyncio.wait_for(self._shutdown_event.wait(), timeout=self.check_interval)
+                # If we get here, shutdown was requested
+                break
+            except asyncio.TimeoutError:
+                # Normal timeout, continue loop
+                pass
     
     async def stop(self):
         """Stop threat detection."""
         self.running = False
+        self._shutdown_event.set()
         self.logger.info("Stopped threat detection")
     
     async def _check_threats(self):

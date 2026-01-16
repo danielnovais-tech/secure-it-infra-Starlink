@@ -148,8 +148,8 @@ class StarlinkSecurityFoundation:
         """Handle shutdown signals gracefully."""
         logger.info(f"Received shutdown signal {signum}")
         self.running = False
-        self.cleanup()
-        sys.exit(0)
+        # Don't call sys.exit() here - let the async event loop handle shutdown
+        # The run() method's while loop will exit when self.running becomes False
     
     def _handle_module_task_result(self, task: asyncio.Task) -> None:
         """Handle completion of background module tasks and log exceptions."""
@@ -217,17 +217,32 @@ def configure_logging():
     )
 
 
-async def async_main():
+async def async_main(config_path: Optional[str] = None):
     """Main async entry point."""
-    foundation = StarlinkSecurityFoundation()
+    foundation = StarlinkSecurityFoundation(config_path=config_path)
     await foundation.run()
 
 
 def main():
     """Main synchronous entry point for console script."""
+    import argparse
+    
     configure_logging()
+    
+    parser = argparse.ArgumentParser(
+        description="Starlink Security Foundation - Enterprise security for Starlink infrastructure"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to configuration file",
+        default=None
+    )
+    
+    args = parser.parse_args()
+    
     try:
-        asyncio.run(async_main())
+        asyncio.run(async_main(config_path=args.config))
     except KeyboardInterrupt:
         logger.info("Shutdown complete")
         sys.exit(0)

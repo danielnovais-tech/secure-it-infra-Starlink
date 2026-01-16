@@ -18,6 +18,7 @@ class NetworkMonitor(SecurityModule):
     def __init__(self, foundation: 'StarlinkSecurityFoundation'):
         super().__init__(foundation)
         self.scan_interval = self.config.get('monitoring', {}).get('network_scan_interval', 300)
+        self._shutdown_event = asyncio.Event()
     
     def initialize(self) -> bool:
         """Initialize network monitoring."""
@@ -37,11 +38,19 @@ class NetworkMonitor(SecurityModule):
         self.logger.info("Starting network monitoring")
         while self.running:
             await self._scan_network()
-            await asyncio.sleep(self.scan_interval)
+            # Use wait_for with timeout to enable responsive shutdown
+            try:
+                await asyncio.wait_for(self._shutdown_event.wait(), timeout=self.scan_interval)
+                # If we get here, shutdown was requested
+                break
+            except asyncio.TimeoutError:
+                # Normal timeout, continue loop
+                pass
     
     async def stop(self):
         """Stop network monitoring."""
         self.running = False
+        self._shutdown_event.set()
         self.logger.info("Stopped network monitoring")
     
     async def _scan_network(self):

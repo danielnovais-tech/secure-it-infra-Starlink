@@ -1,10 +1,8 @@
 """Tests for Starlink Security Foundation."""
 
-import asyncio
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
