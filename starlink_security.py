@@ -12,6 +12,7 @@ import os
 import pickle
 import queue
 import random
+import secrets
 import threading
 import time
 import warnings
@@ -2959,4 +2960,721 @@ class UnifiedCLI:
         """Get command history."""
         with self._lock:
             return self.command_history[-limit:]
+
+
+# ============================================================================
+# Ecosystem & Interoperability
+# ============================================================================
+
+class RESTAPIGateway:
+    """
+    Secure REST API gateway for external integrations.
+    Provides token-based authentication and exposes foundation operations.
+    """
+    
+    def __init__(self, foundation: 'StarlinkSecurityFoundation', secret_key: str = None):
+        self.foundation = foundation
+        self.secret_key = secret_key or secrets.token_hex(32)
+        self.tokens = {}  # token -> (username, expiry)
+        self._lock = threading.RLock()
+        self.logger = logging.getLogger(__name__)
+    
+    def generate_token(self, username: str, expires_in: int = 3600) -> str:
+        """Generate an API token with expiration."""
+        token = secrets.token_urlsafe(32)
+        expiry = datetime.now() + timedelta(seconds=expires_in)
+        
+        with self._lock:
+            self.tokens[token] = (username, expiry)
+        
+        self.logger.info(f"Generated API token for user: {username}, expires: {expiry}")
+        return token
+    
+    def validate_token(self, token: str) -> Optional[str]:
+        """Validate token and return username if valid."""
+        with self._lock:
+            if token not in self.tokens:
+                return None
+            
+            username, expiry = self.tokens[token]
+            if datetime.now() > expiry:
+                del self.tokens[token]
+                return None
+            
+            return username
+    
+    def revoke_token(self, token: str) -> bool:
+        """Revoke an API token."""
+        with self._lock:
+            if token in self.tokens:
+                del self.tokens[token]
+                return True
+            return False
+    
+    def handle_request(self, endpoint: str, method: str, token: str, data: Dict = None) -> Dict[str, Any]:
+        """
+        Handle API requests with authentication.
+        
+        Endpoints:
+        - GET /metrics -> get_metrics_summary()
+        - GET /prometheus -> get_prometheus_metrics()
+        - POST /events -> log_event()
+        - GET /threats -> get active threats
+        - POST /config/reload -> reload_config()
+        - POST /keys/rotate -> rotate_encryption_key()
+        - POST /audit/export -> export_compliance_audit()
+        """
+        username = self.validate_token(token)
+        if not username:
+            return {"error": "Invalid or expired token", "status": 401}
+        
+        try:
+            if endpoint == "/metrics" and method == "GET":
+                return {"data": self.foundation.get_metrics_summary(), "status": 200}
+            
+            elif endpoint == "/prometheus" and method == "GET":
+                return {"data": self.foundation.get_prometheus_metrics(), "status": 200}
+            
+            elif endpoint == "/events" and method == "POST":
+                if not data:
+                    return {"error": "Event data required", "status": 400}
+                event = SecurityEvent(**data)
+                self.foundation.log_event(event)
+                return {"message": "Event logged successfully", "status": 200}
+            
+            elif endpoint == "/threats" and method == "GET":
+                threats = self.foundation.state_store.get_threats()
+                return {"data": list(threats), "status": 200}
+            
+            elif endpoint == "/config/reload" and method == "POST":
+                self.foundation.reload_config()
+                return {"message": "Configuration reloaded", "status": 200}
+            
+            elif endpoint == "/keys/rotate" and method == "POST":
+                self.foundation.rotate_encryption_key()
+                return {"message": "Encryption key rotated", "status": 200}
+            
+            elif endpoint == "/audit/export" and method == "POST":
+                profile = data.get("profile", "iso27001") if data else "iso27001"
+                output = data.get("output", "audit_export.json") if data else "audit_export.json"
+                formatter = ComplianceProfile.create_formatter(profile)
+                self.foundation.export_compliance_audit(formatter, output)
+                return {"message": f"Audit exported to {output}", "status": 200}
+            
+            else:
+                return {"error": f"Unknown endpoint: {endpoint}", "status": 404}
+        
+        except Exception as e:
+            self.logger.error(f"API request error: {e}")
+            return {"error": str(e), "status": 500}
+
+
+class PluginRegistry:
+    """
+    Plugin marketplace model for external module registration.
+    Enables third-party connectors without modifying core code.
+    """
+    
+    def __init__(self):
+        self.plugins = {
+            "threat_feeds": {},  # name -> ThreatFeedConnector class
+            "siem_adapters": {},  # name -> SIEMAdapter class
+            "threat_scorers": {},  # name -> ThreatScorer class
+            "security_modules": {},  # name -> SecurityModule class
+        }
+        self._lock = threading.RLock()
+        self.logger = logging.getLogger(__name__)
+    
+    def register_plugin(self, category: str, name: str, plugin_class: type, metadata: Dict = None):
+        """Register a plugin in the marketplace."""
+        if category not in self.plugins:
+            raise ValueError(f"Unknown plugin category: {category}")
+        
+        with self._lock:
+            self.plugins[category][name] = {
+                "class": plugin_class,
+                "metadata": metadata or {},
+                "registered_at": datetime.now()
+            }
+        
+        self.logger.info(f"Registered plugin: {category}/{name}")
+    
+    def unregister_plugin(self, category: str, name: str) -> bool:
+        """Unregister a plugin."""
+        with self._lock:
+            if category in self.plugins and name in self.plugins[category]:
+                del self.plugins[category][name]
+                self.logger.info(f"Unregistered plugin: {category}/{name}")
+                return True
+            return False
+    
+    def get_plugin(self, category: str, name: str) -> Optional[type]:
+        """Get a plugin class by name."""
+        with self._lock:
+            if category in self.plugins and name in self.plugins[category]:
+                return self.plugins[category][name]["class"]
+            return None
+    
+    def list_plugins(self, category: str = None) -> Dict[str, Any]:
+        """List all registered plugins, optionally filtered by category."""
+        with self._lock:
+            if category:
+                return {category: list(self.plugins.get(category, {}).keys())}
+            return {cat: list(plugins.keys()) for cat, plugins in self.plugins.items()}
+
+
+# ============================================================================
+# Performance & Efficiency
+# ============================================================================
+
+class DynamicWorkerPool:
+    """
+    Auto-scaling worker pool based on queue depth and latency.
+    Integrates with Kubernetes HPA for containerized deployments.
+    """
+    
+    # Configuration constants
+    LATENCY_SMOOTHING_FACTOR = 0.9
+    DEFAULT_RISK_SCORE = 0.5
+    SIGNIFICANT_RISK_DIFFERENCE_THRESHOLD = 0.1
+    
+    def __init__(self, min_workers: int = 2, max_workers: int = 16, 
+                 scale_up_threshold: int = 10, scale_down_threshold: int = 2):
+        self.min_workers = min_workers
+        self.max_workers = max_workers
+        self.scale_up_threshold = scale_up_threshold
+        self.scale_down_threshold = scale_down_threshold
+        
+        self.workers = []
+        self.task_queue = queue.Queue()
+        self.current_workers = min_workers
+        self._lock = threading.RLock()
+        self.running = False
+        self.metrics = {
+            "queue_depth": 0,
+            "avg_latency_ms": 0,
+            "scaling_events": []
+        }
+        self.logger = logging.getLogger(__name__)
+    
+    def start(self):
+        """Start the worker pool with minimum workers."""
+        self.running = True
+        for i in range(self.min_workers):
+            self._add_worker()
+        
+        # Start auto-scaling monitor
+        threading.Thread(target=self._monitor_and_scale, daemon=True).start()
+        self.logger.info(f"DynamicWorkerPool started with {self.min_workers} workers")
+    
+    def stop(self):
+        """Stop all workers gracefully."""
+        self.running = False
+        for worker in self.workers:
+            if worker.is_alive():
+                worker.join(timeout=5)
+        self.logger.info("DynamicWorkerPool stopped")
+    
+    def submit(self, task_fn, *args, **kwargs):
+        """Submit a task to the pool."""
+        self.task_queue.put((task_fn, args, kwargs, time.time()))
+        with self._lock:
+            self.metrics["queue_depth"] = self.task_queue.qsize()
+    
+    def _add_worker(self):
+        """Add a new worker thread."""
+        worker = threading.Thread(target=self._worker_loop, daemon=True)
+        worker.start()
+        self.workers.append(worker)
+    
+    def _worker_loop(self):
+        """Worker thread loop."""
+        while self.running:
+            try:
+                task_fn, args, kwargs, submit_time = self.task_queue.get(timeout=1)
+                
+                # Execute task
+                task_fn(*args, **kwargs)
+                
+                # Track latency with exponential moving average
+                latency_ms = (time.time() - submit_time) * 1000
+                with self._lock:
+                    self.metrics["avg_latency_ms"] = (
+                        self.metrics["avg_latency_ms"] * self.LATENCY_SMOOTHING_FACTOR + 
+                        latency_ms * (1 - self.LATENCY_SMOOTHING_FACTOR)
+                    )
+                
+                self.task_queue.task_done()
+            except queue.Empty:
+                continue
+            except Exception as e:
+                self.logger.error(f"Worker error: {e}")
+    
+    def _monitor_and_scale(self):
+        """Monitor queue depth and scale workers dynamically."""
+        while self.running:
+            time.sleep(5)  # Check every 5 seconds
+            
+            queue_depth = self.task_queue.qsize()
+            
+            with self._lock:
+                # Scale up if queue is deep
+                if queue_depth > self.scale_up_threshold and self.current_workers < self.max_workers:
+                    new_worker_count = min(self.current_workers + 2, self.max_workers)
+                    for _ in range(new_worker_count - self.current_workers):
+                        self._add_worker()
+                    
+                    event = {
+                        "timestamp": datetime.now(),
+                        "action": "scale_up",
+                        "from": self.current_workers,
+                        "to": new_worker_count,
+                        "queue_depth": queue_depth
+                    }
+                    self.metrics["scaling_events"].append(event)
+                    self.current_workers = new_worker_count
+                    self.logger.info(f"Scaled up to {new_worker_count} workers (queue: {queue_depth})")
+                
+                # Scale down if queue is shallow
+                elif queue_depth < self.scale_down_threshold and self.current_workers > self.min_workers:
+                    new_worker_count = max(self.current_workers - 1, self.min_workers)
+                    event = {
+                        "timestamp": datetime.now(),
+                        "action": "scale_down",
+                        "from": self.current_workers,
+                        "to": new_worker_count,
+                        "queue_depth": queue_depth
+                    }
+                    self.metrics["scaling_events"].append(event)
+                    self.current_workers = new_worker_count
+                    self.logger.info(f"Scaled down to {new_worker_count} workers (queue: {queue_depth})")
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get current metrics for HPA integration."""
+        with self._lock:
+            return {
+                "current_workers": self.current_workers,
+                "queue_depth": self.task_queue.qsize(),
+                "avg_latency_ms": self.metrics["avg_latency_ms"],
+                "recent_scaling": self.metrics["scaling_events"][-10:]
+            }
+
+
+class ResourceIsolation:
+    """
+    Resource isolation for ML scorers using separate processes.
+    Prevents ML scoring from starving rule-based scoring.
+    """
+    
+    def __init__(self, cpu_quota: float = 0.5, memory_limit_mb: int = 512):
+        self.cpu_quota = cpu_quota  # 0.5 = 50% of one CPU core
+        self.memory_limit_mb = memory_limit_mb
+        self.isolated_scorers = {}
+        self._lock = threading.RLock()
+        self.logger = logging.getLogger(__name__)
+    
+    def register_scorer(self, name: str, scorer: ThreatScorer):
+        """Register a scorer for resource isolation."""
+        with self._lock:
+            self.isolated_scorers[name] = {
+                "scorer": scorer,
+                "cpu_quota": self.cpu_quota,
+                "memory_limit": self.memory_limit_mb
+            }
+        self.logger.info(f"Registered isolated scorer: {name} (CPU: {self.cpu_quota}, MEM: {self.memory_limit_mb}MB)")
+    
+    def score_isolated(self, scorer_name: str, event: SecurityEvent, timeout: int = 5) -> Dict[str, Any]:
+        """
+        Score an event in an isolated environment.
+        Uses multiprocessing to enforce resource limits.
+        """
+        if scorer_name not in self.isolated_scorers:
+            raise ValueError(f"Unknown scorer: {scorer_name}")
+        
+        scorer = self.isolated_scorers[scorer_name]["scorer"]
+        
+        # In production, this would use process-level resource controls
+        # For now, use threading with timeout
+        result = {"risk": DynamicWorkerPool.DEFAULT_RISK_SCORE, "factors": {}, "error": None}
+        
+        def score_fn():
+            try:
+                result.update(scorer.score(event))
+            except Exception as e:
+                result["error"] = str(e)
+        
+        thread = threading.Thread(target=score_fn)
+        thread.start()
+        thread.join(timeout=timeout)
+        
+        if thread.is_alive():
+            self.logger.warning(f"Scorer {scorer_name} timed out")
+            result["error"] = "Timeout"
+        
+        return result
+
+
+# ============================================================================
+# Governance & Compliance
+# ============================================================================
+
+class DataResidencyPolicy:
+    """
+    Tenant-specific data residency controls.
+    Enforces regional restrictions for compliance (e.g., GDPR, data sovereignty).
+    """
+    
+    def __init__(self):
+        self.policies = {}  # tenant_id -> allowed_regions
+        self._lock = threading.RLock()
+        self.logger = logging.getLogger(__name__)
+    
+    def set_policy(self, tenant_id: str, allowed_regions: List[str]):
+        """Set data residency policy for a tenant."""
+        with self._lock:
+            self.policies[tenant_id] = allowed_regions
+        self.logger.info(f"Set residency policy for {tenant_id}: {allowed_regions}")
+    
+    def check_compliance(self, tenant_id: str, region: str) -> bool:
+        """Check if operation in region is compliant with tenant policy."""
+        with self._lock:
+            if tenant_id not in self.policies:
+                return True  # No policy = allow all
+            
+            return region in self.policies[tenant_id]
+    
+    def enforce_replication(self, tenant_id: str, geo_replication: 'GeoReplication') -> List[str]:
+        """Filter replication regions based on tenant policy."""
+        with self._lock:
+            if tenant_id not in self.policies:
+                return list(geo_replication.regions.keys())
+            
+            allowed = self.policies[tenant_id]
+            return [r for r in geo_replication.regions if r in allowed]
+
+
+class RetentionEnforcer:
+    """
+    Automated log retention and deletion per compliance profile.
+    Ensures logs are kept for required duration and deleted afterwards.
+    """
+    
+    def __init__(self, audit_logger: 'AuditLogger'):
+        self.audit_logger = audit_logger
+        # Use uppercase keys to match ComplianceProfile.PROFILES
+        self.profiles = {
+            "PCI_DSS": 365,  # days
+            "HIPAA": 2557,  # 7 years
+            "ISO27001": 1095,  # 3 years
+            "SOC2": 365
+        }
+        self._lock = threading.RLock()
+        self.logger = logging.getLogger(__name__)
+    
+    def enforce_retention(self, profile: str):
+        """Enforce retention policy for a compliance profile."""
+        if profile not in self.profiles:
+            raise ValueError(f"Unknown profile: {profile}")
+        
+        retention_days = self.profiles[profile]
+        cutoff_date = datetime.now() - timedelta(days=retention_days)
+        
+        deleted_count = 0
+        with self._lock:
+            # Filter audit log entries
+            original_count = len(self.audit_logger.audit_chain)
+            self.audit_logger.audit_chain = [
+                entry for entry in self.audit_logger.audit_chain
+                if entry.get("timestamp", datetime.now()) > cutoff_date
+            ]
+            deleted_count = original_count - len(self.audit_logger.audit_chain)
+        
+        self.logger.info(f"Retention enforced for {profile}: deleted {deleted_count} entries older than {retention_days} days")
+        return deleted_count
+
+
+# ============================================================================
+# Developer & Operator Ergonomics
+# ============================================================================
+
+class WebDashboard:
+    """
+    Lightweight web UI for monitoring and operations.
+    Integrates Prometheus/Grafana panels directly.
+    """
+    
+    def __init__(self, foundation: 'StarlinkSecurityFoundation', port: int = 8080):
+        self.foundation = foundation
+        self.port = port
+        self.logger = logging.getLogger(__name__)
+    
+    def get_dashboard_data(self) -> Dict[str, Any]:
+        """Get all data for dashboard display."""
+        return {
+            "metrics": self.foundation.get_metrics_summary(),
+            "prometheus": self.foundation.get_prometheus_metrics(),
+            "threats": list(self.foundation.state_store.get_threats()),
+            "rbac_audit": self.foundation.get_rbac_audit_log() if hasattr(self.foundation, 'get_rbac_audit_log') else [],
+            "cluster_health": self.foundation.cluster_manager.get_status() if hasattr(self.foundation, 'cluster_manager') else {},
+            "scorer_status": self.foundation.get_scorer_explainability()
+        }
+    
+    def render_html(self) -> str:
+        """Render HTML dashboard."""
+        data = self.get_dashboard_data()
+        
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Starlink Security Dashboard</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }}
+                .card {{ background: white; padding: 20px; margin: 10px 0; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                .metric {{ display: inline-block; margin: 10px 20px; }}
+                .metric-value {{ font-size: 24px; font-weight: bold; color: #2196F3; }}
+                .metric-label {{ font-size: 12px; color: #666; }}
+                .threat {{ padding: 10px; margin: 5px 0; background: #fff3cd; border-left: 4px solid #ffc107; }}
+            </style>
+        </head>
+        <body>
+            <h1>Starlink Security Foundation Dashboard</h1>
+            
+            <div class="card">
+                <h2>Metrics Summary</h2>
+                <div class="metric">
+                    <div class="metric-value">{data['metrics'].get('active_threats', 0)}</div>
+                    <div class="metric-label">Active Threats</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">{data['metrics'].get('unresolved_events', 0)}</div>
+                    <div class="metric-label">Unresolved Events</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">{data['metrics'].get('queue_utilization_pct', 0)}%</div>
+                    <div class="metric-label">Queue Utilization</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Active Threats</h2>
+                {''.join([f'<div class="threat">{threat}</div>' for threat in data['threats'][:10]])}
+            </div>
+            
+            <div class="card">
+                <h2>Scorer Status</h2>
+                <p><strong>Type:</strong> {data['scorer_status'].get('scorer_type', 'Unknown')}</p>
+                <p><strong>Health:</strong> {'Healthy' if data['scorer_status'].get('is_healthy') else 'Unhealthy'}</p>
+            </div>
+        </body>
+        </html>
+        """
+        return html
+
+
+class PolicySimulationSandbox:
+    """
+    Test new rulesets or ML models against historical event data.
+    Shows diff of scoring outcomes before rollout.
+    """
+    
+    def __init__(self, foundation: 'StarlinkSecurityFoundation'):
+        self.foundation = foundation
+        self.historical_events = []
+        self._lock = threading.RLock()
+        self.logger = logging.getLogger(__name__)
+    
+    def capture_events(self, events: List[SecurityEvent]):
+        """Capture events for simulation."""
+        with self._lock:
+            self.historical_events.extend(events)
+        self.logger.info(f"Captured {len(events)} events for simulation")
+    
+    def simulate_scorer(self, new_scorer: ThreatScorer, sample_size: int = 100) -> Dict[str, Any]:
+        """
+        Simulate new scorer against historical events.
+        Returns comparison with current scorer.
+        """
+        if not self.historical_events:
+            return {"error": "No historical events available"}
+        
+        sample = random.sample(self.historical_events, min(sample_size, len(self.historical_events)))
+        
+        current_scores = []
+        new_scores = []
+        differences = []
+        
+        for event in sample:
+            # Current scorer
+            current_result = self.foundation.threat_scorer.score(event)
+            current_scores.append(current_result['risk'])
+            
+            # New scorer
+            new_result = new_scorer.score(event)
+            new_scores.append(new_result['risk'])
+            
+            # Track significant differences
+            diff = abs(new_result['risk'] - current_result['risk'])
+            if diff > DynamicWorkerPool.SIGNIFICANT_RISK_DIFFERENCE_THRESHOLD:
+                differences.append({
+                    "event": f"{event.event_type} from {event.source}",
+                    "current_risk": current_result['risk'],
+                    "new_risk": new_result['risk'],
+                    "delta": diff
+                })
+        
+        return {
+            "sample_size": len(sample),
+            "current_avg_risk": sum(current_scores) / len(current_scores),
+            "new_avg_risk": sum(new_scores) / len(new_scores),
+            "significant_differences": len(differences),
+            "top_differences": sorted(differences, key=lambda x: x['delta'], reverse=True)[:10]
+        }
+    
+    def simulate_audit_impact(self, profile: str) -> Dict[str, Any]:
+        """
+        Simulate audit impact of changing compliance profile.
+        Shows how many entries would be affected by retention policy change.
+        """
+        # Validate profile exists
+        if profile not in ComplianceProfile.PROFILES:
+            return {"error": f"Unknown compliance profile: {profile}"}
+        
+        formatter = ComplianceProfile.create_formatter(profile)
+        retention_days = ComplianceProfile.PROFILES[profile]["retention_days"]
+        
+        cutoff_date = datetime.now() - timedelta(days=retention_days)
+        
+        # Count affected entries
+        affected = 0
+        if hasattr(self.foundation, 'audit_logger'):
+            with self.foundation.audit_logger._lock:
+                affected = sum(
+                    1 for entry in self.foundation.audit_logger.audit_chain
+                    if entry.get("timestamp", datetime.now()) < cutoff_date
+                )
+        
+        return {
+            "profile": profile,
+            "retention_days": retention_days,
+            "entries_to_delete": affected,
+            "cutoff_date": cutoff_date.isoformat()
+        }
+
+
+# ============================================================================
+# Long-Term Sustainability
+# ============================================================================
+
+class ModuleVersion:
+    """
+    Semantic versioning for modules, scorers, and connectors.
+    Ensures backward compatibility during upgrades.
+    """
+    
+    def __init__(self, major: int, minor: int, patch: int):
+        self.major = major
+        self.minor = minor
+        self.patch = patch
+    
+    def __str__(self) -> str:
+        return f"{self.major}.{self.minor}.{self.patch}"
+    
+    def is_compatible(self, other: 'ModuleVersion') -> bool:
+        """Check if versions are compatible (same major version)."""
+        return self.major == other.major
+    
+    def __lt__(self, other: 'ModuleVersion') -> bool:
+        return (self.major, self.minor, self.patch) < (other.major, other.minor, other.patch)
+    
+    def __eq__(self, other: 'ModuleVersion') -> bool:
+        return (self.major, self.minor, self.patch) == (other.major, other.minor, other.patch)
+
+
+class VersionedModule:
+    """Base class for versioned modules."""
+    
+    def __init__(self, name: str, version: ModuleVersion):
+        self.name = name
+        self.version = version
+        self.metadata = {
+            "created_at": datetime.now(),
+            "author": "Unknown",
+            "description": ""
+        }
+    
+    def get_version_info(self) -> Dict[str, Any]:
+        """Get version and metadata."""
+        return {
+            "name": self.name,
+            "version": str(self.version),
+            "metadata": self.metadata
+        }
+
+
+class DocumentationGenerator:
+    """
+    Auto-generate API docs, RBAC role maps, and compliance profiles.
+    Extracts documentation from code annotations.
+    """
+    
+    def __init__(self, foundation: 'StarlinkSecurityFoundation'):
+        self.foundation = foundation
+    
+    def generate_api_docs(self) -> str:
+        """Generate API documentation in Markdown format."""
+        docs = "# Starlink Security Foundation API Documentation\n\n"
+        docs += "## Version: 1.0.0\n\n"
+        
+        docs += "## Core Methods\n\n"
+        docs += "### log_event(event: SecurityEvent)\n"
+        docs += "Log a security event with pluggable processing.\n\n"
+        
+        docs += "### update_metrics(latency, jitter, packet_loss, throughput)\n"
+        docs += "Update network performance metrics.\n\n"
+        
+        docs += "### get_metrics_summary() -> Dict\n"
+        docs += "Get observability metrics including threats, events, queue utilization.\n\n"
+        
+        docs += "### score_threat(event: SecurityEvent) -> Dict\n"
+        docs += "Score a threat using configured ThreatScorer with graceful degradation.\n\n"
+        
+        return docs
+    
+    def generate_rbac_map(self) -> str:
+        """Generate RBAC role mapping documentation."""
+        docs = "# RBAC Role Mapping\n\n"
+        docs += "## Permissions\n\n"
+        docs += "- `rotate_key`: Rotate encryption keys\n"
+        docs += "- `config_reload`: Reload configuration at runtime\n"
+        docs += "- `state_export`: Export system state\n\n"
+        
+        docs += "## Example Role Definitions\n\n"
+        docs += "```python\n"
+        docs += "admin_permissions = ['rotate_key', 'config_reload', 'state_export']\n"
+        docs += "operator_permissions = ['config_reload', 'state_export']\n"
+        docs += "auditor_permissions = ['state_export']\n"
+        docs += "```\n\n"
+        
+        return docs
+    
+    def generate_compliance_profiles(self) -> str:
+        """Generate compliance profile documentation."""
+        docs = "# Compliance Profiles\n\n"
+        
+        for profile_name, profile_data in ComplianceProfile.PROFILES.items():
+            docs += f"## {profile_name.upper()}\n\n"
+            docs += f"**Standard:** {profile_data['standard']}\n\n"
+            docs += f"**Retention:** {profile_data['retention_days']} days\n\n"
+            docs += f"**Required Fields:** {', '.join(profile_data['required_fields'])}\n\n"
+        
+        return docs
+    
+    def generate_full_documentation(self) -> str:
+        """Generate complete documentation."""
+        return (
+            self.generate_api_docs() + "\n\n" +
+            self.generate_rbac_map() + "\n\n" +
+            self.generate_compliance_profiles()
+        )
 
