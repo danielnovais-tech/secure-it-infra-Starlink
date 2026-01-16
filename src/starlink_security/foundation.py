@@ -151,16 +151,30 @@ class StarlinkSecurityFoundation:
         self.cleanup()
         sys.exit(0)
     
+    def _handle_module_task_result(self, task: asyncio.Task) -> None:
+        """Handle completion of background module tasks and log exceptions."""
+        try:
+            exception = task.exception()
+        except asyncio.CancelledError:
+            # Task was cancelled as part of shutdown; no further action needed.
+            return
+        except Exception as e:
+            # Unexpected error while retrieving the exception from the task.
+            logger.error(f"Unexpected error retrieving task exception: {e}")
+            return
+
+        if exception is not None:
+            logger.error("Module task raised an exception", exc_info=exception)
+    
     async def run(self):
         """Main event loop for the security foundation."""
         logger.info("Starting Starlink Security Foundation")
         self.running = True
         
         # Start all security modules
-        tasks = []
         for name, module in self.security_modules.items():
             task = asyncio.create_task(module.start())
-            tasks.append(task)
+            task.add_done_callback(self._handle_module_task_result)
             logger.info(f"Started module: {name}")
         
         try:
