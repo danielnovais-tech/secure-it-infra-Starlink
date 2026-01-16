@@ -6,7 +6,6 @@ This creates a mock API server and runs the monitor for a few cycles.
 import sys
 import os
 import time
-import signal
 from unittest.mock import patch, Mock
 from datetime import datetime, timezone
 
