@@ -266,6 +266,7 @@ async def async_main(config_path: Optional[str] = None):
         cleanup_start = time.time()
         logger.info("Cleanup started", extra={
             "event_type": "cleanup",
+            "config_path": config_path,
             "timestamp": cleanup_start
         })
         await foundation.shutdown()
@@ -273,6 +274,7 @@ async def async_main(config_path: Optional[str] = None):
         cleanup_end = time.time()
         logger.info("Cleanup finished", extra={
             "event_type": "cleanup_complete",
+            "config_path": config_path,
             "timestamp": cleanup_end,
             "cleanup_duration": cleanup_end - cleanup_start,
             "total_runtime": cleanup_end - start_time
