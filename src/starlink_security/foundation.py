@@ -261,7 +261,7 @@ def main():
     
     try:
         asyncio.run(async_main(config_path=args.config))
-    except (KeyboardInterrupt, SystemExit):
+    except KeyboardInterrupt:
         logger.info("Shutdown complete")
         sys.exit(0)
 
