@@ -5,6 +5,7 @@ import copy
 import logging
 import signal
 import sys
+import time
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -224,29 +225,58 @@ def configure_logging():
 
 async def async_main(config_path: Optional[str] = None):
     """Main async entry point with structured lifecycle management."""
-    logger.info("Startup initiated", extra={"event": "startup", "config_path": config_path})
+    start_time = time.time()
+    logger.info("Startup initiated", extra={
+        "event_type": "startup",
+        "config_path": config_path,
+        "timestamp": start_time
+    })
     foundation = StarlinkSecurityFoundation(config_path=config_path)
     try:
         await foundation.run()
     except asyncio.CancelledError:
         # Handle task cancellation and re-raise to propagate upstream
-        logger.warning("Task cancelled", extra={"event": "cancellation"})
+        logger.warning("Task cancelled", extra={
+            "event_type": "cancellation",
+            "config_path": config_path,
+            "timestamp": time.time()
+        })
         raise
     except (OSError, TimeoutError) as e:
         # Operational errors - network issues, timeouts, etc.
-        logger.error(f"Operational error: {e}", exc_info=True, extra={"event": "operational_error", "error_type": type(e).__name__})
+        logger.error(f"Operational error: {e}", exc_info=True, extra={
+            "event_type": "operational_error",
+            "error_type": type(e).__name__,
+            "config_path": config_path,
+            "timestamp": time.time()
+        })
         raise
     except Exception as e:
         # Unexpected errors
-        logger.error(f"Unexpected error in main loop: {e}", exc_info=True, extra={"event": "unexpected_error", "error_type": type(e).__name__})
+        logger.error(f"Unexpected error in main loop: {e}", exc_info=True, extra={
+            "event_type": "unexpected_error",
+            "error_type": type(e).__name__,
+            "config_path": config_path,
+            "timestamp": time.time()
+        })
         raise
     finally:
         # Ensure proper shutdown of async resources, then cleanup
         # Both shutdown() and cleanup() are idempotent and safe to call multiple times
-        logger.info("Cleanup started", extra={"event": "cleanup"})
+        cleanup_start = time.time()
+        logger.info("Cleanup started", extra={
+            "event_type": "cleanup",
+            "timestamp": cleanup_start
+        })
         await foundation.shutdown()
         foundation.cleanup()
-        logger.info("Cleanup finished", extra={"event": "cleanup_complete"})
+        cleanup_end = time.time()
+        logger.info("Cleanup finished", extra={
+            "event_type": "cleanup_complete",
+            "timestamp": cleanup_end,
+            "cleanup_duration": cleanup_end - cleanup_start,
+            "total_runtime": cleanup_end - start_time
+        })
 
 
 def main():
