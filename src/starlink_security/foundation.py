@@ -231,13 +231,14 @@ async def async_main(config_path: Optional[str] = None):
     except asyncio.CancelledError:
         # Handle Ctrl+C or shutdown signals
         logger.info("Received cancellation signal")
-        await foundation.shutdown()
         raise
     except Exception as e:
         logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
         raise
     finally:
-        # Ensure resources are released (cleanup logs its own message)
+        # Ensure proper shutdown of async resources, then cleanup
+        if foundation.running:
+            await foundation.shutdown()
         foundation.cleanup()
 
 
