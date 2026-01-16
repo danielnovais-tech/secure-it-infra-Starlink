@@ -15,7 +15,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.starlink_api import StarlinkAPIClient
 from src.metrics_collector import MetricsCollector
-from src.config import UPDATE_INTERVAL
 
 def create_mock_metrics(cycle: int):
     """Create mock metrics that change over time to demonstrate event detection."""
