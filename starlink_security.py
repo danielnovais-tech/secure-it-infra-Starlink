@@ -3,6 +3,7 @@ Starlink Security Infrastructure Management
 Main application module with structured logging configuration
 """
 
+import atexit
 import json
 import logging
 import logging.handlers
@@ -193,8 +194,12 @@ handlers_list.append(console_handler)
 if SYSLOG_ADDRESS:
     try:
         if ':' in SYSLOG_ADDRESS:
-            host, port = SYSLOG_ADDRESS.rsplit(':', 1)
-            syslog_handler = logging.handlers.SysLogHandler(address=(host, int(port)))
+            host, port_str = SYSLOG_ADDRESS.rsplit(':', 1)
+            try:
+                port = int(port_str)
+                syslog_handler = logging.handlers.SysLogHandler(address=(host, port))
+            except ValueError:
+                raise ValueError(f"Invalid port number: {port_str}")
         else:
             syslog_handler = logging.handlers.SysLogHandler(address=SYSLOG_ADDRESS)
         handlers_list.append(syslog_handler)
@@ -232,16 +237,19 @@ else:
         handler.setFormatter(standard_formatter)
 
 # Performance: Wrap handlers in async queue if enabled
+# Use bounded queue to prevent unbounded memory growth
+MAX_QUEUE_SIZE = 10000  # Maximum pending log records
+
 queue_listener = None
 if USE_ASYNC_LOGGING and handlers_list:
-    log_queue = Queue(-1)  # Unlimited queue
+    log_queue = Queue(maxsize=MAX_QUEUE_SIZE)
     queue_handler = logging.handlers.QueueHandler(log_queue)
     queue_listener = logging.handlers.QueueListener(log_queue, *handlers_list, respect_handler_level=True)
     queue_listener.start()
     
     # Use only the queue handler for async logging
     final_handlers = [queue_handler]
-    print("Info: Async logging enabled via QueueHandler", file=sys.stderr)
+    print(f"Info: Async logging enabled via QueueHandler (max queue: {MAX_QUEUE_SIZE})", file=sys.stderr)
 else:
     final_handlers = handlers_list
 
@@ -304,7 +312,6 @@ if hasattr(signal, 'SIGUSR1'):
     signal.signal(signal.SIGUSR1, handle_signal_usr1)
 
 # Register cleanup for async logging
-import atexit
 atexit.register(cleanup_logging)
 
 
