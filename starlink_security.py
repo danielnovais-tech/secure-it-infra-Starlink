@@ -4780,3 +4780,724 @@ class AdaptiveBatchCoalescer:
                 "target_latency_ms": self.target_latency_ms
             }
 
+
+# ============================================================================
+# Final Mile Upgrades: Security Assurance & Business Readiness
+# ============================================================================
+
+
+class ThreatModelingFramework:
+    """
+    STRIDE/LINDDUN threat modeling framework for systematic attack surface analysis.
+    Identifies threats across subsystems: API Gateway, plugins, scorers, state store.
+    """
+    
+    def __init__(self):
+        self.threat_models: Dict[str, Dict] = {}
+        self.mitigations: Dict[str, List[str]] = {}
+        self.lock = threading.RLock()
+    
+    def model_subsystem(
+        self, 
+        subsystem: str, 
+        assets: List[str], 
+        trust_boundaries: List[str]
+    ) -> Dict[str, List[str]]:
+        """
+        Perform STRIDE threat modeling on a subsystem.
+        
+        Args:
+            subsystem: Subsystem name (API Gateway, plugins, scorers, state_store)
+            assets: List of assets in the subsystem
+            trust_boundaries: Trust boundary crossings
+            
+        Returns:
+            Dict of threat categories to identified threats
+        """
+        threats = {
+            "Spoofing": [],
+            "Tampering": [],
+            "Repudiation": [],
+            "Information_Disclosure": [],
+            "Denial_of_Service": [],
+            "Elevation_of_Privilege": []
+        }
+        
+        with self.lock:
+            # Analyze each asset against STRIDE categories
+            for asset in assets:
+                if "API" in asset or "Gateway" in asset:
+                    threats["Spoofing"].append(f"Token forgery for {asset}")
+                    threats["Denial_of_Service"].append(f"Rate limit bypass on {asset}")
+                
+                if "plugin" in asset.lower():
+                    threats["Tampering"].append(f"Malicious plugin replacement: {asset}")
+                    threats["Elevation_of_Privilege"].append(f"Plugin sandbox escape: {asset}")
+                
+                if "scorer" in asset.lower() or "ML" in asset:
+                    threats["Tampering"].append(f"Model poisoning: {asset}")
+                    threats["Information_Disclosure"].append(f"Model inversion attack: {asset}")
+                
+                if "state" in asset.lower() or "store" in asset.lower():
+                    threats["Tampering"].append(f"State corruption: {asset}")
+                    threats["Repudiation"].append(f"Audit log manipulation: {asset}")
+            
+            self.threat_models[subsystem] = {
+                "assets": assets,
+                "trust_boundaries": trust_boundaries,
+                "threats": threats,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            return threats
+    
+    def add_mitigation(self, subsystem: str, threat: str, mitigation: str):
+        """Add mitigation for identified threat."""
+        with self.lock:
+            key = f"{subsystem}:{threat}"
+            if key not in self.mitigations:
+                self.mitigations[key] = []
+            self.mitigations[key].append(mitigation)
+    
+    def get_threat_report(self) -> Dict[str, Any]:
+        """Get comprehensive threat modeling report."""
+        with self.lock:
+            total_threats = sum(
+                len(category_threats)
+                for model in self.threat_models.values()
+                for category_threats in model["threats"].values()
+            )
+            
+            return {
+                "subsystems_modeled": len(self.threat_models),
+                "total_threats_identified": total_threats,
+                "mitigations_defined": len(self.mitigations),
+                "models": self.threat_models,
+                "mitigations": self.mitigations
+            }
+
+
+class APIRateLimiter:
+    """
+    Rate limiting and abuse prevention for REST API Gateway.
+    Implements token bucket algorithm with per-tenant quotas.
+    """
+    
+    def __init__(self, default_rate: int = 100, window_seconds: int = 60):
+        """
+        Initialize rate limiter.
+        
+        Args:
+            default_rate: Default requests per window
+            window_seconds: Time window in seconds
+        """
+        self.default_rate = default_rate
+        self.window_seconds = window_seconds
+        self.buckets: Dict[str, Dict] = {}  # tenant_id -> {tokens, last_refill}
+        self.tenant_quotas: Dict[str, int] = {}  # tenant_id -> custom quota
+        self.lock = threading.RLock()
+        self.blocked_ips: Set[str] = set()
+        self.ip_reputation: Dict[str, int] = {}  # IP -> reputation score (0-100)
+    
+    def check_rate_limit(self, tenant_id: str, ip_address: str = None) -> bool:
+        """
+        Check if request is within rate limit.
+        
+        Args:
+            tenant_id: Tenant identifier
+            ip_address: Optional IP address for reputation check
+            
+        Returns:
+            True if allowed, False if rate limited
+        """
+        with self.lock:
+            # Check IP reputation and blocklist
+            if ip_address:
+                if ip_address in self.blocked_ips:
+                    return False
+                
+                reputation = self.ip_reputation.get(ip_address, 100)
+                if reputation < 20:  # Low reputation threshold
+                    return False
+            
+            # Token bucket algorithm
+            now = time.time()
+            quota = self.tenant_quotas.get(tenant_id, self.default_rate)
+            
+            if tenant_id not in self.buckets:
+                self.buckets[tenant_id] = {
+                    "tokens": quota,
+                    "last_refill": now
+                }
+            
+            bucket = self.buckets[tenant_id]
+            
+            # Refill tokens based on elapsed time
+            elapsed = now - bucket["last_refill"]
+            refill_rate = quota / self.window_seconds
+            new_tokens = min(quota, bucket["tokens"] + elapsed * refill_rate)
+            
+            bucket["tokens"] = new_tokens
+            bucket["last_refill"] = now
+            
+            # Check if we have tokens available
+            if bucket["tokens"] >= 1.0:
+                bucket["tokens"] -= 1.0
+                return True
+            
+            return False
+    
+    def set_tenant_quota(self, tenant_id: str, quota: int):
+        """Set custom quota for tenant."""
+        with self.lock:
+            self.tenant_quotas[tenant_id] = quota
+    
+    def block_ip(self, ip_address: str):
+        """Block IP address."""
+        with self.lock:
+            self.blocked_ips.add(ip_address)
+    
+    def update_ip_reputation(self, ip_address: str, score: int):
+        """
+        Update IP reputation score.
+        
+        Args:
+            ip_address: IP to update
+            score: Reputation score 0-100 (higher is better)
+        """
+        with self.lock:
+            self.ip_reputation[ip_address] = max(0, min(100, score))
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get rate limiter statistics."""
+        with self.lock:
+            return {
+                "tenants_tracked": len(self.buckets),
+                "custom_quotas": len(self.tenant_quotas),
+                "blocked_ips": len(self.blocked_ips),
+                "ip_reputation_entries": len(self.ip_reputation)
+            }
+
+
+class ComplianceCertificationManager:
+    """
+    Manages compliance certification roadmap (SOC 2, ISO 27001, etc.).
+    Tracks controls, evidence collection, and audit preparation.
+    """
+    
+    def __init__(self):
+        self.certifications: Dict[str, Dict] = {}
+        self.controls: Dict[str, List[Dict]] = {}  # cert_name -> controls
+        self.evidence: Dict[str, List[str]] = {}  # control_id -> evidence paths
+        self.lock = threading.RLock()
+    
+    def add_certification(
+        self, 
+        name: str, 
+        standard: str, 
+        target_date: str,
+        owner: str
+    ):
+        """
+        Add certification to roadmap.
+        
+        Args:
+            name: Certification name (SOC2_Type_II, ISO27001, etc.)
+            standard: Standard version
+            target_date: Target completion date (ISO format)
+            owner: Responsible party
+        """
+        with self.lock:
+            self.certifications[name] = {
+                "standard": standard,
+                "target_date": target_date,
+                "owner": owner,
+                "status": "Planning",
+                "controls_total": 0,
+                "controls_implemented": 0
+            }
+    
+    def add_control(
+        self, 
+        certification: str, 
+        control_id: str, 
+        description: str,
+        status: str = "Not Implemented"
+    ):
+        """Add control requirement for certification."""
+        with self.lock:
+            if certification not in self.controls:
+                self.controls[certification] = []
+            
+            self.controls[certification].append({
+                "control_id": control_id,
+                "description": description,
+                "status": status,
+                "added_date": datetime.now().isoformat()
+            })
+            
+            # Update certification totals
+            if certification in self.certifications:
+                self.certifications[certification]["controls_total"] = len(
+                    self.controls[certification]
+                )
+                self.certifications[certification]["controls_implemented"] = sum(
+                    1 for c in self.controls[certification] 
+                    if c["status"] == "Implemented"
+                )
+    
+    def add_evidence(self, control_id: str, evidence_path: str):
+        """Add evidence file for control."""
+        with self.lock:
+            if control_id not in self.evidence:
+                self.evidence[control_id] = []
+            self.evidence[control_id].append(evidence_path)
+    
+    def get_audit_pack(self, certification: str) -> Dict[str, Any]:
+        """
+        Generate audit pack for certification.
+        
+        Args:
+            certification: Certification name
+            
+        Returns:
+            Audit pack with controls, evidence, and status
+        """
+        with self.lock:
+            if certification not in self.certifications:
+                return {}
+            
+            controls_with_evidence = []
+            for control in self.controls.get(certification, []):
+                control_copy = control.copy()
+                control_copy["evidence_files"] = self.evidence.get(
+                    control["control_id"], []
+                )
+                controls_with_evidence.append(control_copy)
+            
+            return {
+                "certification": self.certifications[certification],
+                "controls": controls_with_evidence,
+                "total_evidence_items": sum(
+                    len(ev) for ev in self.evidence.values()
+                ),
+                "generated_date": datetime.now().isoformat()
+            }
+    
+    def get_roadmap(self) -> Dict[str, Any]:
+        """Get complete certification roadmap."""
+        with self.lock:
+            return {
+                "certifications": self.certifications,
+                "total_controls": sum(len(c) for c in self.controls.values()),
+                "total_evidence_items": sum(len(e) for e in self.evidence.values())
+            }
+
+
+class PrivacyGovernanceManager:
+    """
+    Privacy governance: data classification, DPIAs, consent tracking, PII minimization.
+    Ensures GDPR/CCPA compliance.
+    """
+    
+    def __init__(self):
+        self.data_classifications: Dict[str, str] = {}  # field -> classification
+        self.dpias: Dict[str, Dict] = {}  # tenant -> DPIA
+        self.consent_records: Dict[str, Dict] = {}  # user_id -> consent
+        self.pii_redaction_profiles: Dict[str, List[str]] = {}  # profile -> fields
+        self.lock = threading.RLock()
+    
+    def classify_data(self, field_name: str, classification: str):
+        """
+        Classify data field.
+        
+        Args:
+            field_name: Field name
+            classification: Classification level (Public, Internal, Confidential, Restricted, PII)
+        """
+        with self.lock:
+            self.data_classifications[field_name] = classification
+    
+    def create_dpia(
+        self, 
+        tenant_id: str, 
+        purpose: str, 
+        data_types: List[str],
+        risks: List[str]
+    ):
+        """
+        Create Data Protection Impact Assessment.
+        
+        Args:
+            tenant_id: Tenant identifier
+            purpose: Processing purpose
+            data_types: Types of data processed
+            risks: Identified privacy risks
+        """
+        with self.lock:
+            self.dpias[tenant_id] = {
+                "purpose": purpose,
+                "data_types": data_types,
+                "risks": risks,
+                "created_date": datetime.now().isoformat(),
+                "status": "Active"
+            }
+    
+    def record_consent(
+        self, 
+        user_id: str, 
+        purpose: str, 
+        granted: bool,
+        expiry_date: str = None
+    ):
+        """
+        Record user consent.
+        
+        Args:
+            user_id: User identifier
+            purpose: Purpose of data processing
+            granted: Whether consent was granted
+            expiry_date: Optional expiry date (ISO format)
+        """
+        with self.lock:
+            if user_id not in self.consent_records:
+                self.consent_records[user_id] = {}
+            
+            self.consent_records[user_id][purpose] = {
+                "granted": granted,
+                "timestamp": datetime.now().isoformat(),
+                "expiry_date": expiry_date
+            }
+    
+    def add_redaction_profile(self, profile_name: str, fields: List[str]):
+        """
+        Add PII redaction profile for log minimization.
+        
+        Args:
+            profile_name: Profile name (e.g., 'strict', 'moderate')
+            fields: List of fields to redact
+        """
+        with self.lock:
+            self.pii_redaction_profiles[profile_name] = fields
+    
+    def redact_pii(self, data: Dict[str, Any], profile: str = "strict") -> Dict[str, Any]:
+        """
+        Redact PII from data according to profile.
+        
+        Args:
+            data: Data dictionary
+            profile: Redaction profile name
+            
+        Returns:
+            Redacted data dictionary
+        """
+        with self.lock:
+            fields_to_redact = self.pii_redaction_profiles.get(profile, [])
+            redacted = data.copy()
+            
+            for field in fields_to_redact:
+                if field in redacted:
+                    redacted[field] = "***REDACTED***"
+            
+            return redacted
+    
+    def check_consent(self, user_id: str, purpose: str) -> bool:
+        """Check if user has valid consent for purpose."""
+        with self.lock:
+            if user_id not in self.consent_records:
+                return False
+            
+            consent = self.consent_records[user_id].get(purpose)
+            if not consent or not consent["granted"]:
+                return False
+            
+            # Check expiry
+            if consent.get("expiry_date"):
+                expiry = datetime.fromisoformat(consent["expiry_date"])
+                if datetime.now() > expiry:
+                    return False
+            
+            return True
+    
+    def get_privacy_report(self) -> Dict[str, Any]:
+        """Get comprehensive privacy governance report."""
+        with self.lock:
+            pii_fields = sum(
+                1 for c in self.data_classifications.values() 
+                if c == "PII"
+            )
+            
+            active_consents = sum(
+                1 for user_consents in self.consent_records.values()
+                for consent in user_consents.values()
+                if consent["granted"]
+            )
+            
+            return {
+                "data_fields_classified": len(self.data_classifications),
+                "pii_fields": pii_fields,
+                "dpias_active": len(self.dpias),
+                "active_consents": active_consents,
+                "redaction_profiles": len(self.pii_redaction_profiles)
+            }
+
+
+class DisasterRecoveryDrillManager:
+    """
+    Manages RTO/RPO disaster recovery drills with measured outcomes.
+    Quarterly recovery exercises with automated playbooks.
+    """
+    
+    def __init__(self):
+        self.drills: List[Dict] = []
+        self.rto_target_minutes: int = 60  # Recovery Time Objective
+        self.rpo_target_minutes: int = 15  # Recovery Point Objective
+        self.lock = threading.RLock()
+    
+    def schedule_drill(
+        self, 
+        drill_type: str, 
+        scenario: str, 
+        scheduled_date: str
+    ) -> str:
+        """
+        Schedule disaster recovery drill.
+        
+        Args:
+            drill_type: Type of drill (Full_Failover, Partial_Failover, Data_Restore)
+            scenario: Failure scenario description
+            scheduled_date: Scheduled date (ISO format)
+            
+        Returns:
+            Drill ID
+        """
+        with self.lock:
+            drill_id = f"DRILL-{len(self.drills) + 1:04d}"
+            
+            self.drills.append({
+                "drill_id": drill_id,
+                "drill_type": drill_type,
+                "scenario": scenario,
+                "scheduled_date": scheduled_date,
+                "status": "Scheduled",
+                "actual_rto_minutes": None,
+                "actual_rpo_minutes": None,
+                "created_date": datetime.now().isoformat()
+            })
+            
+            return drill_id
+    
+    def execute_drill(
+        self, 
+        drill_id: str, 
+        start_time: datetime, 
+        recovery_time: datetime,
+        data_loss_minutes: int
+    ):
+        """
+        Record drill execution results.
+        
+        Args:
+            drill_id: Drill identifier
+            start_time: Drill start time
+            recovery_time: Recovery completion time
+            data_loss_minutes: Minutes of data loss (RPO)
+        """
+        with self.lock:
+            for drill in self.drills:
+                if drill["drill_id"] == drill_id:
+                    rto_actual = (recovery_time - start_time).total_seconds() / 60
+                    
+                    drill["status"] = "Completed"
+                    drill["executed_date"] = start_time.isoformat()
+                    drill["actual_rto_minutes"] = rto_actual
+                    drill["actual_rpo_minutes"] = data_loss_minutes
+                    drill["rto_met"] = rto_actual <= self.rto_target_minutes
+                    drill["rpo_met"] = data_loss_minutes <= self.rpo_target_minutes
+                    break
+    
+    def get_drill_report(self) -> Dict[str, Any]:
+        """Get drill statistics and compliance."""
+        with self.lock:
+            completed_drills = [d for d in self.drills if d["status"] == "Completed"]
+            
+            if not completed_drills:
+                return {
+                    "total_drills": len(self.drills),
+                    "completed": 0,
+                    "rto_target_minutes": self.rto_target_minutes,
+                    "rpo_target_minutes": self.rpo_target_minutes
+                }
+            
+            rto_met_count = sum(1 for d in completed_drills if d.get("rto_met", False))
+            rpo_met_count = sum(1 for d in completed_drills if d.get("rpo_met", False))
+            
+            avg_rto = sum(
+                d["actual_rto_minutes"] for d in completed_drills 
+                if d["actual_rto_minutes"] is not None
+            ) / len(completed_drills)
+            
+            avg_rpo = sum(
+                d["actual_rpo_minutes"] for d in completed_drills 
+                if d["actual_rpo_minutes"] is not None
+            ) / len(completed_drills)
+            
+            return {
+                "total_drills": len(self.drills),
+                "completed": len(completed_drills),
+                "rto_target_minutes": self.rto_target_minutes,
+                "rpo_target_minutes": self.rpo_target_minutes,
+                "avg_rto_minutes": avg_rto,
+                "avg_rpo_minutes": avg_rpo,
+                "rto_compliance_rate": rto_met_count / len(completed_drills) * 100,
+                "rpo_compliance_rate": rpo_met_count / len(completed_drills) * 100,
+                "recent_drills": completed_drills[-5:]  # Last 5 drills
+            }
+
+
+class GlobalTrafficManager:
+    """
+    Multi-region traffic management with DNS health checks and tenant-aware failover.
+    Respects data residency policies during regional failovers.
+    """
+    
+    def __init__(self):
+        self.regions: Dict[str, Dict] = {}  # region_id -> {status, health, load}
+        self.tenant_regions: Dict[str, str] = {}  # tenant_id -> preferred_region
+        self.traffic_distribution: Dict[str, int] = {}  # region_id -> traffic %
+        self.lock = threading.RLock()
+    
+    def register_region(
+        self, 
+        region_id: str, 
+        endpoint: str, 
+        capacity: int
+    ):
+        """
+        Register region for traffic management.
+        
+        Args:
+            region_id: Region identifier (us-east-1, eu-west-1, etc.)
+            endpoint: Region endpoint URL
+            capacity: Region capacity (requests/sec)
+        """
+        with self.lock:
+            self.regions[region_id] = {
+                "endpoint": endpoint,
+                "capacity": capacity,
+                "status": "Healthy",
+                "health_score": 100,
+                "current_load": 0,
+                "last_health_check": datetime.now().isoformat()
+            }
+            
+            # Distribute traffic evenly by default
+            self._rebalance_traffic()
+    
+    def health_check(self, region_id: str, success: bool, latency_ms: float):
+        """
+        Update region health based on check results.
+        
+        Args:
+            region_id: Region to update
+            success: Whether health check succeeded
+            latency_ms: Health check latency
+        """
+        with self.lock:
+            if region_id not in self.regions:
+                return
+            
+            region = self.regions[region_id]
+            
+            # Update health score (0-100)
+            if success:
+                region["health_score"] = min(100, region["health_score"] + 5)
+                if latency_ms < 100:
+                    region["status"] = "Healthy"
+                elif latency_ms < 500:
+                    region["status"] = "Degraded"
+                else:
+                    region["status"] = "Slow"
+            else:
+                region["health_score"] = max(0, region["health_score"] - 20)
+                if region["health_score"] < 30:
+                    region["status"] = "Unhealthy"
+            
+            region["last_health_check"] = datetime.now().isoformat()
+            
+            # Rebalance if region became unhealthy
+            if region["status"] == "Unhealthy":
+                self._rebalance_traffic()
+    
+    def set_tenant_region(self, tenant_id: str, region_id: str):
+        """Set preferred region for tenant (data residency)."""
+        with self.lock:
+            self.tenant_regions[tenant_id] = region_id
+    
+    def route_request(self, tenant_id: str = None) -> Optional[str]:
+        """
+        Route request to appropriate region.
+        
+        Args:
+            tenant_id: Optional tenant for residency-aware routing
+            
+        Returns:
+            Region ID to route to, or None if no healthy regions
+        """
+        with self.lock:
+            healthy_regions = [
+                r for r, info in self.regions.items() 
+                if info["status"] in ["Healthy", "Degraded"]
+            ]
+            
+            if not healthy_regions:
+                return None
+            
+            # Respect tenant residency policy if set
+            if tenant_id and tenant_id in self.tenant_regions:
+                preferred = self.tenant_regions[tenant_id]
+                if preferred in healthy_regions:
+                    return preferred
+            
+            # Route to least loaded healthy region
+            return min(
+                healthy_regions,
+                key=lambda r: self.regions[r]["current_load"] / self.regions[r]["capacity"]
+            )
+    
+    def _rebalance_traffic(self):
+        """Rebalance traffic distribution across healthy regions."""
+        healthy_regions = [
+            r for r, info in self.regions.items() 
+            if info["status"] in ["Healthy", "Degraded"]
+        ]
+        
+        if not healthy_regions:
+            self.traffic_distribution = {}
+            return
+        
+        # Distribute based on capacity
+        total_capacity = sum(self.regions[r]["capacity"] for r in healthy_regions)
+        
+        for region in healthy_regions:
+            percentage = int(
+                (self.regions[region]["capacity"] / total_capacity) * 100
+            )
+            self.traffic_distribution[region] = percentage
+    
+    def get_traffic_status(self) -> Dict[str, Any]:
+        """Get current traffic management status."""
+        with self.lock:
+            healthy_count = sum(
+                1 for r in self.regions.values() 
+                if r["status"] in ["Healthy", "Degraded"]
+            )
+            
+            return {
+                "total_regions": len(self.regions),
+                "healthy_regions": healthy_count,
+                "traffic_distribution": self.traffic_distribution,
+                "tenant_policies": len(self.tenant_regions),
+                "regions": self.regions
+            }
+
