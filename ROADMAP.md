@@ -1059,4 +1059,750 @@ By following a phased approach, we ensure each enhancement builds on stable, pro
 
 ---
 
+## Adaptive Roadmap Management
+
+### Quarterly Roadmap Recalibration Process
+
+To prevent drift when priorities or compliance requirements shift, the roadmap undergoes quarterly recalibration against real-world data and stakeholder feedback.
+
+**Recalibration Schedule:**
+- Q1 Review: End of March
+- Q2 Review: End of June  
+- Q3 Review: End of September
+- Q4 Review: End of December
+
+**Recalibration Activities:**
+
+1. **Metrics Review** (Week 1)
+   - Compare actual vs target metrics from current phase
+   - Identify metrics that are lagging or exceeding expectations
+   - Adjust targets based on observed performance
+   - Owner: Platform Team Lead
+   - Output: Metrics variance report
+
+2. **Dependency Validation** (Week 1-2)
+   - Verify all dependencies are still accurate
+   - Identify new dependencies that have emerged
+   - Update lead times based on actual delivery data
+   - Owner: Engineering Manager
+   - Output: Updated dependency matrix
+
+3. **Milestone Adjustment** (Week 2)
+   - Review progress against interim milestones
+   - Adjust future milestone dates based on current velocity
+   - Identify milestones that should be added, removed, or merged
+   - Owner: Product Manager
+   - Output: Revised milestone timeline
+
+4. **Stakeholder Feedback Integration** (Week 2-3)
+   - Collect feedback from all 7 stakeholder groups
+   - Analyze NPS scores, feature voting results, office hours feedback
+   - Identify emerging requirements or changing priorities
+   - Owner: Compliance Team Lead
+   - Output: Stakeholder feedback summary
+
+5. **Risk Reassessment** (Week 3)
+   - Review risk mitigation playbooks against actual incidents
+   - Update playbooks based on lessons learned
+   - Identify new risks that have emerged
+   - Owner: Security Team Lead
+   - Output: Updated risk register
+
+6. **Resource Reallocation** (Week 3-4)
+   - Review resource and budget estimates vs actuals
+   - Reallocate resources based on priority changes
+   - Identify resource constraints or surpluses
+   - Owner: Engineering Manager + Finance
+   - Output: Updated resource allocation plan
+
+7. **Roadmap Publication** (Week 4)
+   - Update ROADMAP.md with all adjustments
+   - Publish changes to public roadmap page
+   - Communicate changes to all stakeholders
+   - Owner: Product Manager
+   - Output: Updated roadmap document + communication
+
+**Decision Framework:**
+
+- **Minor Adjustments** (metric targets, milestone dates within ±2 weeks): Approved by Product Manager
+- **Moderate Changes** (new dependencies, resource reallocation <20%): Approved by Engineering Manager + Product Manager
+- **Major Changes** (phase reprioritization, resource reallocation >20%): Approved by CTO + CISO + General Counsel
+
+**Recalibration Success Metrics:**
+- Recalibration completed within 4 weeks: >95% of quarters
+- Stakeholder participation rate: >80% of invited participants
+- Updated roadmap published within 5 business days of completion: 100%
+- Metrics variance reduced quarter-over-quarter: Trending downward
+
+---
+
+## Scenario Planning & Contingency Paths
+
+To handle major uncertainties without waiting for a crisis, the roadmap includes alternative paths for key decision points.
+
+### Scenario 1: Predictive Modeling Adoption Lags
+
+**Trigger:** <40% of compliance officers using predictive features 60 days after Phase 2a launch
+
+**Primary Path (Planned):**
+- Continue investing in predictive modeling
+- Add training and onboarding improvements
+- Timeline: Phase 2, Q2 2026
+
+**Alternative Path A (Enhanced Dashboards First):**
+- Pivot to Phase 2b (drill-down dashboards) immediately
+- Delay predictive modeling to Phase 3
+- Rationale: Visual insights may drive more immediate value
+- Decision Point: 90 days after Phase 2a launch
+- Owner: Product Manager + Compliance Team Lead
+
+**Alternative Path B (Weighted Scoring Focus):**
+- Double down on weighted framework scoring
+- Make scoring more customizable and business-aligned
+- Delay predictive modeling indefinitely
+- Rationale: Simple weighted scores may be sufficient
+- Decision Point: 120 days after Phase 2a launch
+- Owner: Product Manager + CTO
+
+**Success Criteria for Path Selection:**
+- Path A: Dashboard engagement >70% of users
+- Path B: Weighted scoring adoption >80% of teams
+
+### Scenario 2: Alert Fatigue in Phase 2
+
+**Trigger:** >30% of automated alerts marked as false positives or ignored
+
+**Primary Path (Planned):**
+- Continue with current alert thresholds
+- Add machine learning to reduce false positives over time
+- Timeline: Phase 2c, Q3 2026
+
+**Alternative Path A (Smart Throttling):**
+- Implement aggressive alert throttling and grouping
+- Reduce alert frequency by 50%
+- Add weekly digest mode
+- Rationale: Fewer, higher-quality alerts
+- Decision Point: 30 days after Phase 2c launch
+- Owner: Infrastructure Team + Platform Team
+
+**Alternative Path B (Opt-In Alerts Only):**
+- Make all alerts opt-in rather than opt-out
+- Focus on dashboard visualizations instead
+- Rationale: Users choose their own signal-to-noise ratio
+- Decision Point: 60 days after Phase 2c launch
+- Owner: Product Manager + Security Team
+
+**Success Criteria for Path Selection:**
+- Path A: False positive rate <10%, alert response time <2 hours
+- Path B: Opt-in adoption rate >60% of users
+
+### Scenario 3: Cross-System Verification Latency (Phase 3)
+
+**Trigger:** Federated evidence verification takes >5 minutes for >20% of requests
+
+**Primary Path (Planned):**
+- Continue with current architecture
+- Optimize verification algorithms
+- Timeline: Phase 3a, Q4 2026
+
+**Alternative Path A (Async Verification):**
+- Make verification fully asynchronous
+- Add job queue with status polling
+- Provide eventual consistency instead of immediate results
+- Rationale: Acceptable for most audit scenarios
+- Decision Point: 45 days after Phase 3a launch
+- Owner: Infrastructure Team + Platform Team
+
+**Alternative Path B (Simplified Federation):**
+- Remove cross-system federation feature
+- Keep verification local to each service
+- Provide aggregation tools instead of real-time federation
+- Rationale: Simpler architecture, acceptable tradeoff
+- Decision Point: 90 days after Phase 3a launch
+- Owner: CTO + Security Team
+
+**Success Criteria for Path Selection:**
+- Path A: 95% of verifications complete within 30 seconds (async)
+- Path B: Aggregation tools used by >70% of auditors
+
+### Scenario 4: MFA Lockout Rate (Phase 4)
+
+**Trigger:** >5% of auditors locked out due to MFA issues in first 30 days
+
+**Primary Path (Planned):**
+- Continue with TOTP + WebAuthn
+- Improve recovery processes
+- Timeline: Phase 4a, Q1 2027
+
+**Alternative Path A (MFA Optional for Internal Auditors):**
+- Make MFA required only for external auditors
+- Use IP allowlisting for internal auditors
+- Rationale: Reduce friction for trusted users
+- Decision Point: 45 days after Phase 4a launch
+- Owner: Security Team + Compliance Team
+
+**Alternative Path B (Backup Authentication Methods):**
+- Add SMS/email backup codes
+- Implement "trusted device" caching (30 days)
+- Rationale: More recovery options without sacrificing too much security
+- Decision Point: 60 days after Phase 4a launch
+- Owner: Security Team + Infrastructure Team
+
+**Success Criteria for Path Selection:**
+- Path A: Lockout rate <2% for internal auditors
+- Path B: Recovery success rate >95%, support tickets <10/month
+
+### Scenario 5: Archival Storage Costs Exceed Budget
+
+**Trigger:** Archival costs >$5K/month (150% of budgeted amount)
+
+**Primary Path (Planned):**
+- Continue with current retention policies
+- Request additional budget
+- Timeline: Phase 4c, Q1 2027
+
+**Alternative Path A (Aggressive Compression):**
+- Implement advanced compression (ZSTD level 19)
+- Reduce storage by 60-70%
+- Accept slower retrieval times
+- Rationale: Cost reduction without changing retention
+- Decision Point: 30 days after cost threshold exceeded
+- Owner: Infrastructure Team + Finance
+
+**Alternative Path B (Tiered Retention):**
+- Move to cold storage (Glacier) after 90 days
+- Reduce online retention from 1 year to 90 days
+- Accept 4-12 hour retrieval SLA for archived data
+- Rationale: Compliance-acceptable with cost savings
+- Decision Point: 60 days after cost threshold exceeded
+- Owner: Compliance Team + Infrastructure Team
+
+**Success Criteria for Path Selection:**
+- Path A: Storage costs <$4K/month, retrieval time <5 minutes
+- Path B: Storage costs <$3K/month, <5 retrievals/month from cold storage
+
+**Scenario Planning Review Cadence:**
+- Scenarios reviewed during quarterly recalibration
+- New scenarios added based on emerging risks
+- Outdated scenarios archived after 2 quarters of non-activation
+- Owner: Product Manager + Engineering Manager
+
+---
+
+## Cross-Phase Dependencies
+
+Understanding dependencies that span multiple phases is critical for long-term sequencing and planning.
+
+### Dependency Map (Cross-Phase)
+
+```
+Phase 2                    Phase 3                    Phase 4
+┌─────────────┐           ┌─────────────┐           ┌─────────────┐
+│ Predictive  │ ────────> │ AI Policy   │           │             │
+│ Modeling    │           │ Recommend.  │           │             │
+└─────────────┘           └─────────────┘           │             │
+      │                         │                    │             │
+      │                         ▼                    │             │
+      │                   ┌─────────────┐           │             │
+      │                   │ Evidence    │           │   Evidence  │
+      └─────────────────> │ Correlation │ ────────> │   Lifecycle │
+                          └─────────────┘           │   Mgmt      │
+                                                    └─────────────┘
+┌─────────────┐           ┌─────────────┐                 │
+│ Dashboards  │ ────────> │ Multi-Tenant│                 │
+│             │           │ Portal      │                 │
+└─────────────┘           └─────────────┘                 │
+                                │                         │
+                                ▼                         ▼
+┌─────────────┐           ┌─────────────┐           ┌─────────────┐
+│ Alerts      │           │ Federation  │           │ Resilience  │
+│             │ ────────> │             │ ────────> │ Testing     │
+└─────────────┘           └─────────────┘           └─────────────┘
+```
+
+### Critical Cross-Phase Dependency Details
+
+**1. Predictive Modeling → AI Policy Recommendations**
+- **Nature**: AI recommendations require historical prediction accuracy data
+- **Lead Time**: 6 months of predictive modeling operation
+- **Blocking**: Phase 3b (AI recommendations) cannot start until predictive modeling has 6 months of accuracy metrics
+- **Minimum Data**: 10,000+ predictions with ground truth labels
+- **Mitigation**: If predictive modeling delayed, use rule-based recommendations as interim solution
+- **Owner**: ML/Data Science Team
+
+**2. Predictive Modeling → Evidence Correlation**
+- **Nature**: Evidence correlation links prediction spikes to policy changes
+- **Lead Time**: 3 months of predictive data
+- **Blocking**: Phase 3c (evidence correlation) requires stable predictive model
+- **Minimum Data**: Correlation coefficient >0.7 between predictions and policy changes
+- **Mitigation**: Manual correlation tools as fallback
+- **Owner**: Platform Team + ML/Data Science Team
+
+**3. Evidence Correlation → Evidence Lifecycle Management**
+- **Nature**: Lifecycle management needs to know which evidence bundles are "hot" vs "cold" based on correlation patterns
+- **Lead Time**: 4 months of correlation data
+- **Blocking**: Phase 4c (lifecycle management) archival policies depend on usage patterns from correlation
+- **Minimum Data**: 500+ evidence retrievals correlated to usage triggers
+- **Mitigation**: Use time-based archival (90 days) as default
+- **Owner**: Infrastructure Team + Compliance Team
+
+**4. Dashboards → Multi-Tenant Portal**
+- **Nature**: Multi-tenant portal reuses dashboard components
+- **Lead Time**: 2 months after dashboard stabilization
+- **Blocking**: Phase 3d (multi-tenant) requires proven dashboard architecture
+- **Minimum Data**: Dashboard uptime >99.5%, user satisfaction >4.0/5.0
+- **Mitigation**: Build simplified dashboards specifically for multi-tenant if needed
+- **Owner**: Platform Team + Infrastructure Team
+
+**5. Alerts → Federation**
+- **Nature**: Federated systems need consistent alerting across all nodes
+- **Lead Time**: 3 months of alert stability
+- **Blocking**: Phase 3a (federation) requires <5% false positive rate in alerts
+- **Minimum Data**: 1,000+ alerts with <50 false positives
+- **Mitigation**: Disable federated alerting, use local alerts only
+- **Owner**: Infrastructure Team + Security Team
+
+**6. Federation → Resilience Testing**
+- **Nature**: Resilience testing simulates federated failures
+- **Lead Time**: 2 months after federation deployment
+- **Blocking**: Phase 4d (resilience testing) requires stable federation
+- **Minimum Data**: Federation uptime >99%, <1% verification failures
+- **Mitigation**: Test local systems first, add federation tests later
+- **Owner**: Infrastructure Team + Platform Team
+
+### Dependency Risk Assessment
+
+| Dependency | Risk Level | Impact if Blocked | Mitigation Cost | Recovery Time |
+|------------|------------|-------------------|-----------------|---------------|
+| Predictive → AI Recommendations | HIGH | Delay Phase 3b by 6+ months | 4 eng-weeks (rule-based fallback) | 2 months |
+| Predictive → Evidence Correlation | MEDIUM | Manual correlation only | 2 eng-weeks (manual tools) | 1 month |
+| Correlation → Lifecycle Mgmt | LOW | Default time-based archival | 0 eng-weeks (already planned) | 0 weeks |
+| Dashboards → Multi-Tenant | MEDIUM | Simplified multi-tenant UI | 3 eng-weeks (rebuild components) | 6 weeks |
+| Alerts → Federation | HIGH | No federated alerting | 5 eng-weeks (local-only alerts) | 3 months |
+| Federation → Resilience Testing | LOW | Test local systems only | 1 eng-week (scope reduction) | 2 weeks |
+
+### Dependency Monitoring
+
+- **Weekly**: Track progress of all dependencies with 3+ month lead times
+- **Monthly**: Review dependency risk assessment with stakeholders
+- **Quarterly**: Update dependency map during roadmap recalibration
+- **Owner**: Product Manager + Engineering Manager
+
+---
+
+## Resource & Budget Mapping
+
+To ensure feasibility and help leadership balance priorities, each phase includes estimated resource effort and infrastructure costs.
+
+### Phase 2: Advanced Analytics & Integration (Q2 2026)
+
+**Engineering Effort:**
+
+| Milestone | Engineering Weeks | Team | Infra Cost (Monthly) | One-Time Cost |
+|-----------|------------------|------|---------------------|---------------|
+| 2.1: Predictive modeling data pipeline | 8 weeks | ML/Data Science (2 engineers) | $500 (compute) | $2,000 (tooling) |
+| 2.2: ARIMA & Holt-Winters implementation | 6 weeks | ML/Data Science (2 engineers) | $300 (compute) | $0 |
+| 2.3: Prediction accuracy tracking | 4 weeks | Platform (1 engineer) | $100 (storage) | $0 |
+| 2.4: Weighted framework scoring | 5 weeks | Platform (2 engineers) | $50 (compute) | $0 |
+| 2.5: Composite risk calculation | 3 weeks | Platform (1 engineer) | $50 (compute) | $0 |
+| 2.6: Dashboard framework selection | 2 weeks | Platform (1 engineer) | $0 | $5,000 (licenses) |
+| 2.7: Interactive drill-down dashboards | 10 weeks | Platform (2 engineers) | $400 (hosting) | $0 |
+| 2.8: Per-framework visualization | 6 weeks | Platform (2 engineers) | $200 (hosting) | $0 |
+| 2.9: Slack integration | 4 weeks | Infrastructure (1 engineer) | $0 | $0 |
+| 2.10: Teams integration | 4 weeks | Infrastructure (1 engineer) | $0 | $0 |
+| 2.11: Email alerting | 3 weeks | Infrastructure (1 engineer) | $100 (email service) | $0 |
+| 2.12: Alert threshold configuration | 3 weeks | Platform (1 engineer) | $0 | $0 |
+| 2.13: Evidence-risk linking | 5 weeks | Platform (2 engineers) | $100 (storage) | $0 |
+| 2.14: Correlation UI | 4 weeks | Platform (1 engineer) | $0 | $0 |
+| 2.15: Phase 2 testing & documentation | 6 weeks | All teams (3 engineers) | $0 | $0 |
+| 2.16: Stakeholder training | 2 weeks | All teams (2 engineers) | $0 | $1,000 (materials) |
+| 2.17: Phase 2 launch & monitoring | 2 weeks | All teams (2 engineers) | $0 | $0 |
+
+**Totals for Phase 2:**
+- **Engineering Effort**: 77 engineering-weeks (~19 weeks with 4 FTE average)
+- **Monthly Infrastructure**: ~$1,800/month
+- **One-Time Costs**: ~$8,000
+
+### Phase 3: Enterprise Scale & Federation (Q4 2026)
+
+**Engineering Effort:**
+
+| Milestone | Engineering Weeks | Team | Infra Cost (Monthly) | One-Time Cost |
+|-----------|------------------|------|---------------------|---------------|
+| 3.1: Federation protocol design | 4 weeks | Platform (2 engineers) | $0 | $0 |
+| 3.2: Cross-system verification | 8 weeks | Platform (2 engineers) | $300 (compute) | $0 |
+| 3.3: Distributed consensus | 6 weeks | Infrastructure (2 engineers) | $400 (nodes) | $0 |
+| 3.4: ML model training pipeline | 10 weeks | ML/Data Science (2 engineers) | $800 (GPU compute) | $3,000 (tooling) |
+| 3.5: Policy recommendation engine | 8 weeks | ML/Data Science (2 engineers) | $400 (inference) | $0 |
+| 3.6: Recommendation UI | 5 weeks | Platform (1 engineer) | $0 | $0 |
+| 3.7: Multi-tenancy architecture | 8 weeks | Infrastructure (2 engineers) | $0 | $0 |
+| 3.8: Tenant isolation & RBAC | 6 weeks | Security (2 engineers) | $0 | $0 |
+| 3.9: Clustering & load balancing | 6 weeks | Infrastructure (2 engineers) | $600 (LB + nodes) | $0 |
+| 3.10: ServiceNow connector | 5 weeks | API (2 engineers) | $0 | $2,000 (integration) |
+| 3.11: Archer connector | 5 weeks | API (2 engineers) | $0 | $2,000 (integration) |
+| 3.12: OneTrust connector | 5 weeks | API (2 engineers) | $0 | $2,000 (integration) |
+| 3.13: Webhook/API framework | 4 weeks | API (1 engineer) | $100 (compute) | $0 |
+| 3.14: Phase 3 testing & documentation | 8 weeks | All teams (3 engineers) | $0 | $0 |
+| 3.15: Stakeholder training | 3 weeks | All teams (2 engineers) | $0 | $1,500 (materials) |
+| 3.16: Gradual rollout (3 weeks) | 3 weeks | All teams (2 engineers) | $0 | $0 |
+| 3.17: Phase 3 launch & monitoring | 2 weeks | All teams (2 engineers) | $0 | $0 |
+
+**Totals for Phase 3:**
+- **Engineering Effort**: 96 engineering-weeks (~24 weeks with 4 FTE average)
+- **Monthly Infrastructure**: ~$2,600/month
+- **One-Time Costs**: ~$10,500
+
+### Phase 4: Security & Compliance Hardening (Q1 2027)
+
+**Engineering Effort:**
+
+| Milestone | Engineering Weeks | Team | Infra Cost (Monthly) | One-Time Cost |
+|-----------|------------------|------|---------------------|---------------|
+| 4.1: MFA library selection | 1 week | Security (1 engineer) | $0 | $0 |
+| 4.2: TOTP implementation | 4 weeks | Security (2 engineers) | $0 | $0 |
+| 4.3: WebAuthn implementation | 5 weeks | Security (2 engineers) | $0 | $500 (hardware keys for testing) |
+| 4.4: MFA recovery flows | 3 weeks | Security (1 engineer) | $0 | $0 |
+| 4.5: Retention policy engine | 5 weeks | Infrastructure (2 engineers) | $200 (metadata storage) | $0 |
+| 4.6: Archival automation (Glacier/S3) | 6 weeks | Infrastructure (2 engineers) | $300 (archival storage) | $0 |
+| 4.7: Retrieval workflows | 4 weeks | Platform (1 engineer) | $50 (retrieval costs) | $0 |
+| 4.8: Destruction/purge automation | 5 weeks | Infrastructure (2 engineers) | $0 | $0 |
+| 4.9: Chaos testing framework | 6 weeks | Infrastructure (2 engineers) | $200 (test infra) | $1,000 (tooling) |
+| 4.10: Fault injection scenarios | 5 weeks | Infrastructure (2 engineers) | $0 | $0 |
+| 4.11: Recovery automation | 5 weeks | Infrastructure (2 engineers) | $0 | $0 |
+| 4.12: Positive rationale generation | 4 weeks | ML/Data Science (1 engineer) | $100 (compute) | $0 |
+| 4.13: Natural language generation | 6 weeks | ML/Data Science (2 engineers) | $300 (NLG API) | $2,000 (NLG tooling) |
+| 4.14: Phase 4 testing & documentation | 6 weeks | All teams (3 engineers) | $0 | $0 |
+| 4.15: Stakeholder training | 2 weeks | All teams (2 engineers) | $0 | $1,000 (materials) |
+| 4.16: Phase 4 launch & monitoring | 2 weeks | All teams (2 engineers) | $0 | $0 |
+
+**Totals for Phase 4:**
+- **Engineering Effort**: 69 engineering-weeks (~17 weeks with 4 FTE average)
+- **Monthly Infrastructure**: ~$1,150/month
+- **One-Time Costs**: ~$4,500
+
+### Cumulative Resource Summary (All Phases)
+
+**Total Engineering Effort:**
+- Phase 2: 77 eng-weeks
+- Phase 3: 96 eng-weeks
+- Phase 4: 69 eng-weeks
+- **Total**: 242 engineering-weeks (~60 weeks with 4 FTE average, or ~14 months)
+
+**Total Infrastructure Costs:**
+- Phase 2: $1,800/month
+- Phase 3: $2,600/month (cumulative: $4,400/month)
+- Phase 4: $1,150/month (cumulative: $5,550/month)
+- **Steady State** (all phases): ~$5,550/month (~$66,600/year)
+
+**Total One-Time Costs:**
+- Phase 2: $8,000
+- Phase 3: $10,500
+- Phase 4: $4,500
+- **Total**: $23,000
+
+### Budget Contingency
+
+- **Engineering Overruns**: +20% buffer (48 additional eng-weeks)
+- **Infrastructure Overruns**: +15% buffer ($900/month additional)
+- **One-Time Cost Overruns**: +25% buffer ($5,750 additional)
+
+**Total Budgeted Resources:**
+- Engineering: 290 eng-weeks
+- Infrastructure (monthly): $6,450/month
+- One-Time: $28,750
+
+### Resource Allocation Approval
+
+- **Phase 2**: Approved by Engineering Manager + Finance (budget <$50K)
+- **Phase 3**: Approved by CTO + CFO (budget $50K-$150K)
+- **Phase 4**: Approved by Engineering Manager + Finance (budget <$50K)
+- **Overall Multi-Phase**: Approved by CTO + CFO + Board (if total >$150K)
+
+---
+
+## Audit Readiness Tracking
+
+To keep the roadmap aligned with external audit deadlines, each phase includes a "Compliance Readiness Index" measuring how close the system is to satisfying audit requirements.
+
+### Compliance Readiness Index (CRI)
+
+**Definition**: Percentage of audit control requirements satisfied by the current implementation.
+
+**Formula**: CRI = (Satisfied Controls / Total Required Controls) × 100
+
+### Phase 1 Audit Readiness (CURRENT)
+
+**SOC 2 Type II:**
+- CC6.1 (Logical Access): 95% ready (MFA missing for auditors)
+- CC7.2 (System Monitoring): 100% ready (metrics, health checks complete)
+- CC7.3 (Quality): 90% ready (some test coverage gaps)
+- CC7.4 (Change Management): 85% ready (policy versioning complete, evidence archival missing)
+- **Overall SOC 2 CRI**: 92.5%
+
+**HIPAA:**
+- §164.308(a)(1) (Security Management): 90% ready (risk trend analysis complete, some documentation gaps)
+- §164.308(a)(3) (Workforce Security): 85% ready (RBAC complete, MFA missing)
+- §164.308(a)(4) (Information Access Management): 100% ready (policy-driven enforcement complete)
+- §164.312(a)(1) (Access Control): 90% ready (authentication complete, audit controls complete)
+- **Overall HIPAA CRI**: 91.25%
+
+**PCI-DSS v4.0:**
+- Req 3 (Protect Stored Data): 95% ready (encryption in transit, at-rest encryption for audit trail missing)
+- Req 10 (Log and Monitor): 100% ready (centralized logging, retention, tamper-evidence complete)
+- Req 12 (Information Security Policy): 100% ready (policy management, versioning, audit trail complete)
+- **Overall PCI-DSS CRI**: 98.3%
+
+**GDPR:**
+- Article 5(2) (Accountability): 100% ready (audit trail, evidence bundles complete)
+- Article 30 (Records of Processing): 95% ready (schema governance complete, some retention documentation gaps)
+- Article 32 (Security): 90% ready (encryption in transit complete, MFA missing)
+- **Overall GDPR CRI**: 95%
+
+**ISO 27001:**
+- A.12.4.1 (Event Logging): 100% ready
+- A.9.2 (User Access Management): 90% ready (RBAC complete, MFA missing)
+- A.18.1 (Compliance): 95% ready (audit trail complete, some procedural documentation gaps)
+- **Overall ISO 27001 CRI**: 95%
+
+**Phase 1 Aggregate CRI**: 94.4%
+
+### Phase 2 Audit Readiness Targets
+
+**Improvements:**
+- Evidence correlation improves SOC 2 CC7.4 to 95% (+10%)
+- Enhanced dashboards improve HIPAA §164.308(a)(1) to 95% (+5%)
+- Weighted framework scoring improves ISO 27001 A.18.1 to 100% (+5%)
+
+**Phase 2 Target CRI**: 96.5% (+2.1 percentage points)
+
+### Phase 3 Audit Readiness Targets
+
+**Improvements:**
+- Multi-tenant RBAC improves SOC 2 CC6.1 to 98% (+3%)
+- Cross-system federation improves GDPR Article 30 to 100% (+5%)
+- GRC integration improves HIPAA §164.308(a)(4) documentation to 100% (no change in CRI, better evidence)
+
+**Phase 3 Target CRI**: 97.8% (+1.3 percentage points)
+
+### Phase 4 Audit Readiness Targets
+
+**Improvements:**
+- MFA implementation closes all authentication gaps:
+  - SOC 2 CC6.1: 100% (+2%)
+  - HIPAA §164.308(a)(3): 100% (+15%)
+  - GDPR Article 32: 100% (+10%)
+  - ISO 27001 A.9.2: 100% (+10%)
+- Evidence lifecycle management closes retention gaps:
+  - SOC 2 CC7.4: 100% (+5%)
+  - GDPR Article 30: 100% (already 100%)
+- At-rest encryption for audit trail:
+  - PCI-DSS Req 3: 100% (+5%)
+
+**Phase 4 Target CRI**: 99.5% (+1.7 percentage points)
+
+### Audit Deadline Tracking
+
+**Known Audit Deadlines:**
+- SOC 2 Type II Annual Audit: July 2026 (requires CRI >95% by June 2026)
+- HIPAA Compliance Review: October 2026 (requires CRI >90% by September 2026)
+- PCI-DSS QSA Assessment: December 2026 (requires CRI >95% by November 2026)
+- ISO 27001 Certification Audit: March 2027 (requires CRI >98% by February 2027)
+
+**Roadmap Alignment:**
+- Phase 2 completion (August 2026) achieves 96.5% CRI → Satisfies SOC 2 and HIPAA deadlines ✅
+- Phase 3 completion (December 2026) achieves 97.8% CRI → Satisfies PCI-DSS deadline ✅
+- Phase 4 completion (March 2027) achieves 99.5% CRI → Satisfies ISO 27001 deadline ✅
+
+**Risk Flags:**
+- If Phase 2 delayed by >1 month, SOC 2 audit may need to be rescheduled
+- If Phase 4 delayed by >2 weeks, ISO 27001 audit may need to be rescheduled
+
+**CRI Monitoring:**
+- **Weekly**: Track CRI for current phase during active development
+- **Monthly**: Report CRI to compliance team and auditors
+- **Quarterly**: Validate CRI calculation with external auditors
+- **Owner**: Compliance Team Lead + Security Team
+
+### Audit Evidence Packages
+
+Each phase includes automated evidence package generation aligned with audit requirements:
+
+**Phase 1 Evidence** (Current):
+- Policy audit trail (90 days)
+- Risk trend history (90 days)
+- Schema validation reports (90 days)
+- Access logs (90 days)
+- Self-test results (90 days)
+
+**Phase 2 Evidence** (Added):
+- Predictive model accuracy reports
+- Alert effectiveness metrics
+- Dashboard usage analytics
+
+**Phase 3 Evidence** (Added):
+- Federation verification logs
+- Multi-tenant access segregation proof
+- GRC platform integration logs
+
+**Phase 4 Evidence** (Added):
+- MFA enrollment and usage logs
+- Evidence archival and retrieval logs
+- Chaos testing results and remediation
+
+**Evidence Retention Alignment:**
+- SOC 2: 1 year online, 7 years archived
+- HIPAA: 6 years (per §164.316(b)(2)(i))
+- PCI-DSS: 1 year online, 7 years total
+- GDPR: Per data retention policy (default: 90 days online, 7 years archived)
+- ISO 27001: Per organizational policy (default: 3 years)
+
+---
+
+## Sunset & Decommission Planning
+
+To avoid long-term technical debt, the roadmap includes explicit plans for retiring deprecated features and policies.
+
+### Deprecation Lifecycle
+
+**Stage 1: Deprecation Announced** (T+0)
+- Feature/policy marked as deprecated in documentation
+- Warning added to UI (if applicable)
+- Deprecation notice sent to all stakeholders
+- Migration guide published
+
+**Stage 2: Deprecation Grace Period** (T+0 to T+90 days)
+- Feature remains fully functional
+- Telemetry tracks usage of deprecated feature
+- Support team assists with migration
+- Monthly reminders sent to remaining users
+
+**Stage 3: Soft Decommission** (T+90 to T+120 days)
+- Feature disabled by default (opt-in to re-enable)
+- Warning banner shown to remaining users
+- Final migration deadline announced (T+120)
+- Escalation to management for stragglers
+
+**Stage 4: Hard Decommission** (T+120 days)
+- Feature removed from codebase
+- Data archived or migrated
+- Documentation moved to "archived" section
+- Decommission announcement sent to all stakeholders
+
+**Stage 5: Complete Sunset** (T+180 days)
+- Archived data purged (if no longer required for compliance)
+- Infrastructure resources deallocated
+- Lessons learned documented
+
+### Planned Deprecations
+
+**1. Legacy Schema Versions**
+
+**Current State**: JSON Schema v1.0.0 is current
+
+**Deprecation Plan:**
+- v1.0.0 will be deprecated when v2.0.0 is released (estimated Q3 2026 during Phase 3)
+- Grace period: 180 days (extended from standard 90 days due to schema criticality)
+- Migration: Automated schema migration tool provided
+- Decommission: v1.0.0 support removed 180 days after v2.0.0 release (estimated Q1 2027)
+- Reason: Schema evolution, new privacy requirements
+
+**Migration Support:**
+- `validate_logs.py --migrate-schema v1.0.0 v2.0.0 input.log output.log`
+- Automated migration in CI pipelines
+- Dual-write support during grace period
+
+**2. ASCII Chart Visualizations**
+
+**Current State**: CLI uses ASCII charts for trend visualization
+
+**Deprecation Plan:**
+- ASCII charts deprecated when Phase 2 dashboards launch (Q2 2026)
+- Grace period: 90 days
+- Migration: Users directed to web dashboards
+- Decommission: ASCII chart code removed Q3 2026
+- Reason: Superior interactive dashboards available
+
+**Migration Support:**
+- Dashboard training provided
+- "Quick view" links in CLI output redirect to dashboard
+- Export functionality preserved (JSON/CSV)
+
+**3. Local SQLite Database for Trends**
+
+**Current State**: Risk trends stored in local SQLite database
+
+**Deprecation Plan:**
+- Local SQLite deprecated when Phase 3 multi-tenant portal launches (Q4 2026)
+- Grace period: 120 days (extended for data migration)
+- Migration: Automated migration to centralized database
+- Decommission: Local SQLite support removed Q1 2027
+- Reason: Centralized storage required for multi-tenancy
+
+**Migration Support:**
+- `risk_trend_analyzer.py --migrate-to-central --source local.db --target postgresql://...`
+- Zero-downtime migration with automated sync
+- Rollback support during grace period
+
+**4. Single-Signature Evidence Bundles**
+
+**Current State**: Evidence bundles signed with single PGP key
+
+**Deprecation Plan:**
+- Single-signature bundles deprecated when Phase 4 multi-signature support added (Q1 2027)
+- Grace period: 180 days (extended for compliance verification)
+- Migration: Re-sign existing bundles with multiple keys
+- Decommission: Single-signature verification removed Q3 2027
+- Reason: Enhanced security, compliance requirements
+
+**Migration Support:**
+- `policy_diff.py --re-sign bundle.json --additional-keys key2.asc,key3.asc`
+- Backward compatibility: Multi-signature bundles validate with any valid signature
+- Gradual rollout with monitoring
+
+**5. HTTP Logging Handler (Non-Resilient)**
+
+**Current State**: Optional HTTP handler without circuit breaker
+
+**Deprecation Plan:**
+- Non-resilient HTTP handler deprecated immediately (already replaced by ResilientHTTPHandler in Phase 1)
+- Grace period: 60 days
+- Migration: Switch to ResilientHTTPHandler (configuration change only)
+- Decommission: Non-resilient handler removed Q2 2026
+- Reason: Production reliability, circuit breaker required
+
+**Migration Support:**
+- Documentation: `STARLINK_HTTP_LOG_ENDPOINT` now uses ResilientHTTPHandler automatically
+- No code changes required
+- Backward compatible configuration
+
+### Decommission Success Metrics
+
+- **User Notification Reach**: >95% of active users notified of deprecation
+- **Migration Completion**: >90% of users migrated before grace period ends
+- **Support Burden**: <10 support tickets per deprecated feature during grace period
+- **Code Cleanup**: Deprecated code removed within 30 days of decommission date
+- **Documentation Update**: Deprecated feature docs moved to archive within 7 days
+
+### Technical Debt Prevention
+
+**Quarterly Tech Debt Review:**
+- Identify features/policies used by <5% of users
+- Evaluate cost/benefit of maintaining low-usage features
+- Propose deprecation for features with high maintenance burden and low usage
+- Owner: Engineering Manager + Product Manager
+
+**Long-Term Compatibility Commitments:**
+- JSON Schema: 2 versions supported concurrently (current + previous)
+- Policy formats: 2 versions supported concurrently
+- API endpoints: 1 year backward compatibility guarantee
+- Evidence bundle signatures: Permanent backward compatibility (verification only)
+
+**Decommission Review Cadence:**
+- Monthly: Track deprecation grace periods and migration progress
+- Quarterly: Review decommission pipeline and adjust timelines as needed
+- Annually: Purge archived features that are no longer compliance-relevant
+- Owner: Platform Team + Compliance Team
+
+---
+
 **End of Roadmap**
