@@ -1,3 +1,5 @@
+requests>=2.31.0
+python-dotenv>=1.0.0
 # VPN Manager Dependencies
 # For Starlink infrastructure security VPN management
 
@@ -27,50 +29,16 @@ python-dateutil>=2.8.0
 pyyaml>=6.0
 pyyaml>=6.0
 python-json-logger>=2.0.0
+cryptography>=42.0.4
 # Secure IT Infrastructure - Starlink
-# Python dependencies
+# Core runtime dependencies only
+# Note: The starlink_metrics module uses only Python standard library
 
-# Core dependencies
-# No external dependencies required for basic functionality
-# All modules use Python standard library
-
-# Optional dependencies for enhanced functionality:
-# Uncomment these if you want to use real implementations
-
-# Network scanning
-# nmap==0.0.1
-# scapy==2.5.0
-
-# Threat intelligence
-# requests==2.31.0
-# feedparser==6.0.10
-
-# VPN
-# python-openvpn==1.0.0
-
-# Backup and compression
-# paramiko==3.4.0
-
-# Monitoring and logging
-# prometheus-client==0.19.0
-cryptography>=41.0.0
-# Starlink Security Auditor Requirements
-# Python 3.7+ required
-
-# No external dependencies required for basic functionality
-# All modules used are part of Python standard library:
-# - json
-# - logging
-# - subprocess
-# - socket
-# - os
-# - sys
-# - datetime
-# - typing
-# - dataclasses
-# - pathlib
-
-# Optional dependencies for enhanced functionality:
-# pytest>=7.0.0  # For running tests (if tests are added)
-# pylint>=2.12.0  # For code linting
-# black>=22.0.0   # For code formatting
+# Optional runtime dependencies (uncomment if needed in your environment)
+# PyYAML>=6.0.1
+# cryptography>=41.0.0
+# requests>=2.31.0
+# python-dateutil>=2.8.0
+# python-json-logger>=2.0.0
+# aiohttp>=3.13.3
+# psutil>=5.9.0

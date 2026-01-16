@@ -1,0 +1,481 @@
+# ⚠️ SECURITY WARNING ⚠️
+# This configuration contains DEFAULT CREDENTIALS for development/testing only!
+# For production deployments:
+# 1. Change the default password (currently: armada_password)
+# 2. Use Kubernetes Secrets to store credentials
+# 3. Enable SSL/TLS for database connections
+# 4. See docs/SECURITY.md for complete hardening guide
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: armada
+  labels:
+    app: armada
+    component: fleet-management
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: armada
+  labels:
+    app: armada
+    component: redis
+spec:
+  ports:
+  - port: 6379
+    name: redis
+  selector:
+    app: armada
+    component: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: armada
+  labels:
+    app: armada
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: armada
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: armada
+        component: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7.2-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        command: ["redis-server", "--appendonly", "yes"]
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: redis-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: armada
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: armada
+  labels:
+    app: armada
+    component: postgres
+spec:
+  ports:
+  - port: 5432
+    name: postgres
+  selector:
+    app: armada
+    component: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: armada
+  labels:
+    app: armada
+    component: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: armada
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: armada
+        component: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          value: armada
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: armada-postgres-secret
+              key: password
+        - name: POSTGRES_DB
+          value: armada
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 20Gi
+---
+# ⚠️ SECURITY WARNING ⚠️
+# This Secret contains a DEFAULT PASSWORD for development only!
+# For production, generate a secure random password:
+#   kubectl create secret generic armada-postgres-secret \
+#     --from-literal=password="$(openssl rand -base64 32)" \
+#     -n armada
+# See docs/SECURITY.md for more details
+apiVersion: v1
+kind: Secret
+metadata:
+  name: armada-postgres-secret
+  namespace: armada
+type: Opaque
+stringData:
+  password: armada_password  # CHANGE THIS! Use: openssl rand -base64 32
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: armada-server-config
+  namespace: armada
+data:
+  config.yaml: |
+    grpcPort: 50051
+    httpPort: 8080
+    metricsPort: 9000
+    
+    redis:
+      addrs:
+        - "redis:6379"
+      masterName: ""
+      db: 0
+    
+    postgres:
+      connection:
+        host: postgres
+        port: 5432
+        user: armada
+        password: ${POSTGRES_PASSWORD}  # Injected from Secret via environment variable
+        dbname: armada
+        sslmode: disable  # Change to 'require' in production
+    
+    scheduling:
+      maxJobsPerCall: 5000
+      defaultJobLimits:
+        cpu: 1
+        memory: 1Gi
+      defaultJobTolerations: []
+      defaultJobPriorityClassName: ""
+    
+    pulsar:
+      enabled: true
+      URL: "pulsar://broker.pulsar:6650"
+      jobsetEventsTopic: "persistent://public/default/armada-jobset-events"
+      maxConnectionsPerBroker: 1
+    
+    auth:
+      anonymousAuth: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: armada-server
+  namespace: armada
+  labels:
+    app: armada
+    component: server
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 50051
+    targetPort: 50051
+    name: grpc
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app: armada
+    component: server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: armada-server
+  namespace: armada
+  labels:
+    app: armada
+    component: server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: armada
+      component: server
+  template:
+    metadata:
+      labels:
+        app: armada
+        component: server
+    spec:
+      containers:
+      - name: armada-server
+        image: gresearch/armada-server:v0.4.54
+        ports:
+        - containerPort: 50051
+          name: grpc
+        - containerPort: 8080
+          name: http
+        - containerPort: 9000
+          name: metrics
+        command:
+        - armada-server
+        - --config
+        - /config/armada/config.yaml
+        volumeMounts:
+        - name: config
+          mountPath: /config/armada
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: armada-postgres-secret
+              key: password
+        - name: ARMADA_REDIS_ADDRS
+          value: "redis:6379"
+        # Note: ARMADA_POSTGRES_CONNECTION is deprecated in favor of config file
+        # The config file uses ${POSTGRES_PASSWORD} which will be substituted
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - grpc_health_probe
+            - -addr=:50051
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: armada-server-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: armada-executor-config
+  namespace: armada
+data:
+  config.yaml: |
+    apiConnection:
+      armadaUrl: "armada-server:50051"
+    
+    application:
+      clusterId: "starlink-cluster-1"
+      clusterPool: "starlink-pool"
+    
+    kubernetes:
+      impersonateUsers: false
+      qps: 100
+      burst: 200
+      stuckPodExpiry: 5m
+    
+    task:
+      utilisationReportingInterval: 30s
+      missingJobEventReconciliationInterval: 15s
+      jobLeaseRenewalInterval: 30s
+      podDefaults:
+        schedulerName: default-scheduler
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: armada-executor
+  namespace: armada
+  labels:
+    app: armada
+    component: executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: armada
+      component: executor
+  template:
+    metadata:
+      labels:
+        app: armada
+        component: executor
+    spec:
+      serviceAccountName: armada-executor
+      containers:
+      - name: armada-executor
+        image: gresearch/armada-executor:v0.4.54
+        command:
+        - armada-executor
+        - --config
+        - /config/armada/config.yaml
+        volumeMounts:
+        - name: config
+          mountPath: /config/armada
+        env:
+        - name: ARMADA_SERVER_URL
+          value: "armada-server:50051"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: config
+        configMap:
+          name: armada-executor-config
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: armada-executor
+  namespace: armada
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: armada-executor
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch", "create"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection"]
+- apiGroups: [""]
+  resources: ["services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: armada-executor
+subjects:
+- kind: ServiceAccount
+  name: armada-executor
+  namespace: armada
+roleRef:
+  kind: ClusterRole
+  name: armada-executor
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lookout
+  namespace: armada
+  labels:
+    app: armada
+    component: lookout
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8089
+    targetPort: 8080
+    name: http
+  selector:
+    app: armada
+    component: lookout
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lookout
+  namespace: armada
+  labels:
+    app: armada
+    component: lookout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: armada
+      component: lookout
+  template:
+    metadata:
+      labels:
+        app: armada
+        component: lookout
+    spec:
+      containers:
+      - name: lookout
+        image: gresearch/armada-lookout:v0.4.54
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        # PostgreSQL password injected from Secret
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: armada-postgres-secret
+              key: password
+        - name: ARMADA_SERVER_URL
+          value: "armada-server:50051"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
