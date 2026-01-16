@@ -11,6 +11,7 @@ import logging
 import os
 import pickle
 import queue
+import random
 import threading
 import time
 import warnings
@@ -2386,14 +2387,18 @@ class ClusterManager:
         with self._lock:
             self.nodes[node_id] = ClusterNode(node_id, address)
     
-    def elect_leader(self) -> str:
+    def elect_leader(self) -> Optional[str]:
         """
         Perform leader election (simple implementation - lowest node_id wins).
         In production, use Raft, Paxos, or ZooKeeper.
+        
+        Returns:
+            Node ID of elected leader, or None if no healthy nodes
         """
         with self._lock:
             healthy_nodes = [n for n in self.nodes.values() if n.healthy]
             if not healthy_nodes:
+                logging.warning("No healthy nodes available for leader election")
                 return None
             
             # Simple leader election: lexicographically smallest node_id
@@ -2445,7 +2450,9 @@ class ClusterManager:
         """Stop cluster management."""
         self._running = False
         if self._heartbeat_thread:
-            self._heartbeat_thread.join(timeout=5)
+            # Use dynamic timeout based on heartbeat interval
+            timeout = self.heartbeat_interval * 2
+            self._heartbeat_thread.join(timeout=timeout)
     
     def _heartbeat_loop(self):
         """Background thread for heartbeat monitoring."""
@@ -2574,9 +2581,10 @@ class WorkerPool:
     Enables concurrent ML scoring with configurable workers.
     """
     
-    def __init__(self, num_workers: int = 4, max_batch_size: int = 100):
+    def __init__(self, num_workers: int = 4, max_batch_size: int = 100, batch_timeout_sec: float = 0.1):
         self.num_workers = num_workers
         self.max_batch_size = max_batch_size
+        self.batch_timeout_sec = batch_timeout_sec
         self.task_queue = queue.Queue()
         self.workers: List[threading.Thread] = []
         self._running = False
@@ -2616,7 +2624,10 @@ class WorkerPool:
                 # Schedule batch processing after timeout
                 if self._batch_timer:
                     self._batch_timer.cancel()
-                self._batch_timer = threading.Timer(0.1, lambda: self._process_batch(batch_task))
+                self._batch_timer = threading.Timer(
+                    self.batch_timeout_sec, 
+                    lambda: self._process_batch(batch_task)
+                )
                 self._batch_timer.start()
     
     def _process_batch(self, batch_task: Callable):
@@ -2723,7 +2734,7 @@ class ComplianceProfile:
         "HIPAA": {
             "standard": "HIPAA Security Rule",
             "required_fields": ["timestamp", "actor", "action", "resource", "outcome", "phi_accessed"],
-            "retention_days": 2555,  # 7 years
+            "retention_days": 2557,  # ~7 years (accounting for leap years)
             "encryption_required": True
         },
         "ISO_27001": {
@@ -2753,11 +2764,11 @@ class ComplianceProfile:
             raise ValueError(f"Unknown compliance profile: {profile_name}")
         
         class ProfileFormatter(AuditFormatter):
-            def format_audit_entry(self, entry: Dict[str, Any]) -> str:
-                return json.dumps({
+            def format_audit_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
+                return {
                     "standard": profile["standard"],
                     **entry
-                }, indent=2)
+                }
             
             def get_standard_name(self) -> str:
                 return profile["standard"]
@@ -2807,8 +2818,6 @@ class ChaosTestingFramework:
     
     def should_fail(self, component: str) -> bool:
         """Check if a component should fail based on active faults."""
-        import random
-        
         with self._lock:
             now = datetime.now()
             self.active_faults = [f for f in self.active_faults if f["expires_at"] > now]
@@ -2909,8 +2918,8 @@ class UnifiedCLI:
             return {"message": "Encryption key rotated successfully"}
         
         elif command == "reload_config":
-            path = args.get("path")
-            self.foundation.reload_config(path)
+            # reload_config doesn't take parameters, it reloads from existing path
+            self.foundation.reload_config()
             return {"message": "Configuration reloaded successfully"}
         
         elif command == "export_audit":
