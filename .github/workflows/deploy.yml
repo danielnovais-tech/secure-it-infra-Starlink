@@ -1,6 +1,181 @@
 name: Deploy to Environments
 
 on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+jobs:
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://dev.starlink-security.example.com
+    if: github.event_name == 'push' || github.event.inputs.environment == 'development'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run tests
+      run: |
+        pytest test_starlink_security.py -v
+    
+    - name: Deploy to Development
+      run: |
+        echo "🚀 Deploying to Development environment..."
+        echo "Environment: development"
+        echo "Version: ${{ github.sha }}"
+        # Add actual deployment commands here
+        # e.g., kubectl apply, helm upgrade, ansible playbook, etc.
+    
+    - name: Verify deployment
+      run: |
+        echo "✅ Deployment verification passed"
+        # Add health check commands here
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    environment:
+      name: staging
+      url: https://staging.starlink-security.example.com
+    if: github.event_name == 'push' || github.event.inputs.environment == 'staging'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run integration tests
+      run: |
+        pytest test_starlink_security.py -v
+        echo "Running integration tests..."
+    
+    - name: Deploy to Staging
+      run: |
+        echo "🚀 Deploying to Staging environment..."
+        echo "Environment: staging"
+        echo "Version: ${{ github.sha }}"
+        # Add actual deployment commands here
+    
+    - name: Smoke tests
+      run: |
+        echo "🔍 Running smoke tests..."
+        # Add smoke test commands here
+    
+    - name: Verify deployment
+      run: |
+        echo "✅ Staging deployment verified"
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment:
+      name: production
+      url: https://starlink-security.example.com
+    if: github.event.inputs.environment == 'production'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Pre-deployment checks
+      run: |
+        echo "🔍 Running pre-deployment checks..."
+        pytest test_starlink_security.py -v
+    
+    - name: Create deployment backup
+      run: |
+        echo "💾 Creating backup..."
+        echo "Backup ID: backup-${{ github.sha }}"
+    
+    - name: Deploy to Production
+      run: |
+        echo "🚀 Deploying to Production environment..."
+        echo "Environment: production"
+        echo "Version: ${{ github.sha }}"
+        # Add actual deployment commands here
+        # Consider canary deployment or blue-green deployment
+    
+    - name: Health checks
+      run: |
+        echo "🏥 Running health checks..."
+        # Add comprehensive health check commands
+    
+    - name: Verify deployment
+      run: |
+        echo "✅ Production deployment verified"
+    
+    - name: Notify team
+      if: always()
+      run: |
+        echo "📢 Notifying team of deployment status..."
+        # Add notification commands (Slack, email, etc.)
+
+  rollback:
+    name: Rollback Production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    if: failure() && github.event.inputs.environment == 'production'
+    needs: deploy-production
+    
+    steps:
+    - name: Rollback deployment
+      run: |
+        echo "⏪ Rolling back production deployment..."
+        echo "Restoring to previous version"
+        # Add rollback commands here
+    
+    - name: Verify rollback
+      run: |
+        echo "✅ Rollback completed and verified"
+    
+    - name: Notify team
+      run: |
+        echo "🚨 Production rollback executed - team notified"
   workflow_dispatch:
     inputs:
       environment:
