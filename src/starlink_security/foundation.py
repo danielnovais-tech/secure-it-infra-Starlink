@@ -44,6 +44,7 @@ class StarlinkSecurityFoundation:
         self.security_modules = {}
         self.running = False
         self._cleaned_up = False
+        self._shutdown_complete = False
         
         # Initialize security modules
         self._initialize_modules()
@@ -182,9 +183,13 @@ class StarlinkSecurityFoundation:
             await asyncio.sleep(1)
     
     async def shutdown(self):
-        """Shutdown all modules gracefully."""
+        """Shutdown all modules gracefully. Idempotent - safe to call multiple times."""
+        if self._shutdown_complete:
+            return
+            
         logger.info("Shutting down Starlink Security Foundation")
         self.running = False
+        self._shutdown_complete = True
         
         # Stop all modules
         for name, module in self.security_modules.items():
@@ -223,7 +228,7 @@ async def async_main(config_path: Optional[str] = None):
     try:
         await foundation.run()
     except asyncio.CancelledError:
-        # Handle Ctrl+C or shutdown signals
+        # Handle task cancellation (e.g., from asyncio.wait_for or task.cancel())
         logger.info("Received cancellation signal")
         raise
     except Exception as e:
