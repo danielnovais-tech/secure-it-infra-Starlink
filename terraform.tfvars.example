@@ -1,0 +1,32 @@
+# Example Terraform Variables Configuration
+# Copy this file to terraform.tfvars and customize for your environment
+
+# AWS Region - Primary region for infrastructure deployment
+aws_region = "us-west-2"
+
+# Environment - Must be one of: dev, staging, production
+environment = "dev"
+
+# Owner/Team Information
+owner = "SecureIT-Team"
+
+# Cost Center for billing and tracking
+cost_center = "Infrastructure"
+
+# AWS Account ID (optional, for validation)
+# aws_account_id = "123456789012"
+
+# Secondary region for cross-region resources (default: us-east-1)
+# aws_secondary_region = "us-east-1"
+
+# Feature Flags
+enable_cross_region = true
+enable_backup       = true
+enable_monitoring   = true
+
+# Additional custom tags
+additional_tags = {
+  Application = "Starlink-Infrastructure"
+  Compliance  = "SOC2"
+  DataClass   = "Confidential"
+}
