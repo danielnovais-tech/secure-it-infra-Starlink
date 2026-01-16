@@ -8,7 +8,6 @@ import signal
 import time
 import logging
 import json
-from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional
 
