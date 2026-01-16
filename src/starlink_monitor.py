@@ -15,15 +15,16 @@ from src.config import UPDATE_INTERVAL, LOG_DIR, DATA_DIR
 from src.starlink_api import StarlinkAPIClient
 from src.metrics_collector import MetricsCollector
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_DIR / 'starlink_monitor.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+# Configure logging only when run as a script
+if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(LOG_DIR / 'starlink_monitor.log'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
 logger = logging.getLogger(__name__)
 
 
