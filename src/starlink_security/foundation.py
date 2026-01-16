@@ -43,6 +43,7 @@ class StarlinkSecurityFoundation:
         self.encryption = self._initialize_encryption()
         self.security_modules = {}
         self.running = False
+        self._cleaned_up = False
         
         # Initialize security modules
         self._initialize_modules()
@@ -148,8 +149,7 @@ class StarlinkSecurityFoundation:
         """Handle shutdown signals gracefully."""
         logger.info(f"Received shutdown signal {signum}")
         self.running = False
-        # Call cleanup synchronously since it's not an async method
-        self.cleanup()
+        # Don't call cleanup here - let async_main's finally block handle it
         raise SystemExit(0)
     
     def _handle_module_task_result(self, task: asyncio.Task) -> None:
@@ -201,8 +201,13 @@ class StarlinkSecurityFoundation:
                 logger.error(f"Error stopping module {name}: {e}")
     
     def cleanup(self):
-        """Cleanup resources."""
+        """Cleanup resources. Idempotent - safe to call multiple times."""
+        if self._cleaned_up:
+            return
+        
         logger.info("Cleaning up resources")
+        self._cleaned_up = True
+        
         for module in self.security_modules.values():
             try:
                 module.cleanup()
