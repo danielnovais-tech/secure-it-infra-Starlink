@@ -1,3 +1,4 @@
+"""Test package."""
 """Tests for security monitoring."""
 """
 Test package for VPN Manager

@@ -1,3 +1,4 @@
+"""Starlink monitoring package."""
 """
 Secure IT Infrastructure for Starlink
 Security monitoring and management tools for Starlink enterprise infrastructure.
