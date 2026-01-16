@@ -223,22 +223,31 @@ def configure_logging():
 
 
 async def async_main(config_path: Optional[str] = None):
-    """Main async entry point."""
+    """Main async entry point with structured lifecycle management."""
+    logger.info("Startup initiated", extra={"event": "startup", "config_path": config_path})
     foundation = StarlinkSecurityFoundation(config_path=config_path)
     try:
         await foundation.run()
     except asyncio.CancelledError:
         # Handle task cancellation (e.g., from asyncio.wait_for or task.cancel())
-        logger.info("Received cancellation signal")
+        # Re-raise to propagate cancellation upstream
+        logger.warning("Task cancelled", extra={"event": "cancellation"})
+        raise
+    except (OSError, TimeoutError) as e:
+        # Operational errors - network issues, timeouts, etc.
+        logger.error(f"Operational error: {e}", exc_info=True, extra={"event": "operational_error", "error_type": type(e).__name__})
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
+        # Unexpected errors
+        logger.error(f"Unexpected error in main loop: {e}", exc_info=True, extra={"event": "unexpected_error", "error_type": type(e).__name__})
         raise
     finally:
         # Ensure proper shutdown of async resources, then cleanup
-        # Always call shutdown() - it's safe to call even if already shut down
+        # Both shutdown() and cleanup() are idempotent and safe to call multiple times
+        logger.info("Cleanup started", extra={"event": "cleanup"})
         await foundation.shutdown()
         foundation.cleanup()
+        logger.info("Cleanup finished", extra={"event": "cleanup_complete"})
 
 
 def main():
