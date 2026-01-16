@@ -26,7 +26,11 @@ CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Configurable log level from environment variable (default: INFO)
+VALID_LOG_LEVELS = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}
 LOG_LEVEL = os.getenv('STARLINK_LOG_LEVEL', 'INFO').upper()
+if LOG_LEVEL not in VALID_LOG_LEVELS:
+    LOG_LEVEL = 'INFO'  # Fallback to INFO for invalid values
+    
 LOG_FORMAT = os.getenv('STARLINK_LOG_FORMAT', 'standard').lower()
 
 # Maximum log file size (10 MB) and backup count (7 days worth)
@@ -35,10 +39,37 @@ BACKUP_COUNT = 7
 
 
 class JSONFormatter(logging.Formatter):
-    """Custom JSON formatter for structured logging."""
+    """
+    Custom JSON formatter for structured logging.
+    
+    Produces JSON output with the following structure:
+    {
+        "timestamp": "2026-01-16 19:29:07,668",
+        "logger": "logger-name",
+        "level": "INFO",
+        "module": "module_name",
+        "line": 42,
+        "message": "Log message text"
+    }
+    
+    Additional fields can be included via the 'extra' parameter in logging calls:
+    - request_id: Request/transaction identifier
+    - user_id: User identifier
+    - Any other custom fields passed via extra dict
+    
+    Exception information is automatically included when present.
+    """
     
     def format(self, record):
-        """Format log record as JSON."""
+        """
+        Format log record as JSON.
+        
+        Args:
+            record: LogRecord instance
+            
+        Returns:
+            JSON string representation of the log record
+        """
         log_data = {
             'timestamp': self.formatTime(record, self.datefmt),
             'logger': record.name,
@@ -58,33 +89,54 @@ class JSONFormatter(logging.Formatter):
         if record.exc_info:
             log_data['exception'] = self.formatException(record.exc_info)
         
-        return json.dumps(log_data)
+        try:
+            return json.dumps(log_data, default=str)
+        except (TypeError, ValueError) as e:
+            # Fallback to string representation if JSON serialization fails
+            return json.dumps({
+                'timestamp': self.formatTime(record, self.datefmt),
+                'logger': record.name,
+                'level': 'ERROR',
+                'message': f'Failed to serialize log record: {str(e)}'
+            })
 
 
 # Configure handlers
-file_handler = logging.handlers.RotatingFileHandler(
-    LOG_DIR / 'starlink_security.log',
-    maxBytes=MAX_LOG_BYTES,
-    backupCount=BACKUP_COUNT
-)
+try:
+    file_handler = logging.handlers.RotatingFileHandler(
+        LOG_DIR / 'starlink_security.log',
+        maxBytes=MAX_LOG_BYTES,
+        backupCount=BACKUP_COUNT
+    )
+except (OSError, IOError) as e:
+    # Fallback to console-only logging if file handler fails
+    print(f"Warning: Could not create log file handler: {e}", file=__import__('sys').stderr)
+    file_handler = None
 
 console_handler = logging.StreamHandler()
 
 # Set formatters based on configuration
 if LOG_FORMAT == 'json':
-    file_handler.setFormatter(JSONFormatter())
-    console_handler.setFormatter(JSONFormatter())
+    json_formatter = JSONFormatter()
+    if file_handler:
+        file_handler.setFormatter(json_formatter)
+    console_handler.setFormatter(json_formatter)
 else:
     standard_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d - %(message)s'
     )
-    file_handler.setFormatter(standard_formatter)
+    if file_handler:
+        file_handler.setFormatter(standard_formatter)
     console_handler.setFormatter(standard_formatter)
 
 # Configure structured logging
+handlers = [console_handler]
+if file_handler:
+    handlers.insert(0, file_handler)
+
 logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.INFO),
-    handlers=[file_handler, console_handler]
+    level=getattr(logging, LOG_LEVEL),
+    handlers=handlers
 )
 
 logger = logging.getLogger('starlink-security')
