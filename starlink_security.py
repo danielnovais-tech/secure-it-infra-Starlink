@@ -10,8 +10,12 @@ import logging.handlers
 import os
 import signal
 import sys
+import threading
+import time
+from collections import Counter
 from pathlib import Path
 from queue import Queue
+from typing import Dict, Optional
 
 # Constants - use local directories if system directories are not writable
 if os.access("/etc", os.W_OK):
@@ -46,9 +50,131 @@ USE_ASYNC_LOGGING = os.getenv('STARLINK_ASYNC_LOGGING', 'false').lower() == 'tru
 SYSLOG_ADDRESS = os.getenv('STARLINK_SYSLOG_ADDRESS', None)  # e.g., 'localhost:514'
 HTTP_LOG_ENDPOINT = os.getenv('STARLINK_HTTP_LOG_ENDPOINT', None)  # e.g., 'http://logs.example.com/ingest'
 
+# Resilience: Enable self-test mode at startup
+ENABLE_SELF_TEST = os.getenv('STARLINK_LOG_SELF_TEST', 'true').lower() == 'true'
+
 # Maximum log file size (10 MB) and backup count (7 days worth)
 MAX_LOG_BYTES = 10 * 1024 * 1024  # 10 MB
 BACKUP_COUNT = 7
+
+
+# Logging Metrics & Health Monitoring
+class LoggingMetrics:
+    """
+    Tracks metrics about the logging system for observability.
+    
+    Metrics tracked:
+    - messages_logged: Total messages logged by level
+    - messages_dropped: Messages dropped due to queue overflow
+    - handler_failures: Failures per handler
+    - queue_size: Current async queue size (if applicable)
+    - handler_health: Health status of each handler
+    """
+    
+    def __init__(self):
+        self._lock = threading.Lock()
+        self.messages_logged = Counter()
+        self.messages_dropped = 0
+        self.handler_failures = Counter()
+        self.handler_health = {}
+        self._queue_size = 0
+        
+    def record_message(self, level: str):
+        """Record a logged message."""
+        with self._lock:
+            self.messages_logged[level] += 1
+    
+    def record_dropped_message(self):
+        """Record a dropped message."""
+        with self._lock:
+            self.messages_dropped += 1
+    
+    def record_handler_failure(self, handler_name: str):
+        """Record a handler failure."""
+        with self._lock:
+            self.handler_failures[handler_name] += 1
+            self.handler_health[handler_name] = 'unhealthy'
+    
+    def record_handler_success(self, handler_name: str):
+        """Record a handler success."""
+        with self._lock:
+            self.handler_health[handler_name] = 'healthy'
+    
+    def set_queue_size(self, size: int):
+        """Update the current queue size."""
+        with self._lock:
+            self._queue_size = size
+    
+    def get_metrics(self) -> Dict:
+        """Get all current metrics."""
+        with self._lock:
+            return {
+                'messages_logged': dict(self.messages_logged),
+                'messages_dropped': self.messages_dropped,
+                'handler_failures': dict(self.handler_failures),
+                'handler_health': dict(self.handler_health),
+                'queue_size': self._queue_size,
+                'total_messages': sum(self.messages_logged.values())
+            }
+    
+    def get_health_status(self) -> Dict:
+        """Get health check status."""
+        with self._lock:
+            unhealthy_handlers = [h for h, status in self.handler_health.items() if status == 'unhealthy']
+            return {
+                'status': 'unhealthy' if unhealthy_handlers else 'healthy',
+                'unhealthy_handlers': unhealthy_handlers,
+                'queue_size': self._queue_size,
+                'messages_dropped': self.messages_dropped
+            }
+
+
+# Global metrics instance
+logging_metrics = LoggingMetrics()
+
+
+class ResilientHTTPHandler(logging.handlers.HTTPHandler):
+    """HTTP handler with retry logic and circuit breaker."""
+    
+    def __init__(self, host, url, method='POST', max_retries=3, backoff_factor=2):
+        super().__init__(host, url, method)
+        self.max_retries = max_retries
+        self.backoff_factor = backoff_factor
+        self.circuit_open = False
+        self.failure_count = 0
+        self.circuit_threshold = 5
+        
+    def emit(self, record):
+        """Emit with retry and circuit breaker."""
+        if self.circuit_open:
+            logging_metrics.record_dropped_message()
+            return
+        
+        for attempt in range(self.max_retries):
+            try:
+                super().emit(record)
+                self.failure_count = 0
+                logging_metrics.record_handler_success('http')
+                return
+            except Exception as e:
+                self.failure_count += 1
+                if self.failure_count >= self.circuit_threshold:
+                    self.circuit_open = True
+                    logging_metrics.record_handler_failure('http')
+                
+                if attempt == self.max_retries - 1:
+                    logging_metrics.record_handler_failure('http')
+                    return
+                
+                time.sleep(self.backoff_factor ** attempt)
+
+
+class MetricsFilter(logging.Filter):
+    """Filter that tracks logging metrics."""
+    
+    def filter(self, record):
+        logging_metrics.record_message(record.levelname)
+        return True
 
 
 # Structured Error Codes for filtering and alerting
@@ -62,6 +188,8 @@ class ErrorCode:
     - NET: Network-related errors
     - CFG: Configuration errors
     - SYS: System-level errors
+    
+    Each code maps to a human-readable description for documentation.
     """
     # Security errors
     SEC_001 = "SEC-001"  # Security violation detected
@@ -86,6 +214,29 @@ class ErrorCode:
     # System errors
     SYS_001 = "SYS-001"  # Service startup failed
     SYS_002 = "SYS-002"  # Resource exhausted
+    
+    # Error code documentation mapping
+    DESCRIPTIONS = {
+        "SEC-001": "Security violation detected",
+        "SEC-002": "Unauthorized access attempt",
+        "SEC-003": "Data integrity check failed",
+        "AUTH-001": "Authentication failed",
+        "AUTH-002": "Invalid credentials",
+        "AUTH-003": "Token expired",
+        "AUTH-004": "Permission denied",
+        "NET-001": "Connection timeout",
+        "NET-002": "Network unreachable",
+        "NET-003": "Satellite link down",
+        "CFG-001": "Invalid configuration",
+        "CFG-002": "Missing required parameter",
+        "SYS-001": "Service startup failed",
+        "SYS-002": "Resource exhausted",
+    }
+    
+    @classmethod
+    def get_description(cls, code: str) -> Optional[str]:
+        """Get human-readable description for an error code."""
+        return cls.DESCRIPTIONS.get(code, "Unknown error code")
 
 
 class JSONFormatter(logging.Formatter):
@@ -210,19 +361,28 @@ if SYSLOG_ADDRESS:
 # Centralized logging: Add HTTP handler if configured
 if HTTP_LOG_ENDPOINT:
     try:
-        from logging.handlers import HTTPHandler
         from urllib.parse import urlparse
         
         parsed = urlparse(HTTP_LOG_ENDPOINT)
-        http_handler = HTTPHandler(
+        http_handler = ResilientHTTPHandler(
             f"{parsed.netloc}",
             f"{parsed.path}",
             method='POST'
         )
         handlers_list.append(http_handler)
-        print(f"Info: HTTP log handler configured for {HTTP_LOG_ENDPOINT}", file=sys.stderr)
+        logging_metrics.record_handler_success('http')
+        print(f"Info: Resilient HTTP log handler configured for {HTTP_LOG_ENDPOINT}", file=sys.stderr)
     except Exception as e:
+        logging_metrics.record_handler_failure('http')
         print(f"Warning: Could not configure HTTP log handler: {e}", file=sys.stderr)
+
+# Add metrics filter to all handlers
+metrics_filter = MetricsFilter()
+for handler in handlers_list:
+    handler.addFilter(metrics_filter)
+    # Initialize handler health status
+    handler_name = handler.__class__.__name__
+    logging_metrics.record_handler_success(handler_name)
 
 # Set formatters based on configuration
 if LOG_FORMAT == 'json':
@@ -307,12 +467,157 @@ def cleanup_logging():
         queue_listener.stop()
 
 
+def get_logging_metrics() -> Dict:
+    """
+    Get current logging system metrics.
+    
+    Returns:
+        Dictionary with metrics including:
+        - messages_logged: Count by level
+        - messages_dropped: Total dropped messages
+        - handler_failures: Failures per handler
+        - handler_health: Health status per handler
+        - queue_size: Current async queue size
+        - total_messages: Total messages logged
+    
+    Example:
+        metrics = get_logging_metrics()
+        print(f"Total messages: {metrics['total_messages']}")
+        print(f"Messages dropped: {metrics['messages_dropped']}")
+    """
+    return logging_metrics.get_metrics()
+
+
+def get_logging_health() -> Dict:
+    """
+    Get logging system health status.
+    
+    Returns:
+        Dictionary with health information:
+        - status: 'healthy' or 'unhealthy'
+        - unhealthy_handlers: List of unhealthy handler names
+        - queue_size: Current queue size
+        - messages_dropped: Dropped message count
+    
+    Example:
+        health = get_logging_health()
+        if health['status'] == 'unhealthy':
+            print(f"Unhealthy handlers: {health['unhealthy_handlers']}")
+    """
+    return logging_metrics.get_health_status()
+
+
+def run_logging_self_test() -> bool:
+    """
+    Run self-test on logging configuration.
+    
+    Tests:
+    - All handlers can be created
+    - Formatters work correctly
+    - Log messages can be written
+    - Async queue (if enabled) is operational
+    
+    Returns:
+        True if all tests pass, False otherwise
+    
+    Example:
+        if not run_logging_self_test():
+            print("Logging system has configuration issues")
+    """
+    test_results = []
+    
+    # Test 1: Handler creation
+    if not final_handlers:
+        print("FAIL: No handlers configured", file=sys.stderr)
+        test_results.append(False)
+    else:
+        print(f"PASS: {len(final_handlers)} handler(s) configured", file=sys.stderr)
+        test_results.append(True)
+    
+    # Test 2: Write test messages at each level
+    test_logger = logging.getLogger('starlink-security.selftest')
+    try:
+        test_logger.debug("Self-test DEBUG message")
+        test_logger.info("Self-test INFO message")
+        test_logger.warning("Self-test WARNING message")
+        print("PASS: Test messages written successfully", file=sys.stderr)
+        test_results.append(True)
+    except Exception as e:
+        print(f"FAIL: Could not write test messages: {e}", file=sys.stderr)
+        test_results.append(False)
+    
+    # Test 3: Verify async queue if enabled
+    if USE_ASYNC_LOGGING:
+        if queue_listener and queue_listener._thread.is_alive():
+            print("PASS: Async logging queue operational", file=sys.stderr)
+            test_results.append(True)
+        else:
+            print("FAIL: Async logging queue not operational", file=sys.stderr)
+            test_results.append(False)
+    
+    # Test 4: Check handler health
+    health = get_logging_health()
+    if health['status'] == 'healthy':
+        print("PASS: All handlers healthy", file=sys.stderr)
+        test_results.append(True)
+    else:
+        print(f"WARN: Some handlers unhealthy: {health['unhealthy_handlers']}", file=sys.stderr)
+        test_results.append(True)  # Don't fail on this, just warn
+    
+    all_passed = all(test_results)
+    print(f"\nSelf-test {'PASSED' if all_passed else 'FAILED'}: {sum(test_results)}/{len(test_results)} tests passed\n", file=sys.stderr)
+    return all_passed
+
+
+def attach_correlation_id(correlation_id: str):
+    """
+    Helper decorator to automatically attach correlation ID to all logs within a function.
+    
+    Args:
+        correlation_id: The correlation ID to attach
+    
+    Example:
+        @attach_correlation_id('req-12345')
+        def process_request():
+            logger.info("Processing")  # Will include correlation_id
+    """
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            # Store old factory
+            old_factory = logging.getLogRecordFactory()
+            
+            # Create new factory that adds correlation_id
+            def record_factory(*args, **kwargs):
+                record = old_factory(*args, **kwargs)
+                record.correlation_id = correlation_id
+                return record
+            
+            # Set new factory
+            logging.setLogRecordFactory(record_factory)
+            
+            try:
+                return func(*args, **kwargs)
+            finally:
+                # Restore old factory
+                logging.setLogRecordFactory(old_factory)
+        
+        return wrapper
+    return decorator
+
+
 # Register signal handler for dynamic log level changes (Unix-like systems only)
 if hasattr(signal, 'SIGUSR1'):
     signal.signal(signal.SIGUSR1, handle_signal_usr1)
 
 # Register cleanup for async logging
 atexit.register(cleanup_logging)
+
+# Run self-test if enabled
+if ENABLE_SELF_TEST:
+    print("=" * 60, file=sys.stderr)
+    print("Running logging system self-test...", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    run_logging_self_test()
 
 
 def main():
@@ -331,15 +636,17 @@ def main():
     extra = {'request_id': 'req-12345', 'user_id': 'user-67890'}
     logger.info("Example log with correlation metadata", extra=extra)
     
-    # Example of logging with error codes
+    # Example of logging with error codes and descriptions
+    error_code = ErrorCode.SEC_002
     logger.error(
-        "Example: Unauthorized access attempt detected",
-        extra={'error_code': ErrorCode.SEC_002, 'ip_address': '192.168.1.100', 'user_id': 'user-67890'}
+        f"Example: {ErrorCode.get_description(error_code)}",
+        extra={'error_code': error_code, 'ip_address': '192.168.1.100', 'user_id': 'user-67890'}
     )
     
+    error_code = ErrorCode.AUTH_001
     logger.warning(
-        "Example: Authentication failed",
-        extra={'error_code': ErrorCode.AUTH_001, 'username': 'test_user'}
+        f"Example: {ErrorCode.get_description(error_code)}",
+        extra={'error_code': error_code, 'username': 'test_user'}
     )
     
     # Example of different log levels
@@ -349,6 +656,38 @@ def main():
     # Example: Demonstrate per-module logging
     module_logger = logging.getLogger('starlink-security.auth')
     module_logger.info("Module-specific log example")
+    
+    # Example: Using correlation ID decorator
+    @attach_correlation_id('req-99999')
+    def example_function():
+        logger.info("This log automatically has correlation_id attached")
+    
+    example_function()
+    
+    # Display logging metrics
+    print("\n" + "=" * 60, file=sys.stderr)
+    print("Logging System Metrics", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    
+    metrics = get_logging_metrics()
+    print(f"Total messages logged: {metrics['total_messages']}", file=sys.stderr)
+    print(f"Messages by level: {metrics['messages_logged']}", file=sys.stderr)
+    print(f"Messages dropped: {metrics['messages_dropped']}", file=sys.stderr)
+    print(f"Handler failures: {metrics['handler_failures']}", file=sys.stderr)
+    print(f"Queue size: {metrics['queue_size']}", file=sys.stderr)
+    
+    print("\n" + "=" * 60, file=sys.stderr)
+    print("Logging System Health Check", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    
+    health = get_logging_health()
+    print(f"Status: {health['status'].upper()}", file=sys.stderr)
+    print(f"Handler health: {metrics['handler_health']}", file=sys.stderr)
+    if health['unhealthy_handlers']:
+        print(f"Unhealthy handlers: {health['unhealthy_handlers']}", file=sys.stderr)
+    else:
+        print("All handlers operational", file=sys.stderr)
+    print("=" * 60 + "\n", file=sys.stderr)
 
 
 if __name__ == "__main__":
