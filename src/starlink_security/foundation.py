@@ -225,7 +225,6 @@ def configure_logging():
 
 async def async_main(config_path: Optional[str] = None):
     """Main async entry point."""
-    logger.info("Starting Starlink Security Foundation")
     foundation = StarlinkSecurityFoundation(config_path=config_path)
     try:
         await foundation.run()
@@ -238,8 +237,7 @@ async def async_main(config_path: Optional[str] = None):
         logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
         raise
     finally:
-        # Ensure resources are released
-        logger.info("Cleaning up resources")
+        # Ensure resources are released (cleanup logs its own message)
         foundation.cleanup()
 
 
