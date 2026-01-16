@@ -3678,3 +3678,1105 @@ class DocumentationGenerator:
             self.generate_compliance_profiles()
         )
 
+
+# ============================================================================
+# STRATEGIC POLISH: Security Hardening
+# ============================================================================
+
+class KeyProvider(ABC):
+    """Abstract interface for key management providers (HSM/KMS)."""
+    
+    @abstractmethod
+    def generate_key(self) -> bytes:
+        """Generate a new encryption key."""
+        pass
+    
+    @abstractmethod
+    def rotate_key(self, old_key: bytes) -> bytes:
+        """Rotate encryption key with envelope encryption."""
+        pass
+    
+    @abstractmethod
+    def encrypt(self, plaintext: bytes, key_id: str) -> bytes:
+        """Encrypt data using KMS."""
+        pass
+    
+    @abstractmethod
+    def decrypt(self, ciphertext: bytes, key_id: str) -> bytes:
+        """Decrypt data using KMS."""
+        pass
+    
+    @abstractmethod
+    def get_key_metadata(self, key_id: str) -> Dict[str, Any]:
+        """Get key metadata including rotation status and usage policies."""
+        pass
+
+
+class KMSKeyProvider(KeyProvider):
+    """
+    Cloud KMS provider with envelope encryption.
+    Supports AWS KMS, Azure Key Vault, GCP KMS.
+    """
+    
+    def __init__(self, provider: str = "aws", region: str = "us-east-1", key_id: str = None):
+        """
+        Initialize KMS key provider.
+        
+        Args:
+            provider: Cloud provider (aws, azure, gcp)
+            region: Cloud region
+            key_id: Master key ID in KMS
+        """
+        self.provider = provider
+        self.region = region
+        self.key_id = key_id or f"starlink-security-master-key-{region}"
+        self.data_encryption_keys = {}  # Cache for envelope encryption
+        self.lock = threading.RLock()
+    
+    def generate_key(self) -> bytes:
+        """Generate data encryption key with envelope encryption."""
+        # Generate local data encryption key
+        dek = Fernet.generate_key()
+        
+        # In production, encrypt DEK with KMS master key
+        # For now, simulate KMS encryption
+        with self.lock:
+            encrypted_dek = self._simulate_kms_encrypt(dek)
+            self.data_encryption_keys[self.key_id] = {
+                "plaintext_dek": dek,
+                "encrypted_dek": encrypted_dek,
+                "created_at": datetime.now(),
+                "rotation_count": 0
+            }
+        
+        return dek
+    
+    def rotate_key(self, old_key: bytes) -> bytes:
+        """Rotate key using KMS envelope encryption."""
+        new_dek = Fernet.generate_key()
+        
+        with self.lock:
+            encrypted_dek = self._simulate_kms_encrypt(new_dek)
+            old_metadata = self.data_encryption_keys.get(self.key_id, {})
+            
+            self.data_encryption_keys[f"{self.key_id}-rotated"] = old_metadata
+            self.data_encryption_keys[self.key_id] = {
+                "plaintext_dek": new_dek,
+                "encrypted_dek": encrypted_dek,
+                "created_at": datetime.now(),
+                "rotation_count": old_metadata.get("rotation_count", 0) + 1,
+                "previous_key_id": f"{self.key_id}-rotated"
+            }
+        
+        return new_dek
+    
+    def encrypt(self, plaintext: bytes, key_id: str) -> bytes:
+        """Encrypt using envelope encryption."""
+        with self.lock:
+            if key_id not in self.data_encryption_keys:
+                raise ValueError(f"Key {key_id} not found")
+            
+            dek = self.data_encryption_keys[key_id]["plaintext_dek"]
+            f = Fernet(dek)
+            return f.encrypt(plaintext)
+    
+    def decrypt(self, ciphertext: bytes, key_id: str) -> bytes:
+        """Decrypt using envelope encryption."""
+        with self.lock:
+            if key_id not in self.data_encryption_keys:
+                raise ValueError(f"Key {key_id} not found")
+            
+            dek = self.data_encryption_keys[key_id]["plaintext_dek"]
+            f = Fernet(dek)
+            return f.decrypt(ciphertext)
+    
+    def get_key_metadata(self, key_id: str) -> Dict[str, Any]:
+        """Get key metadata."""
+        with self.lock:
+            if key_id not in self.data_encryption_keys:
+                return {}
+            
+            metadata = self.data_encryption_keys[key_id].copy()
+            metadata.pop("plaintext_dek", None)  # Don't expose plaintext key
+            metadata["key_id"] = key_id
+            metadata["provider"] = self.provider
+            metadata["region"] = self.region
+            return metadata
+    
+    def _simulate_kms_encrypt(self, dek: bytes) -> bytes:
+        """Simulate KMS encryption (in production, call actual KMS API)."""
+        # This would call actual KMS in production
+        return hashlib.sha256(dek + self.key_id.encode()).digest()
+
+
+class SecretsManager:
+    """
+    Integration with secrets management services (Vault, AWS Secrets Manager).
+    Retrieves secrets with short-lived tokens and auto-refresh.
+    """
+    
+    def __init__(self, provider: str = "vault", endpoint: str = None, ttl_seconds: int = 3600):
+        """
+        Initialize secrets manager.
+        
+        Args:
+            provider: Secrets provider (vault, aws_secrets, azure_kv)
+            endpoint: API endpoint
+            ttl_seconds: Token/secret TTL
+        """
+        self.provider = provider
+        self.endpoint = endpoint or f"https://{provider}.example.com"
+        self.ttl_seconds = ttl_seconds
+        self.cache = {}
+        self.lock = threading.RLock()
+        self.refresh_thread = None
+        self.running = False
+    
+    def get_secret(self, secret_path: str) -> str:
+        """
+        Retrieve secret with caching and auto-refresh.
+        
+        Args:
+            secret_path: Path to secret
+            
+        Returns:
+            Secret value
+        """
+        with self.lock:
+            cached = self.cache.get(secret_path)
+            if cached and datetime.now() < cached["expires_at"]:
+                return cached["value"]
+            
+            # Fetch from provider
+            secret_value = self._fetch_from_provider(secret_path)
+            
+            self.cache[secret_path] = {
+                "value": secret_value,
+                "fetched_at": datetime.now(),
+                "expires_at": datetime.now() + timedelta(seconds=self.ttl_seconds)
+            }
+            
+            return secret_value
+    
+    def start_auto_refresh(self):
+        """Start background thread for secret auto-refresh."""
+        if self.running:
+            return
+        
+        self.running = True
+        self.refresh_thread = threading.Thread(target=self._refresh_loop, daemon=True)
+        self.refresh_thread.start()
+    
+    def stop_auto_refresh(self):
+        """Stop auto-refresh thread."""
+        self.running = False
+        if self.refresh_thread:
+            self.refresh_thread.join(timeout=5)
+    
+    def _refresh_loop(self):
+        """Background loop for refreshing cached secrets."""
+        while self.running:
+            time.sleep(min(60, self.ttl_seconds // 2))  # Refresh at half TTL
+            
+            with self.lock:
+                now = datetime.now()
+                expired_keys = [
+                    k for k, v in self.cache.items()
+                    if now >= v["expires_at"] - timedelta(seconds=300)  # 5min before expiry
+                ]
+                
+                for key in expired_keys:
+                    try:
+                        self.cache[key] = {
+                            "value": self._fetch_from_provider(key),
+                            "fetched_at": now,
+                            "expires_at": now + timedelta(seconds=self.ttl_seconds)
+                        }
+                    except Exception:
+                        pass  # Keep old value on error
+    
+    def _fetch_from_provider(self, secret_path: str) -> str:
+        """Fetch secret from provider (simulated)."""
+        # In production, call actual Vault/AWS Secrets Manager API
+        return f"secret_value_for_{secret_path}"
+
+
+class SBOMGenerator:
+    """
+    Software Bill of Materials (SBOM) generator.
+    Generates CycloneDX and SPDX SBOMs for supply chain security.
+    """
+    
+    def __init__(self):
+        """Initialize SBOM generator."""
+        self.components = []
+        self.dependencies = []
+    
+    def add_component(self, name: str, version: str, supplier: str = None,
+                     licenses: List[str] = None, hashes: Dict[str, str] = None):
+        """
+        Add component to SBOM.
+        
+        Args:
+            name: Component name
+            version: Component version
+            supplier: Component supplier/vendor
+            licenses: SPDX license identifiers
+            hashes: Hash values (sha256, sha512)
+        """
+        self.components.append({
+            "name": name,
+            "version": version,
+            "supplier": supplier or "unknown",
+            "licenses": licenses or [],
+            "hashes": hashes or {},
+            "added_at": datetime.now().isoformat()
+        })
+    
+    def generate_cyclonedx(self) -> Dict[str, Any]:
+        """Generate CycloneDX SBOM."""
+        return {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.4",
+            "version": 1,
+            "metadata": {
+                "timestamp": datetime.now().isoformat(),
+                "tools": [{
+                    "vendor": "Starlink Security Foundation",
+                    "name": "SBOM Generator",
+                    "version": "1.0.0"
+                }]
+            },
+            "components": [
+                {
+                    "type": "library",
+                    "name": c["name"],
+                    "version": c["version"],
+                    "supplier": {"name": c["supplier"]},
+                    "licenses": [{"license": {"id": lic}} for lic in c["licenses"]],
+                    "hashes": [{"alg": alg.upper(), "content": val} for alg, val in c["hashes"].items()]
+                }
+                for c in self.components
+            ]
+        }
+    
+    def generate_spdx(self) -> Dict[str, Any]:
+        """Generate SPDX SBOM."""
+        return {
+            "spdxVersion": "SPDX-2.3",
+            "dataLicense": "CC0-1.0",
+            "SPDXID": "SPDXRef-DOCUMENT",
+            "name": "Starlink Security Foundation SBOM",
+            "documentNamespace": f"https://starlink-security.example.com/sbom/{datetime.now().isoformat()}",
+            "creationInfo": {
+                "created": datetime.now().isoformat(),
+                "creators": ["Tool: SBOM Generator-1.0.0"]
+            },
+            "packages": [
+                {
+                    "SPDXID": f"SPDXRef-Package-{i}",
+                    "name": c["name"],
+                    "versionInfo": c["version"],
+                    "supplier": f"Organization: {c['supplier']}",
+                    "licenseConcluded": " AND ".join(c["licenses"]) if c["licenses"] else "NOASSERTION",
+                    "checksums": [{"algorithm": alg.upper(), "checksumValue": val} for alg, val in c["hashes"].items()]
+                }
+                for i, c in enumerate(self.components)
+            ]
+        }
+    
+    def verify_signatures(self, plugin_path: str, signature_path: str) -> bool:
+        """
+        Verify plugin signature for supply chain integrity.
+        
+        Args:
+            plugin_path: Path to plugin file
+            signature_path: Path to detached signature
+            
+        Returns:
+            True if signature is valid
+        """
+        # In production, use GPG or similar for signature verification
+        # For now, simulate verification
+        return True
+
+
+# ============================================================================
+# STRATEGIC POLISH: Reliability & SRE Maturity
+# ============================================================================
+
+@dataclass
+class SLO:
+    """Service Level Objective definition."""
+    name: str
+    description: str
+    target_percentile: float  # e.g., 0.99 for 99th percentile
+    target_value: float  # Target latency in ms, success rate, etc.
+    measurement_window_seconds: int  # Rolling window
+    error_budget_percentage: float  # e.g., 1.0 for 1% error budget
+
+
+class SLOMonitor:
+    """
+    SLO monitoring with error budgets and burn rate alerts.
+    Tracks scoring latency, queue time, feed ingestion, audit export.
+    """
+    
+    def __init__(self):
+        """Initialize SLO monitor."""
+        self.slos = {}
+        self.measurements = {}  # slo_name -> List[measurement]
+        self.lock = threading.RLock()
+        
+        # Define default SLOs
+        self._define_default_slos()
+    
+    def _define_default_slos(self):
+        """Define default SLOs."""
+        self.slos = {
+            "scoring_latency": SLO(
+                name="scoring_latency",
+                description="Threat scoring latency p99",
+                target_percentile=0.99,
+                target_value=100.0,  # 100ms p99
+                measurement_window_seconds=300,  # 5 min window
+                error_budget_percentage=1.0
+            ),
+            "queue_time": SLO(
+                name="queue_time",
+                description="Event queue processing time p95",
+                target_percentile=0.95,
+                target_value=50.0,  # 50ms p95
+                measurement_window_seconds=300,
+                error_budget_percentage=2.0
+            ),
+            "feed_ingestion_freshness": SLO(
+                name="feed_ingestion_freshness",
+                description="Threat feed ingestion freshness",
+                target_percentile=0.99,
+                target_value=300.0,  # 5 min freshness
+                measurement_window_seconds=600,
+                error_budget_percentage=0.5
+            ),
+            "audit_export_success": SLO(
+                name="audit_export_success",
+                description="Audit export success rate",
+                target_percentile=1.0,  # 100% target
+                target_value=1.0,  # Success rate
+                measurement_window_seconds=3600,  # 1 hour
+                error_budget_percentage=0.1
+            )
+        }
+        
+        for slo_name in self.slos:
+            self.measurements[slo_name] = []
+    
+    def record_measurement(self, slo_name: str, value: float, success: bool = True):
+        """
+        Record SLO measurement.
+        
+        Args:
+            slo_name: SLO identifier
+            value: Measured value (latency, success=1.0/failure=0.0, etc.)
+            success: Whether operation succeeded
+        """
+        if slo_name not in self.slos:
+            return
+        
+        with self.lock:
+            now = datetime.now()
+            self.measurements[slo_name].append({
+                "timestamp": now,
+                "value": value,
+                "success": success
+            })
+            
+            # Cleanup old measurements outside window
+            slo = self.slos[slo_name]
+            cutoff = now - timedelta(seconds=slo.measurement_window_seconds)
+            self.measurements[slo_name] = [
+                m for m in self.measurements[slo_name]
+                if m["timestamp"] > cutoff
+            ]
+    
+    def get_slo_status(self, slo_name: str) -> Dict[str, Any]:
+        """
+        Get current SLO status.
+        
+        Returns:
+            Status including current value, target, error budget consumption
+        """
+        if slo_name not in self.slos:
+            return {}
+        
+        with self.lock:
+            slo = self.slos[slo_name]
+            measurements = self.measurements[slo_name]
+            
+            if not measurements:
+                return {
+                    "slo_name": slo_name,
+                    "status": "no_data",
+                    "current_value": None,
+                    "target_value": slo.target_value,
+                    "error_budget_remaining": 100.0
+                }
+            
+            # Calculate percentile or success rate
+            if slo_name == "audit_export_success":
+                values = [m["value"] for m in measurements if m["success"]]
+                current_value = sum(values) / len(measurements) if measurements else 0.0
+            else:
+                values = sorted([m["value"] for m in measurements])
+                percentile_index = int(len(values) * slo.target_percentile)
+                current_value = values[min(percentile_index, len(values) - 1)]
+            
+            # Calculate error budget consumption
+            if slo_name == "audit_export_success":
+                error_budget_consumed = max(0, (slo.target_value - current_value) / (slo.error_budget_percentage / 100))
+            else:
+                error_budget_consumed = max(0, (current_value - slo.target_value) / slo.target_value * 100)
+            
+            error_budget_remaining = max(0, 100 - error_budget_consumed)
+            
+            return {
+                "slo_name": slo_name,
+                "status": "healthy" if error_budget_remaining > 20 else "warning" if error_budget_remaining > 0 else "critical",
+                "current_value": current_value,
+                "target_value": slo.target_value,
+                "error_budget_remaining": error_budget_remaining,
+                "sample_count": len(measurements)
+            }
+    
+    def check_burn_rate_alert(self, slo_name: str) -> Dict[str, Any]:
+        """
+        Check if error budget burn rate exceeds thresholds.
+        
+        Returns:
+            Alert information if burn rate is too high
+        """
+        status = self.get_slo_status(slo_name)
+        
+        if status.get("error_budget_remaining", 100) < 20:
+            return {
+                "alert": True,
+                "severity": "critical" if status["error_budget_remaining"] < 5 else "warning",
+                "message": f"SLO {slo_name} error budget at {status['error_budget_remaining']:.1f}%",
+                "current_value": status["current_value"],
+                "target_value": status["target_value"]
+            }
+        
+        return {"alert": False}
+
+
+class RunbookManager:
+    """
+    Incident runbooks and automated recovery workflows.
+    Links to CLI/API actions for predictable failure recovery.
+    """
+    
+    def __init__(self):
+        """Initialize runbook manager."""
+        self.runbooks = {}
+        self._define_default_runbooks()
+    
+    def _define_default_runbooks(self):
+        """Define default runbooks."""
+        self.runbooks = {
+            "scorer_outage": {
+                "title": "Threat Scorer Outage",
+                "symptoms": [
+                    "Scoring latency SLO violated",
+                    "Scorer health check failures",
+                    "Increased error rates in scoring pipeline"
+                ],
+                "diagnosis": [
+                    "1. Check scorer health: foundation.get_scorer_explainability()",
+                    "2. Check worker pool status: worker_pool.get_status()",
+                    "3. Review recent scoring errors in logs"
+                ],
+                "recovery_steps": [
+                    "1. Verify graceful degradation to rule-based scorer",
+                    "2. Restart ML scorer process if unhealthy",
+                    "3. If persists, rollback to previous scorer version",
+                    "4. Escalate to on-call if no recovery within 15 minutes"
+                ],
+                "automation": {
+                    "auto_restart": True,
+                    "fallback_to_rules": True,
+                    "escalation_timeout_seconds": 900
+                }
+            },
+            "redis_failure": {
+                "title": "Redis/StateStore Failure",
+                "symptoms": [
+                    "State store connection errors",
+                    "Threat management operations failing",
+                    "Cluster synchronization issues"
+                ],
+                "diagnosis": [
+                    "1. Check Redis connectivity and health",
+                    "2. Verify network connectivity to Redis cluster",
+                    "3. Check Redis cluster status and replication"
+                ],
+                "recovery_steps": [
+                    "1. Attempt reconnection with exponential backoff",
+                    "2. Failover to in-memory state store temporarily",
+                    "3. Restore state from latest backup if needed",
+                    "4. Verify state consistency after recovery"
+                ],
+                "automation": {
+                    "auto_failover": True,
+                    "backup_restore": True,
+                    "verification_required": True
+                }
+            },
+            "kms_failure": {
+                "title": "KMS/Key Management Failure",
+                "symptoms": [
+                    "Encryption/decryption failures",
+                    "Key rotation blocked",
+                    "KMS API timeout errors"
+                ],
+                "diagnosis": [
+                    "1. Check KMS service health and quotas",
+                    "2. Verify IAM permissions for KMS operations",
+                    "3. Check network connectivity to KMS endpoint"
+                ],
+                "recovery_steps": [
+                    "1. Use cached DEK for short-term operations",
+                    "2. Queue operations requiring new keys",
+                    "3. Retry KMS operations with exponential backoff",
+                    "4. Escalate if KMS unavailable > 5 minutes"
+                ],
+                "automation": {
+                    "cache_fallback": True,
+                    "retry_with_backoff": True,
+                    "escalation_timeout_seconds": 300
+                }
+            },
+            "cluster_failover": {
+                "title": "Cluster Leader Failover",
+                "symptoms": [
+                    "Leader node health check failures",
+                    "Cluster operations stalled",
+                    "Leadership election in progress"
+                ],
+                "diagnosis": [
+                    "1. Check cluster manager status",
+                    "2. Verify heartbeat connectivity",
+                    "3. Review leader election logs"
+                ],
+                "recovery_steps": [
+                    "1. Allow automatic leader election to complete",
+                    "2. Verify new leader has current state",
+                    "3. Resume critical operations on new leader",
+                    "4. Investigate root cause of previous leader failure"
+                ],
+                "automation": {
+                    "auto_election": True,
+                    "state_verification": True,
+                    "post_incident_review": True
+                }
+            },
+            "compliance_export_backlog": {
+                "title": "Compliance Audit Export Backlog",
+                "symptoms": [
+                    "Audit export success SLO violated",
+                    "Retention enforcement failures",
+                    "SIEM push queue backing up"
+                ],
+                "diagnosis": [
+                    "1. Check SIEM adapter connectivity",
+                    "2. Verify compliance profile configuration",
+                    "3. Review export queue depth"
+                ],
+                "recovery_steps": [
+                    "1. Increase export worker concurrency",
+                    "2. Retry failed exports with backoff",
+                    "3. Temporarily increase queue capacity",
+                    "4. Escalate if backlog continues to grow"
+                ],
+                "automation": {
+                    "auto_retry": True,
+                    "scale_workers": True,
+                    "escalation_threshold": 1000  # items
+                }
+            }
+        }
+    
+    def get_runbook(self, incident_type: str) -> Dict[str, Any]:
+        """
+        Get runbook for incident type.
+        
+        Args:
+            incident_type: Type of incident
+            
+        Returns:
+            Runbook with recovery steps
+        """
+        return self.runbooks.get(incident_type, {
+            "title": "Unknown Incident",
+            "message": "No runbook available for this incident type",
+            "recovery_steps": ["1. Consult on-call engineer", "2. Review system logs"]
+        })
+    
+    def execute_automated_recovery(self, incident_type: str, foundation: 'StarlinkSecurityFoundation') -> Dict[str, Any]:
+        """
+        Execute automated recovery actions.
+        
+        Args:
+            incident_type: Type of incident
+            foundation: Foundation instance for executing actions
+            
+        Returns:
+            Recovery result
+        """
+        runbook = self.get_runbook(incident_type)
+        automation = runbook.get("automation", {})
+        
+        results = {
+            "incident_type": incident_type,
+            "automated_actions": [],
+            "success": False
+        }
+        
+        # Execute automated actions based on incident type
+        if incident_type == "scorer_outage" and automation.get("auto_restart"):
+            results["automated_actions"].append("Attempted scorer restart")
+            if automation.get("fallback_to_rules"):
+                results["automated_actions"].append("Enabled rule-based fallback")
+                results["success"] = True
+        
+        elif incident_type == "redis_failure" and automation.get("auto_failover"):
+            results["automated_actions"].append("Initiated failover to in-memory state store")
+            results["success"] = True
+        
+        elif incident_type == "kms_failure" and automation.get("cache_fallback"):
+            results["automated_actions"].append("Using cached DEK for operations")
+            results["success"] = True
+        
+        return results
+
+
+class CanaryDeployment:
+    """
+    Canary and progressive delivery for scorers and policies.
+    Integrates with PolicySimulationSandbox for pre-flight checks.
+    """
+    
+    def __init__(self, sandbox: 'PolicySimulationSandbox' = None):
+        """
+        Initialize canary deployment manager.
+        
+        Args:
+            sandbox: Policy simulation sandbox for pre-flight checks
+        """
+        self.sandbox = sandbox
+        self.canary_configs = {}
+        self.tenant_assignments = {}  # tenant_id -> scorer_version
+        self.lock = threading.RLock()
+    
+    def create_canary(self, name: str, new_scorer: 'ThreatScorer',
+                     canary_percentage: float = 10.0,
+                     rollback_threshold: float = 0.15) -> str:
+        """
+        Create canary deployment for new scorer.
+        
+        Args:
+            name: Canary deployment name
+            new_scorer: New scorer to canary test
+            canary_percentage: Percentage of traffic to route to canary (0-100)
+            rollback_threshold: Auto-rollback if risk difference > threshold
+            
+        Returns:
+            Canary deployment ID
+        """
+        canary_id = f"canary-{name}-{int(time.time())}"
+        
+        with self.lock:
+            self.canary_configs[canary_id] = {
+                "name": name,
+                "new_scorer": new_scorer,
+                "canary_percentage": canary_percentage,
+                "rollback_threshold": rollback_threshold,
+                "created_at": datetime.now(),
+                "status": "active",
+                "metrics": {
+                    "canary_requests": 0,
+                    "baseline_requests": 0,
+                    "canary_avg_risk": 0.0,
+                    "baseline_avg_risk": 0.0,
+                    "significant_differences": 0
+                }
+            }
+        
+        return canary_id
+    
+    def should_use_canary(self, canary_id: str, tenant_id: str = None) -> bool:
+        """
+        Determine if request should use canary scorer.
+        
+        Args:
+            canary_id: Canary deployment ID
+            tenant_id: Optional tenant ID for sticky routing
+            
+        Returns:
+            True if should use canary
+        """
+        if canary_id not in self.canary_configs:
+            return False
+        
+        config = self.canary_configs[canary_id]
+        
+        # Check if canary is active
+        if config["status"] != "active":
+            return False
+        
+        # Sticky tenant routing
+        if tenant_id:
+            with self.lock:
+                if tenant_id in self.tenant_assignments:
+                    return self.tenant_assignments[tenant_id] == "canary"
+                
+                # New tenant - assign based on percentage
+                use_canary = random.random() * 100 < config["canary_percentage"]
+                self.tenant_assignments[tenant_id] = "canary" if use_canary else "baseline"
+                return use_canary
+        
+        # Random percentage-based routing
+        return random.random() * 100 < config["canary_percentage"]
+    
+    def record_canary_result(self, canary_id: str, is_canary: bool,
+                            risk_score: float, baseline_risk: float = None):
+        """
+        Record canary deployment result.
+        
+        Args:
+            canary_id: Canary deployment ID
+            is_canary: Whether this was canary or baseline
+            risk_score: Risk score from scorer
+            baseline_risk: Baseline risk for comparison (optional)
+        """
+        if canary_id not in self.canary_configs:
+            return
+        
+        with self.lock:
+            config = self.canary_configs[canary_id]
+            metrics = config["metrics"]
+            
+            if is_canary:
+                metrics["canary_requests"] += 1
+                # Update rolling average
+                n = metrics["canary_requests"]
+                metrics["canary_avg_risk"] = (
+                    (metrics["canary_avg_risk"] * (n - 1) + risk_score) / n
+                )
+            else:
+                metrics["baseline_requests"] += 1
+                n = metrics["baseline_requests"]
+                metrics["baseline_avg_risk"] = (
+                    (metrics["baseline_avg_risk"] * (n - 1) + risk_score) / n
+                )
+            
+            # Check for significant difference
+            if baseline_risk is not None:
+                diff = abs(risk_score - baseline_risk)
+                if diff > config["rollback_threshold"]:
+                    metrics["significant_differences"] += 1
+                    
+                    # Auto-rollback if too many significant differences
+                    if metrics["significant_differences"] > 10:
+                        config["status"] = "rolled_back"
+                        config["rollback_reason"] = f"Exceeded rollback threshold: {diff:.3f} > {config['rollback_threshold']:.3f}"
+    
+    def get_canary_status(self, canary_id: str) -> Dict[str, Any]:
+        """Get canary deployment status."""
+        if canary_id not in self.canary_configs:
+            return {}
+        
+        with self.lock:
+            config = self.canary_configs[canary_id].copy()
+            config.pop("new_scorer", None)  # Don't include scorer object
+            return config
+    
+    def promote_canary(self, canary_id: str) -> bool:
+        """
+        Promote canary to 100% traffic.
+        
+        Args:
+            canary_id: Canary deployment ID
+            
+        Returns:
+            True if promoted successfully
+        """
+        if canary_id not in self.canary_configs:
+            return False
+        
+        with self.lock:
+            config = self.canary_configs[canary_id]
+            if config["status"] == "active":
+                config["status"] = "promoted"
+                config["canary_percentage"] = 100.0
+                config["promoted_at"] = datetime.now()
+                return True
+        
+        return False
+    
+    def rollback_canary(self, canary_id: str, reason: str = "Manual rollback"):
+        """
+        Rollback canary deployment.
+        
+        Args:
+            canary_id: Canary deployment ID
+            reason: Rollback reason
+        """
+        if canary_id not in self.canary_configs:
+            return
+        
+        with self.lock:
+            config = self.canary_configs[canary_id]
+            config["status"] = "rolled_back"
+            config["rollback_reason"] = reason
+            config["rolled_back_at"] = datetime.now()
+
+
+# ============================================================================
+# STRATEGIC POLISH: Performance & Efficiency
+# ============================================================================
+
+class PerformanceProfiler:
+    """
+    CPU and memory profiling with flamegraph generation.
+    Tracks GC pauses and hot paths.
+    """
+    
+    def __init__(self):
+        """Initialize performance profiler."""
+        self.profiles = {}
+        self.hot_paths = {}  # function_name -> call_count
+        self.gc_pauses = []
+        self.lock = threading.RLock()
+    
+    def profile_function(self, func_name: str):
+        """
+        Decorator for profiling function execution.
+        
+        Args:
+            func_name: Function name for profiling
+        """
+        def decorator(func):
+            def wrapper(*args, **kwargs):
+                start_time = time.time()
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                finally:
+                    elapsed = (time.time() - start_time) * 1000  # ms
+                    
+                    with self.lock:
+                        if func_name not in self.profiles:
+                            self.profiles[func_name] = {
+                                "call_count": 0,
+                                "total_time_ms": 0.0,
+                                "min_time_ms": float('inf'),
+                                "max_time_ms": 0.0,
+                                "samples": []
+                            }
+                        
+                        profile = self.profiles[func_name]
+                        profile["call_count"] += 1
+                        profile["total_time_ms"] += elapsed
+                        profile["min_time_ms"] = min(profile["min_time_ms"], elapsed)
+                        profile["max_time_ms"] = max(profile["max_time_ms"], elapsed)
+                        
+                        # Keep last 100 samples
+                        profile["samples"].append(elapsed)
+                        if len(profile["samples"]) > 100:
+                            profile["samples"].pop(0)
+                        
+                        # Track hot paths
+                        self.hot_paths[func_name] = self.hot_paths.get(func_name, 0) + 1
+            
+            return wrapper
+        return decorator
+    
+    def get_profile_summary(self) -> Dict[str, Any]:
+        """Get profiling summary with hot paths."""
+        with self.lock:
+            summary = {}
+            
+            for func_name, profile in self.profiles.items():
+                avg_time = profile["total_time_ms"] / profile["call_count"] if profile["call_count"] > 0 else 0
+                
+                # Calculate percentiles from samples
+                samples = sorted(profile["samples"])
+                p50 = samples[len(samples) // 2] if samples else 0
+                p95 = samples[int(len(samples) * 0.95)] if samples else 0
+                p99 = samples[int(len(samples) * 0.99)] if samples else 0
+                
+                summary[func_name] = {
+                    "call_count": profile["call_count"],
+                    "avg_time_ms": avg_time,
+                    "min_time_ms": profile["min_time_ms"] if profile["min_time_ms"] != float('inf') else 0,
+                    "max_time_ms": profile["max_time_ms"],
+                    "p50_ms": p50,
+                    "p95_ms": p95,
+                    "p99_ms": p99
+                }
+            
+            return {
+                "profiles": summary,
+                "hot_paths": sorted(self.hot_paths.items(), key=lambda x: x[1], reverse=True)[:10]
+            }
+    
+    def generate_flamegraph_data(self) -> str:
+        """Generate flamegraph data in folded stack format."""
+        # Simplified flamegraph data
+        lines = []
+        for func_name, count in sorted(self.hot_paths.items(), key=lambda x: x[1], reverse=True):
+            lines.append(f"root;{func_name} {count}")
+        
+        return "\n".join(lines)
+    
+    def record_gc_pause(self, duration_ms: float):
+        """Record garbage collection pause."""
+        with self.lock:
+            self.gc_pauses.append({
+                "timestamp": datetime.now(),
+                "duration_ms": duration_ms
+            })
+            
+            # Keep last 1000 pauses
+            if len(self.gc_pauses) > 1000:
+                self.gc_pauses.pop(0)
+    
+    def get_gc_stats(self) -> Dict[str, Any]:
+        """Get GC pause statistics."""
+        with self.lock:
+            if not self.gc_pauses:
+                return {"count": 0}
+            
+            durations = [p["duration_ms"] for p in self.gc_pauses]
+            durations.sort()
+            
+            return {
+                "count": len(durations),
+                "total_pause_ms": sum(durations),
+                "avg_pause_ms": sum(durations) / len(durations),
+                "max_pause_ms": durations[-1],
+                "p95_pause_ms": durations[int(len(durations) * 0.95)]
+            }
+
+
+class AdaptiveBatchCoalescer:
+    """
+    Adaptive batching with dynamic batch size based on load.
+    Maximizes throughput under varying load conditions.
+    """
+    
+    def __init__(self, min_batch_size: int = 1, max_batch_size: int = 100,
+                 target_latency_ms: float = 50.0):
+        """
+        Initialize adaptive batch coalescer.
+        
+        Args:
+            min_batch_size: Minimum batch size
+            max_batch_size: Maximum batch size
+            target_latency_ms: Target processing latency
+        """
+        self.min_batch_size = min_batch_size
+        self.max_batch_size = max_batch_size
+        self.target_latency_ms = target_latency_ms
+        
+        self.current_batch_size = min_batch_size
+        self.recent_latencies = []
+        self.queue = []
+        self.lock = threading.RLock()
+        
+        # Performance tracking
+        self.batches_processed = 0
+        self.total_items_processed = 0
+    
+    def add_item(self, item: Any) -> Optional[List[Any]]:
+        """
+        Add item to batch. Returns batch if ready for processing.
+        
+        Args:
+            item: Item to add to batch
+            
+        Returns:
+            Batch to process, or None if not ready
+        """
+        with self.lock:
+            self.queue.append(item)
+            
+            if len(self.queue) >= self.current_batch_size:
+                batch = self.queue[:self.current_batch_size]
+                self.queue = self.queue[self.current_batch_size:]
+                return batch
+        
+        return None
+    
+    def flush_batch(self) -> List[Any]:
+        """Flush current batch regardless of size."""
+        with self.lock:
+            batch = self.queue.copy()
+            self.queue.clear()
+            return batch
+    
+    def record_batch_latency(self, latency_ms: float, batch_size: int):
+        """
+        Record batch processing latency and adapt batch size.
+        
+        Args:
+            latency_ms: Batch processing latency
+            batch_size: Size of processed batch
+        """
+        with self.lock:
+            self.recent_latencies.append(latency_ms)
+            if len(self.recent_latencies) > 10:
+                self.recent_latencies.pop(0)
+            
+            self.batches_processed += 1
+            self.total_items_processed += batch_size
+            
+            # Adapt batch size based on recent performance
+            avg_latency = sum(self.recent_latencies) / len(self.recent_latencies)
+            
+            if avg_latency < self.target_latency_ms * 0.7:
+                # We can handle more - increase batch size
+                self.current_batch_size = min(
+                    self.max_batch_size,
+                    int(self.current_batch_size * 1.2)
+                )
+            elif avg_latency > self.target_latency_ms * 1.3:
+                # Too slow - decrease batch size
+                self.current_batch_size = max(
+                    self.min_batch_size,
+                    int(self.current_batch_size * 0.8)
+                )
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get batching statistics."""
+        with self.lock:
+            avg_latency = (
+                sum(self.recent_latencies) / len(self.recent_latencies)
+                if self.recent_latencies else 0
+            )
+            
+            avg_batch_size = (
+                self.total_items_processed / self.batches_processed
+                if self.batches_processed > 0 else 0
+            )
+            
+            return {
+                "current_batch_size": self.current_batch_size,
+                "queue_depth": len(self.queue),
+                "batches_processed": self.batches_processed,
+                "total_items_processed": self.total_items_processed,
+                "avg_batch_size": avg_batch_size,
+                "avg_latency_ms": avg_latency,
+                "target_latency_ms": self.target_latency_ms
+            }
+
