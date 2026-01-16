@@ -1,0 +1,143 @@
+# Armada Server Configuration
+# Fleet Management Control Plane
+
+# ⚠️ SECURITY WARNING ⚠️
+# This is a SAMPLE configuration for development/testing!
+# For production use:
+# 1. Disable anonymousAuth and configure proper authentication (OIDC, etc.)
+# 2. Use environment variables or secrets for sensitive values (passwords, tokens)
+# 3. Enable TLS encryption
+# 4. See docs/SECURITY.md for complete security configuration
+
+grpcPort: 50051
+httpPort: 8080
+metricsPort: 9000
+
+# Redis Configuration - Job Queue and State Management
+redis:
+  addrs:
+    - "redis:6379"
+  masterName: ""
+  db: 0
+  poolSize: 1000
+
+# PostgreSQL Configuration - Persistent Storage
+postgres:
+  connection:
+    host: postgres
+    port: 5432
+    user: armada
+    # Password should be injected via environment variable in production:
+    # Set POSTGRES_PASSWORD environment variable from Kubernetes Secret
+    # or use: password: ${POSTGRES_PASSWORD}
+    password: armada_password  # DEV ONLY - change in production!
+    dbname: armada
+    sslmode: disable  # Change to 'require' for production
+  maxOpenConns: 100
+  maxIdleConns: 25
+  connMaxLifetime: 30m
+
+# Scheduling Configuration
+scheduling:
+  # Maximum number of jobs to schedule per call
+  maxJobsPerCall: 5000
+  
+  # Lease settings
+  lease:
+    expireAfter: 15m
+    expiryLoopInterval: 1m
+  
+  # Default job resource limits
+  defaultJobLimits:
+    cpu: "1"
+    memory: "1Gi"
+    ephemeralStorage: "8Gi"
+  
+  # Default job priority
+  defaultJobPriorityClassName: ""
+  
+  # Default tolerations for jobs
+  defaultJobTolerations: []
+  
+  # Preemption settings
+  preemption:
+    enabled: true
+    priorityClasses:
+      - name: high-priority
+        priority: 1000
+      - name: medium-priority
+        priority: 500
+      - name: low-priority
+        priority: 100
+
+# Pulsar Integration for Reliability
+pulsar:
+  enabled: true
+  URL: "pulsar://broker.pulsar:6650"
+  
+  # Topics for different event types
+  jobsetEventsTopic: "persistent://public/default/armada-jobset-events"
+  jobEventsTopic: "persistent://public/default/armada-job-events"
+  
+  # Connection settings
+  maxConnectionsPerBroker: 1
+  compressionType: "LZ4"
+  compressionLevel: "default"
+  
+  # Producer settings
+  sendTimeout: 30s
+  batchingMaxPublishDelay: 10ms
+  batchingMaxMessages: 1000
+  
+  # Reliability settings
+  blockIfQueueFull: true
+  maxPendingMessages: 1000
+
+# Authentication and Authorization
+auth:
+  # Set to false in production and configure proper auth
+  anonymousAuth: true
+  
+  # OpenID Connect configuration (for production)
+  # oidc:
+  #   providerUrl: "https://your-oidc-provider.com"
+  #   clientId: "armada-client"
+  #   scopes: ["openid", "profile", "email"]
+  
+  # Kubernetes RBAC integration
+  # kubernetes:
+  #   impersonateUsers: true
+
+# Fleet Management Settings
+fleet:
+  # Cluster pools for different workload types
+  pools:
+    - name: "starlink-pool"
+      clusters:
+        - "starlink-cluster-1"
+        - "starlink-cluster-2"
+        - "starlink-cluster-3"
+  
+  # Resource quotas per queue
+  defaultQueueResourceLimits:
+    cpu: "1000"
+    memory: "1000Gi"
+    gpu: "10"
+
+# Metrics and Monitoring
+metrics:
+  port: 9000
+  path: "/metrics"
+  
+  # Prometheus integration
+  prometheus:
+    enabled: true
+
+# Logging
+logging:
+  level: "info"
+  format: "json"
+
+# Health checks
+health:
+  checkInterval: 10s
