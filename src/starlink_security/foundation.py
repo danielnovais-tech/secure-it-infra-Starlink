@@ -148,8 +148,9 @@ class StarlinkSecurityFoundation:
         """Handle shutdown signals gracefully."""
         logger.info(f"Received shutdown signal {signum}")
         self.running = False
-        # Don't call sys.exit() here - let the async event loop handle shutdown
-        # The run() method's while loop will exit when self.running becomes False
+        # Call cleanup synchronously since it's not an async method
+        self.cleanup()
+        raise SystemExit(0)
     
     def _handle_module_task_result(self, task: asyncio.Task) -> None:
         """Handle completion of background module tasks and log exceptions."""
@@ -219,8 +220,22 @@ def configure_logging():
 
 async def async_main(config_path: Optional[str] = None):
     """Main async entry point."""
+    logger.info("Starting Starlink Security Foundation")
     foundation = StarlinkSecurityFoundation(config_path=config_path)
-    await foundation.run()
+    try:
+        await foundation.run()
+    except asyncio.CancelledError:
+        # Handle Ctrl+C or shutdown signals
+        logger.info("Received cancellation signal")
+        await foundation.shutdown()
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in main loop: {e}", exc_info=True)
+        raise
+    finally:
+        # Ensure resources are released
+        logger.info("Cleaning up resources")
+        foundation.cleanup()
 
 
 def main():
