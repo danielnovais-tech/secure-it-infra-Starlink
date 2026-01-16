@@ -149,8 +149,7 @@ class StarlinkSecurityFoundation:
         """Handle shutdown signals gracefully."""
         logger.info(f"Received shutdown signal {signum}")
         self.running = False
-        # Don't call cleanup here - let async_main's finally block handle it
-        raise SystemExit(0)
+        # Don't raise SystemExit - let the async event loop handle shutdown gracefully
     
     def _handle_module_task_result(self, task: asyncio.Task) -> None:
         """Handle completion of background module tasks and log exceptions."""
@@ -178,14 +177,9 @@ class StarlinkSecurityFoundation:
             task.add_done_callback(self._handle_module_task_result)
             logger.info(f"Started module: {name}")
         
-        try:
-            # Keep running until shutdown
-            while self.running:
-                await asyncio.sleep(1)
-        except KeyboardInterrupt:
-            logger.info("Received keyboard interrupt")
-        finally:
-            await self.shutdown()
+        # Keep running until shutdown
+        while self.running:
+            await asyncio.sleep(1)
     
     async def shutdown(self):
         """Shutdown all modules gracefully."""
@@ -237,8 +231,8 @@ async def async_main(config_path: Optional[str] = None):
         raise
     finally:
         # Ensure proper shutdown of async resources, then cleanup
-        if foundation.running:
-            await foundation.shutdown()
+        # Always call shutdown() - it's safe to call even if already shut down
+        await foundation.shutdown()
         foundation.cleanup()
 
 
@@ -262,7 +256,7 @@ def main():
     
     try:
         asyncio.run(async_main(config_path=args.config))
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         logger.info("Shutdown complete")
         sys.exit(0)
 
