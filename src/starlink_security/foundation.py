@@ -229,8 +229,7 @@ async def async_main(config_path: Optional[str] = None):
     try:
         await foundation.run()
     except asyncio.CancelledError:
-        # Handle task cancellation (e.g., from asyncio.wait_for or task.cancel())
-        # Re-raise to propagate cancellation upstream
+        # Handle task cancellation and re-raise to propagate upstream
         logger.warning("Task cancelled", extra={"event": "cancellation"})
         raise
     except (OSError, TimeoutError) as e:
