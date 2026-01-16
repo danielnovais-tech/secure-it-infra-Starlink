@@ -7,6 +7,7 @@ import json
 import logging
 import logging.handlers
 import os
+import sys
 from pathlib import Path
 
 # Constants - use local directories if system directories are not writable
@@ -27,9 +28,11 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Configurable log level from environment variable (default: INFO)
 VALID_LOG_LEVELS = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}
-LOG_LEVEL = os.getenv('STARLINK_LOG_LEVEL', 'INFO').upper()
-if LOG_LEVEL not in VALID_LOG_LEVELS:
-    LOG_LEVEL = 'INFO'  # Fallback to INFO for invalid values
+LOG_LEVEL_RAW = os.getenv('STARLINK_LOG_LEVEL', 'INFO').upper()
+LOG_LEVEL = LOG_LEVEL_RAW if LOG_LEVEL_RAW in VALID_LOG_LEVELS else 'INFO'
+
+if LOG_LEVEL_RAW != LOG_LEVEL:
+    print(f"Warning: Invalid log level '{LOG_LEVEL_RAW}', falling back to INFO", file=sys.stderr)
     
 LOG_FORMAT = os.getenv('STARLINK_LOG_FORMAT', 'standard').lower()
 
@@ -70,6 +73,14 @@ class JSONFormatter(logging.Formatter):
         Returns:
             JSON string representation of the log record
         """
+        # Standard logging attributes to exclude from extra fields
+        standard_attrs = {
+            'name', 'msg', 'args', 'created', 'filename', 'funcName', 'levelname',
+            'levelno', 'lineno', 'module', 'msecs', 'message', 'pathname', 'process',
+            'processName', 'relativeCreated', 'thread', 'threadName', 'exc_info',
+            'exc_text', 'stack_info', 'getMessage', 'taskName'
+        }
+        
         log_data = {
             'timestamp': self.formatTime(record, self.datefmt),
             'logger': record.name,
@@ -79,11 +90,10 @@ class JSONFormatter(logging.Formatter):
             'message': record.getMessage(),
         }
         
-        # Add extra fields if present
-        if hasattr(record, 'request_id'):
-            log_data['request_id'] = record.request_id
-        if hasattr(record, 'user_id'):
-            log_data['user_id'] = record.user_id
+        # Dynamically add extra fields from record
+        for key, value in record.__dict__.items():
+            if key not in standard_attrs and not key.startswith('_'):
+                log_data[key] = value
         
         # Add exception info if present
         if record.exc_info:
@@ -110,7 +120,7 @@ try:
     )
 except (OSError, IOError) as e:
     # Fallback to console-only logging if file handler fails
-    print(f"Warning: Could not create log file handler: {e}", file=__import__('sys').stderr)
+    print(f"Warning: Could not create log file handler: {e}", file=sys.stderr)
     file_handler = None
 
 console_handler = logging.StreamHandler()
