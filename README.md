@@ -5438,7 +5438,6 @@ For issues and questions:
 - [Kubernetes](https://kubernetes.io/)
 - [Starlink](https://www.starlink.com/)
 For issues, questions, or contributions, please open a GitHub issue.
-For issues and questions, please open an issue on GitHub.
 
 ## Disclaimer
 
