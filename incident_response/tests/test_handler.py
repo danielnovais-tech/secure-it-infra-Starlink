@@ -35,11 +35,13 @@ class TestIncidentResponseHandler(unittest.TestCase):
         """Test retrieval of incident configuration."""
         malware_config = self.handler.get_incident_config('malware')
         self.assertIsNotNone(malware_config, "Malware config not found")
+        assert malware_config is not None
         self.assertEqual(malware_config['type'], 'malware')
         self.assertEqual(malware_config['severity'], 'high')
         
         breach_config = self.handler.get_incident_config('breach')
         self.assertIsNotNone(breach_config, "Breach config not found")
+        assert breach_config is not None
         self.assertEqual(breach_config['type'], 'breach')
     
     def test_evaluate_conditions_eq(self):
@@ -74,6 +76,7 @@ class TestIncidentResponseHandler(unittest.TestCase):
     def test_should_trigger_malware(self):
         """Test incident triggering for malware events."""
         malware_config = self.handler.get_incident_config('malware')
+        assert malware_config is not None
         
         event_data = {
             'event_type': 'malware_detected',
@@ -96,6 +99,7 @@ class TestIncidentResponseHandler(unittest.TestCase):
     def test_should_trigger_breach(self):
         """Test incident triggering for breach events."""
         breach_config = self.handler.get_incident_config('breach')
+        assert breach_config is not None
         
         event_data = {
             'event_type': 'unauthorized_access',

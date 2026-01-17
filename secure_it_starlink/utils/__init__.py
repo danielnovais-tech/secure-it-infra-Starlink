@@ -1,10 +1,10 @@
 """Utility functions for Secure IT Starlink."""
 
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
-def format_timestamp(timestamp: float = None) -> str:
+def format_timestamp(timestamp: Optional[float] = None) -> str:
     """
     Format timestamp to ISO format.
     

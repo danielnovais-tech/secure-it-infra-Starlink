@@ -9,7 +9,7 @@ import time
 import logging
 import subprocess
 import yaml
-from typing import Dict, Optional, List
+from typing import Any, Dict, Optional, List
 from datetime import datetime
 from pathlib import Path
 
@@ -77,7 +77,7 @@ class VPNManager:
         
         return logger
     
-    def get_vpn_status(self) -> Dict[str, any]:
+    def get_vpn_status(self) -> Dict[str, Any]:
         """
         Get current VPN connection status.
         

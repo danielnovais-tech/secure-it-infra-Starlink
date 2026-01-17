@@ -271,4 +271,4 @@ class PortScanner:
                 summary[host] = set()
             summary[host].update(scan["open_ports"])
 
-        return {host: sorted(list(ports)) for host, ports in summary.items()}
+        return summary

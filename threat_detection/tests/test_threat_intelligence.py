@@ -2,11 +2,7 @@
 Tests for Threat Intelligence Updater
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'modules'))
-
-from threat_intelligence import ThreatIntelligenceUpdater
+from threat_detection.modules.threat_intelligence import ThreatIntelligenceUpdater
 
 
 def test_ip_validation():

@@ -2,11 +2,7 @@
 Tests for Anomaly Detector
 """
 
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'modules'))
-
-from anomaly_detector import AnomalyDetector
+from threat_detection.modules.anomaly_detector import AnomalyDetector
 
 
 def test_failed_login_detection():

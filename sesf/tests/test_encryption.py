@@ -85,6 +85,7 @@ class TestEncryptionModule(unittest.TestCase):
         status = self.encryption.get_key_status(key_id)
         
         self.assertIsNotNone(status)
+        assert status is not None
         self.assertEqual(status["key_id"], key_id)
         self.assertIn("created_at", status)
         self.assertIn("usage_count", status)
@@ -92,3 +93,4 @@ class TestEncryptionModule(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

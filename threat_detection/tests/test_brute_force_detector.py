@@ -2,12 +2,8 @@
 Tests for Brute-force Detector
 """
 
-import sys
-import os
 import tempfile
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'modules'))
-
-from brute_force_detector import BruteForceDetector
+from threat_detection.modules.brute_force_detector import BruteForceDetector
 
 
 def test_ssh_bruteforce_detection():

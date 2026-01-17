@@ -9,20 +9,17 @@ import yaml
 import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
-# Add modules directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'modules'))
-
-from anomaly_detector import AnomalyDetector
-from brute_force_detector import BruteForceDetector
-from threat_intelligence import ThreatIntelligenceUpdater
+from threat_detection.modules.anomaly_detector import AnomalyDetector
+from threat_detection.modules.brute_force_detector import BruteForceDetector
+from threat_detection.modules.threat_intelligence import ThreatIntelligenceUpdater
 
 
 class ThreatDetectionSystem:
     """Main threat detection system coordinating all components"""
     
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: Optional[str] = None):
         """
         Initialize threat detection system
         
@@ -36,7 +33,7 @@ class ThreatDetectionSystem:
                 'threat_rules.yaml'
             )
         
-        self.config_path = config_path
+        self.config_path: str = config_path
         self.config = self._load_config()
         self.logger = self._setup_logging()
         
@@ -47,7 +44,7 @@ class ThreatDetectionSystem:
         
         self._initialize_components()
     
-    def _load_config(self) -> dict:
+    def _load_config(self) -> Dict[str, Any]:
         """
         Load configuration from YAML file
         
@@ -60,7 +57,7 @@ class ThreatDetectionSystem:
         """
         try:
             with open(self.config_path, 'r') as f:
-                config = yaml.safe_load(f)
+                config = yaml.safe_load(f) or {}
             print(f"Configuration loaded from {self.config_path}")
             return config
         except FileNotFoundError:
@@ -229,7 +226,7 @@ class ThreatDetectionSystem:
         
         return list(blocked_ips)
     
-    def run_continuous_monitoring(self, log_files: List[str] = None, interval_seconds: int = 60):
+    def run_continuous_monitoring(self, log_files: Optional[List[str]] = None, interval_seconds: int = 60):
         """
         Run continuous monitoring mode
         

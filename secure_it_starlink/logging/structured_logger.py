@@ -164,7 +164,7 @@ class EventCorrelator:
         return recent_incidents
 
 
-class CustomJsonFormatter(jsonlogger.JsonFormatter):
+class CustomJsonFormatter(jsonlogger.JsonFormatter):  # pyright: ignore[reportPrivateImportUsage]
     """
     Custom JSON formatter for structured logging.
     
@@ -297,7 +297,7 @@ class StructuredLogger:
         
         return handler
     
-    def _create_console_handler(self, config: Dict[str, Any]) -> logging.Handler:
+    def _create_console_handler(self, config: Dict[str, Any]) -> Optional[logging.Handler]:
         """Create a console handler."""
         if not config.get('enabled', True):
             return None

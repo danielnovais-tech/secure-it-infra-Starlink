@@ -1,54 +1,63 @@
-"""
-Secure IT Starlink - Comprehensive Security Tool Foundation
+"""Secure IT Starlink.
 
-A security toolkit for Starlink-connected enterprise infrastructures.
-
-This package provides:
-- Network security monitoring for Starlink connections
-- Encryption and key management utilities
-- Security event logging and alerting
-- Vulnerability scanning framework
-- Access control and authentication
-- Configuration security scanner
-"""
-
-__version__ = "0.1.0"
-__author__ = "Daniel Novais Tech"
-
-from secure_it_starlink.network import NetworkMonitor, ConnectionValidator
-from secure_it_starlink.crypto import EncryptionManager, KeyManager
-from secure_it_starlink.logging import SecurityLogger, AlertManager
-from secure_it_starlink.scanning import VulnerabilityScanner, PortScanner
-from secure_it_starlink.access import AccessController, AuthenticationManager
-from secure_it_starlink.config import ConfigScanner, SecurityConfig
-
-__all__ = [
-    "NetworkMonitor",
-    "ConnectionValidator",
-    "EncryptionManager",
-    "KeyManager",
-    "SecurityLogger",
-    "AlertManager",
-    "VulnerabilityScanner",
-    "PortScanner",
-    "AccessController",
-    "AuthenticationManager",
-    "ConfigScanner",
-    "SecurityConfig",
-Secure IT Starlink - Enterprise-grade security solutions for managed Starlink infrastructures.
+Enterprise-grade security solutions for managed Starlink infrastructures.
 """
 
 __version__ = "1.0.0"
 __author__ = "Secure IT Team"
 
-from .config.config_loader import ConfigurationManager
-from .metrics.collector import MetricsCollector
-from .automated_responses.coordinator import AutomatedResponseCoordinator
-from .logging.structured_logger import StructuredLogger
+from .access import AccessController, AuthenticationManager
+from .automated_responses import AutomatedResponseCoordinator
+from .config import ConfigScanner, ConfigurationManager, SecurityConfig
+from .crypto import EncryptionManager, KeyManager
+from .logging import AlertManager, SecurityLogger
+from .logging.structured_logger import EventCorrelator, StructuredLogger
+from .metrics import MetricsCollector
+from .network import ConnectionValidator, NetworkMonitor
+from .scanning import PortScanner, VulnerabilityScanner
 
 __all__ = [
-    "ConfigurationManager",
-    "MetricsCollector",
+    "AccessController",
+    "AlertManager",
+    "AuthenticationManager",
     "AutomatedResponseCoordinator",
-    "StructuredLogger",
-]
+    "ConfigScanner",
+    "ConfigurationManager",
+    "ConnectionValidator",
+    """Secure IT Infrastructure - Starlink.
+
+    Enterprise-grade security solutions for managed Starlink infrastructures.
+    """
+
+    __version__ = "1.0.0"
+    __author__ = "Secure IT Team"
+
+    from .access import AccessController, AuthenticationManager
+    from .automated_responses.coordinator import AutomatedResponseCoordinator
+    from .config import ConfigScanner, SecurityConfig
+    from .config.config_loader import ConfigurationManager
+    from .crypto import EncryptionManager, KeyManager
+    from .logging import AlertManager, SecurityLogger
+    from .logging.structured_logger import StructuredLogger
+    from .metrics.collector import MetricsCollector
+    from .network import ConnectionValidator, NetworkMonitor
+    from .scanning import PortScanner, VulnerabilityScanner
+
+    __all__ = [
+        "AccessController",
+        "AlertManager",
+        "AuthenticationManager",
+        "AutomatedResponseCoordinator",
+        "ConfigScanner",
+        "ConnectionValidator",
+        "ConfigurationManager",
+        "EncryptionManager",
+        "KeyManager",
+        "MetricsCollector",
+        "NetworkMonitor",
+        "PortScanner",
+        "SecurityConfig",
+        "SecurityLogger",
+        "StructuredLogger",
+        "VulnerabilityScanner",
+    ]

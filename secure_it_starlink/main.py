@@ -8,7 +8,7 @@ Enterprise-grade security and monitoring for Starlink infrastructure.
 import sys
 import time
 import signal
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pathlib import Path
 
 from secure_it_starlink.config import ConfigurationManager
@@ -25,7 +25,7 @@ class SecureITStarlink:
     and structured logging.
     """
     
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: Optional[str] = None):
         """
         Initialize the Secure IT Starlink application.
         

@@ -8,7 +8,7 @@ security events such as malware detection and security breaches.
 import os
 import yaml
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 from pathlib import Path
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class IncidentResponseHandler:
     """Handles incident response based on YAML configurations."""
     
-    def __init__(self, config_dir: Optional[str] = None):
+    def __init__(self, config_dir: Optional[Union[str, Path]] = None):
         """
         Initialize the incident response handler.
         
@@ -89,7 +89,12 @@ class IncidentResponseHandler:
             field = condition.get('field')
             operator = condition.get('operator')
             expected_value = condition.get('value')
-            
+
+            if not isinstance(field, str) or not field:
+                return False
+            if not isinstance(operator, str) or not operator:
+                return False
+
             actual_value = event_data.get(field)
             
             if operator == 'eq' and actual_value != expected_value:
@@ -109,10 +114,18 @@ class IncidentResponseHandler:
                         return False
                 else:
                     return False
-            elif operator == 'gt' and not (isinstance(actual_value, (int, float)) and actual_value > expected_value):
-                return False
-            elif operator == 'in' and actual_value not in expected_value:
-                return False
+            elif operator == 'gt':
+                if not (
+                    isinstance(actual_value, (int, float))
+                    and isinstance(expected_value, (int, float))
+                    and actual_value > expected_value
+                ):
+                    return False
+            elif operator == 'in':
+                if not isinstance(expected_value, (list, tuple, set)):
+                    return False
+                if actual_value not in expected_value:
+                    return False
         
         return True
     
@@ -200,9 +213,21 @@ class IncidentResponseHandler:
             Dictionary containing action execution results
         """
         action_type = action.get('action')
-        target = action.get('target')
-        config = action.get('config', {})
+        target_raw = action.get('target')
+        config_raw = action.get('config', {})
         priority = action.get('priority')
+
+        if not isinstance(action_type, str) or not action_type:
+            return {
+                'action': action_type,
+                'target': target_raw,
+                'priority': priority,
+                'result': {'success': False, 'message': 'Missing or invalid action type'},
+                'timestamp': datetime.utcnow().isoformat()
+            }
+
+        target = target_raw if isinstance(target_raw, str) else (str(target_raw) if target_raw is not None else "unknown")
+        config: Dict[str, Any] = config_raw if isinstance(config_raw, dict) else {}
         
         # Simulate action execution based on type
         if action_type == 'isolate':
@@ -253,7 +278,8 @@ class IncidentResponseHandler:
     
     def _execute_scan(self, target: str, config: Dict[str, Any], event_data: Dict[str, Any]) -> Dict[str, Any]:
         """Execute scan action."""
-        scan_type = config.get('scan_type', 'standard')
+        scan_type_value = config.get('scan_type', 'standard')
+        scan_type = scan_type_value if isinstance(scan_type_value, str) else str(scan_type_value)
         steps = [f"Initiated {scan_type} scan on {target}"]
         
         if config.get('update_definitions'):
