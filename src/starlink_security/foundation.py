@@ -20,6 +20,7 @@ from .modules import (
     ThreatDetector,
     VPNManager,
 )
+from .modules.base import SecurityModule
 
 # Logger for this module
 logger = logging.getLogger(__name__)
@@ -133,7 +134,7 @@ class StarlinkSecurityFoundation:
     
     def _initialize_modules(self):
         """Initialize security modules."""
-        modules = {
+        modules: Dict[str, SecurityModule] = {
             'network_monitor': NetworkMonitor(self),
             'threat_detector': ThreatDetector(self),
             'policy_enforcer': PolicyEnforcer(self),
