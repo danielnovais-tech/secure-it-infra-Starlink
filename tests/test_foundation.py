@@ -3,6 +3,7 @@
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any, Dict
 
 import pytest
 
@@ -71,7 +72,7 @@ class TestStarlinkSecurityFoundation:
         """Test deep dictionary update."""
         foundation = StarlinkSecurityFoundation()
         
-        target = {
+        target: Dict[str, Any] = {
             'a': 1,
             'b': {
                 'c': 2,
@@ -79,7 +80,7 @@ class TestStarlinkSecurityFoundation:
             }
         }
         
-        source = {
+        source: Dict[str, Any] = {
             'b': {
                 'c': 20,
                 'e': 4
@@ -87,7 +88,7 @@ class TestStarlinkSecurityFoundation:
             'f': 5
         }
         
-        foundation._deep_update(target, source)
+        foundation.deep_update(target, source)
         
         assert target['a'] == 1
         assert target['b']['c'] == 20

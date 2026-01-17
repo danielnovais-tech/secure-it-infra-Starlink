@@ -7,7 +7,8 @@ import signal
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from types import FrameType
+from typing import Any, Dict, Optional, cast
 
 import yaml
 from cryptography.fernet import Fernet
@@ -20,6 +21,7 @@ from .modules import (
     ThreatDetector,
     VPNManager,
 )
+from .modules.base import SecurityModule
 
 # Logger for this module
 logger = logging.getLogger(__name__)
@@ -40,9 +42,9 @@ class StarlinkSecurityFoundation:
     
     def __init__(self, config_path: Optional[str] = None):
         """Initialize the Starlink Security Foundation."""
-        self.config = self._load_config(config_path)
+        self.config: Dict[str, Any] = self._load_config(config_path)
         self.encryption = self._initialize_encryption()
-        self.security_modules = {}
+        self.security_modules: Dict[str, SecurityModule] = {}
         self.running = False
         self._cleaned_up = False
         self._shutdown_complete = False
@@ -56,9 +58,9 @@ class StarlinkSecurityFoundation:
         
         logger.info("Starlink Security Foundation initialized")
     
-    def _load_config(self, config_path: Optional[str]) -> Dict:
+    def _load_config(self, config_path: Optional[str]) -> Dict[str, Any]:
         """Load configuration from file or defaults."""
-        default_config = {
+        default_config: Dict[str, Any] = {
             "security": {
                 "encryption_enabled": True,
                 "vpn_required": True,
@@ -95,21 +97,31 @@ class StarlinkSecurityFoundation:
         if config_file.exists():
             try:
                 with open(config_file, 'r') as f:
-                    user_config = yaml.safe_load(f)
+                    loaded = yaml.safe_load(f)
+                    if not loaded:
+                        logger.info("Config file is empty; using defaults")
+                        return default_config
+                    if not isinstance(loaded, dict):
+                        logger.error("Config file must contain a mapping at the top level; using defaults")
+                        return default_config
+
+                    user_config = cast(Dict[str, Any], loaded)
                     # Deep merge configurations
                     merged = copy.deepcopy(default_config)
-                    self._deep_update(merged, user_config)
+                    self.deep_update(merged, user_config)
                     return merged
             except Exception as e:
                 logger.error(f"Error loading config: {e}")
         
         return default_config
     
-    def _deep_update(self, target: Dict, source: Dict):
+    def deep_update(self, target: Dict[str, Any], source: Dict[str, Any]) -> None:
         """Deep update nested dictionaries."""
         for key, value in source.items():
             if key in target and isinstance(target[key], dict) and isinstance(value, dict):
-                self._deep_update(target[key], value)
+                nested_target = cast(Dict[str, Any], target[key])
+                nested_source = cast(Dict[str, Any], value)
+                self.deep_update(nested_target, nested_source)
             else:
                 target[key] = value
     
@@ -133,7 +145,7 @@ class StarlinkSecurityFoundation:
     
     def _initialize_modules(self):
         """Initialize security modules."""
-        modules = {
+        modules: Dict[str, SecurityModule] = {
             'network_monitor': NetworkMonitor(self),
             'threat_detector': ThreatDetector(self),
             'policy_enforcer': PolicyEnforcer(self),
@@ -147,13 +159,13 @@ class StarlinkSecurityFoundation:
                 self.security_modules[name] = module
                 logger.info(f"Initialized module: {name}")
     
-    def _shutdown_handler(self, signum, frame):
+    def _shutdown_handler(self, signum: int, frame: Optional[FrameType]) -> None:
         """Handle shutdown signals gracefully."""
         logger.info(f"Received shutdown signal {signum}")
         self.running = False
         # Don't raise SystemExit - let the async event loop handle shutdown gracefully
     
-    def _handle_module_task_result(self, task: asyncio.Task) -> None:
+    def _handle_module_task_result(self, task: asyncio.Task[object]) -> None:
         """Handle completion of background module tasks and log exceptions."""
         try:
             exception = task.exception()

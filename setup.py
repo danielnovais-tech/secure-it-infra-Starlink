@@ -1,7 +1,7 @@
 """Setup configuration for Starlink Security Foundation."""
 
-from setuptools import setup, find_packages
 from pathlib import Path
+from setuptools import setup, find_packages
 
 # Read the README file
 this_directory = Path(__file__).parent
@@ -36,6 +36,13 @@ setup(
     entry_points={
         "console_scripts": [
             "starlink-security=starlink_security.foundation:main",
+        ],
+    },
+    extras_require={
+        "test": [
+            "setuptools>=68.0.0",
+            "pytest>=7.0.0",
+            "pytest-asyncio>=0.21.0",
         ],
     },
 )

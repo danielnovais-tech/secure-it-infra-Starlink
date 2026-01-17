@@ -2,7 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ..foundation import StarlinkSecurityFoundation
@@ -15,7 +15,7 @@ class SecurityModule(ABC):
     
     def __init__(self, foundation: 'StarlinkSecurityFoundation'):
         self.foundation = foundation
-        self.config = foundation.config
+        self.config: Dict[str, Any] = foundation.config
         self.logger = logging.getLogger(self.__class__.__name__)
         self.running = False
     

@@ -1,7 +1,7 @@
 """Backup management module for redundancy."""
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict
 
 from .base import SecurityModule
 
@@ -20,8 +20,9 @@ class BackupManager(SecurityModule):
     def initialize(self) -> bool:
         """Initialize backup manager."""
         try:
+            self.config: Dict[str, Any] = self.foundation.config
             self.logger.info("Initializing backup manager")
-            enterprise = self.config.get('enterprise', {})
+            enterprise = (self.config or {}).get('enterprise', {})
             backups = enterprise.get('backup_connections', [])
             self.logger.info(f"Backup connections: {backups}")
             return True

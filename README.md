@@ -72,7 +72,7 @@ pytest tests/ -v
 
 ### Project Structure
 
-```
+```plaintext
 secure-it-infra-Starlink/
 ├── src/
 │   └── starlink_security/
@@ -96,16 +96,21 @@ secure-it-infra-Starlink/
 ## Security Features
 
 ### Encryption
+
 - Automatic encryption key generation and management
 - Fernet symmetric encryption for data protection
 - Secure key storage with restricted permissions
 
 ### Network Security
+
+- Real-time network traffic monitoring
+- Intrusion detection using multiple threat intelligence feeds
 - Continuous monitoring of Starlink gateway
 - Performance threshold monitoring (latency, jitter, packet loss)
 - Automated alerting on security events
 
 ### Policy Enforcement
+
 - TLS 1.3 minimum requirement
 - VPN connection enforcement
 - Security policy compliance checking
