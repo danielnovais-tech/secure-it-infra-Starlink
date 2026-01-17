@@ -1,0 +1,154 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starlink-metrics
+  labels:
+    app: starlink-metrics
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: starlink-metrics
+  template:
+    metadata:
+      labels:
+        app: starlink-metrics
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: starlink-metrics
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: starlink-metrics
+        image: starlink-metrics:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: STARLINK_LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: starlink-config
+              key: log_level
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          exec:
+            command:
+            - python3
+            - -c
+            - "import starlink_metrics; print('healthy')"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - python3
+            - -c
+            - "import starlink_metrics; print('ready')"
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: config
+        configMap:
+          name: starlink-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: starlink-metrics
+  labels:
+    app: starlink-metrics
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: metrics
+    protocol: TCP
+    name: metrics
+  selector:
+    app: starlink-metrics
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: starlink-metrics
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starlink-config
+data:
+  log_level: "INFO"
+  prometheus_port: "9090"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: starlink-metrics-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: starlink-metrics
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: starlink-metrics
+  labels:
+    app: starlink-metrics
+spec:
+  selector:
+    matchLabels:
+      app: starlink-metrics
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics

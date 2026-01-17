@@ -1,0 +1,99 @@
+{
+  "$schema": "https://starlink-security.internal/schemas/privacy-policy-v1.0.0.json",
+  "version": "1.0.0",
+  "profile_name": "staging",
+  "description": "Moderate privacy enforcement for staging environments (production-like validation)",
+  "created_at": "2026-01-16T20:00:00Z",
+  "updated_at": "2026-01-16T20:00:00Z",
+  "owner": "Platform Team",
+  
+  "enforcement_level": "moderate",
+  
+  "pii_fields": {
+    "suspect_fields": [
+      "user_id", "email", "username", "name", "phone",
+      "ip_address", "session_id", "ssn", "credit_card"
+    ],
+    "required_tags": ["PII"],
+    "allow_untagged": false,
+    "require_redaction": true
+  },
+  
+  "phi_fields": {
+    "suspect_fields": [
+      "patient_id", "medical_record", "diagnosis", "treatment",
+      "health_data", "insurance_id"
+    ],
+    "required_tags": ["PHI"],
+    "allow_untagged": false,
+    "require_redaction": true,
+    "retention_days": 90
+  },
+  
+  "confidential_fields": {
+    "suspect_fields": [
+      "password", "secret", "private_key", "encryption_key",
+      "access_token", "api_secret"
+    ],
+    "required_tags": ["CONFIDENTIAL", "REDACTED"],
+    "allow_untagged": false,
+    "require_redaction": true,
+    "block_entirely": true
+  },
+  
+  "pattern_detection": {
+    "enabled": true,
+    "patterns": {
+      "email": {
+        "regex": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+        "severity": "error",
+        "message": "Email address detected without proper redaction"
+      },
+      "ssn": {
+        "regex": "\\b\\d{3}-\\d{2}-\\d{4}\\b",
+        "severity": "error",
+        "message": "SSN detected in logs"
+      },
+      "credit_card": {
+        "regex": "\\b(?:\\d{4}[- ]?){3}\\d{4}\\b",
+        "severity": "error",
+        "message": "Credit card number detected"
+      },
+      "api_key": {
+        "regex": "(?i)(api[_-]?key|apikey)['\"]?\\s*[:=]\\s*['\"]?[a-z0-9_-]{20,}",
+        "severity": "error",
+        "message": "API key detected"
+      }
+    }
+  },
+  
+  "redaction_markers": {
+    "accepted": ["***", "REDACTED", "[REDACTED]", "XXX", "####"],
+    "minimum_length": 3
+  },
+  
+  "encryption_requirements": {
+    "require_encrypted_tag": false,
+    "allowed_encryption_methods": ["AES-256-GCM", "ChaCha20-Poly1305"]
+  },
+  
+  "compliance": {
+    "frameworks": ["GDPR", "SOC2"],
+    "data_minimization": true,
+    "consent_required": false,
+    "audit_all_access": true
+  },
+  
+  "exceptions": {
+    "allowed_services": [],
+    "allowed_components": [],
+    "allowed_fields": []
+  },
+  
+  "reporting": {
+    "generate_audit_report": true,
+    "report_format": "json",
+    "include_samples": true,
+    "max_violations_per_report": 100
+  }
+}
