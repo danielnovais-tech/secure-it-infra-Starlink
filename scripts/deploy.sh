@@ -120,7 +120,13 @@ terraform fmt -check -recursive || {
 case $ACTION in
     plan)
         print_info "Running Terraform plan..."
-        terraform plan -out=tfplan
+        # Check if tfvars file exists
+        if [ -f "$ENVIRONMENT.tfvars" ]; then
+            terraform plan -var-file=$ENVIRONMENT.tfvars -out=tfplan
+        else
+            print_warning "$ENVIRONMENT.tfvars not found, using default values"
+            terraform plan -out=tfplan
+        fi
         print_info "Plan saved to tfplan"
         print_info "Review the plan above before applying"
         ;;
@@ -133,7 +139,13 @@ case $ACTION in
             print_info "Deployment completed successfully"
         else
             print_warning "No plan file found, creating and applying new plan..."
-            terraform plan -out=tfplan
+            # Check if tfvars file exists
+            if [ -f "$ENVIRONMENT.tfvars" ]; then
+                terraform plan -var-file=$ENVIRONMENT.tfvars -out=tfplan
+            else
+                print_warning "$ENVIRONMENT.tfvars not found, using default values"
+                terraform plan -out=tfplan
+            fi
             
             # Auto-approve in automation mode, otherwise ask for confirmation
             if [ "${TF_IN_AUTOMATION:-false}" == "true" ]; then

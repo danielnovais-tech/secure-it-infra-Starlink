@@ -18,6 +18,10 @@ variable "project_name" {
 }
 
 # Security Group for Application Layer
+# NOTE: This is a baseline configuration. For production use:
+# - Replace 0.0.0.0/0 with specific IP ranges or use a load balancer
+# - Consider implementing AWS WAF for additional protection
+# - Use VPN or bastion host for administrative access
 # WARNING: This baseline configuration allows ingress from any IP (0.0.0.0/0) on ports 80/443.
 # This exposes the application tier directly to the internet and creates security risks.
 #
@@ -155,4 +159,12 @@ output "db_security_group_id" {
   description = "ID of the database security group"
   value       = aws_security_group.db.id
 }
+output "web_security_group_id" {
+  description = "ID of the web security group"
+  value       = aws_security_group.web_sg.id
+}
+
+output "db_security_group_id" {
+  description = "ID of the database security group"
+  value       = aws_security_group.db.id
 }

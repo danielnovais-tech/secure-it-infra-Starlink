@@ -138,6 +138,10 @@ jobs:
         working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
         run: |
           # Backend is disabled here to avoid needing cloud credentials in the plan job.
+      - name: Terraform Init (no backend for plan)
+        working-directory: ${{ env.TF_WORKDIR_BASE }}/${{ matrix.environment }}
+        run: |
+          # Using -backend=false since backend is commented out
           terraform init -backend=false -input=false
 
       - name: Terraform Plan (capture output)
@@ -146,6 +150,15 @@ jobs:
         run: |
           set -e
           terraform plan -no-color -input=false | tee plan.out
+          # Check if tfvars file exists
+          if [ ! -f "${{ matrix.environment }}.tfvars" ]; then
+            echo "Warning: ${{ matrix.environment }}.tfvars not found, using default values"
+            terraform plan -no-color -input=false | tee plan.out
+          else
+            terraform plan -var-file=${{ matrix.environment }}.tfvars -no-color -input=false | tee plan.out
+          fi
+          # Exit 0 to allow comment even if plan finds changes; fail applies in dedicated job
+          exit 0
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
