@@ -10,7 +10,7 @@ import pytest
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from starlink_security import StarlinkSecurityFoundation
+from starlink_security.foundation import StarlinkSecurityFoundation
 
 
 class TestStarlinkSecurityFoundation:

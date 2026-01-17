@@ -1,0 +1,7 @@
+{
+  "multipliers": {
+    "critical": 0.7,
+    "elevated": 0.9,
+    "normal": 1.0
+  }
+}

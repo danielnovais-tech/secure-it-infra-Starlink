@@ -1,0 +1,105 @@
+# Armada Executor Configuration
+# Fleet Management Job Executor
+
+# API Connection to Armada Server
+apiConnection:
+  armadaUrl: "armada-server:50051"
+  forceNoTls: true
+
+# Application Configuration
+application:
+  # Unique identifier for this cluster
+  clusterId: "starlink-cluster-1"
+  
+  # Cluster pool this executor belongs to
+  clusterPool: "starlink-pool"
+  
+  # Submit concurrency
+  submitConcurrencyLimit: 10
+  
+  # Update concurrency
+  updateConcurrencyLimit: 10
+  
+  # Delete concurrency
+  deleteConcurrencyLimit: 10
+
+# Kubernetes Configuration
+kubernetes:
+  # Namespace where jobs will be executed
+  namespace: "armada-jobs"
+  
+  # Whether to impersonate users when creating pods
+  impersonateUsers: false
+  
+  # QPS and burst settings for Kubernetes API
+  qps: 100
+  burst: 200
+  
+  # How long before a stuck pod is considered failed
+  stuckPodExpiry: 5m
+  
+  # Minimum pod age before deletion
+  minimumPodAge: 3m
+  
+  # Pending pod checking interval
+  pendingPodCheckerInterval: 10s
+  
+  # Failed pod checking interval
+  failedPodCheckerInterval: 10s
+
+# Task Configuration
+task:
+  # How often to report cluster utilization to server
+  utilisationReportingInterval: 30s
+  
+  # How often to reconcile missing job events
+  missingJobEventReconciliationInterval: 15s
+  
+  # How often to renew job leases
+  jobLeaseRenewalInterval: 30s
+  
+  # Batch size for job status updates
+  updateJobStatusBatchSize: 100
+  
+  # Pod defaults
+  podDefaults:
+    # Default scheduler to use
+    schedulerName: "default-scheduler"
+    
+    # Default ingress configuration
+    ingress:
+      enabled: false
+    
+    # Default service configuration
+    service:
+      enabled: false
+
+# Resource Management
+resource:
+  # Allocatable resources (override if needed)
+  # These should match or be lower than actual cluster capacity
+  allocatable:
+    cpu: "1000"
+    memory: "1000Gi"
+    ephemeralStorage: "10Ti"
+    gpu: "10"
+
+# Metrics Configuration
+metric:
+  port: 9001
+  path: "/metrics"
+  exposeQueueUsageMetrics: true
+
+# Logging
+logging:
+  level: "info"
+  format: "json"
+
+# Pulsar Event Publishing (for reliability)
+eventPublisher:
+  pulsar:
+    enabled: true
+    url: "pulsar://broker.pulsar:6650"
+    jobEventsTopic: "persistent://public/default/armada-job-events"
+    compressionType: "LZ4"
+    sendTimeout: 30s

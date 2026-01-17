@@ -1,0 +1,42 @@
+# Lookout Configuration
+# Armada Job Monitoring UI
+
+# ⚠️ SECURITY WARNING ⚠️
+# Default password is used here for development only!
+# For production: Use environment variables or secrets management
+# See docs/SECURITY.md for security hardening
+
+# API Connection
+armadaUrl: "armada-server:50051"
+
+# HTTP Server Configuration
+httpPort: 8080
+metricsPort: 9002
+
+# PostgreSQL Configuration
+postgres:
+  connection:
+    host: postgres
+    port: 5432
+    user: armada
+    password: armada_password  # DEV ONLY - Use env var ${POSTGRES_PASSWORD} in production
+    dbname: armada
+    sslmode: disable  # Change to 'require' for production
+  maxOpenConns: 100
+  maxIdleConns: 25
+
+# UI Configuration
+ui:
+  # Number of jobs to display per page
+  jobsPerPage: 50
+  
+  # Auto-refresh interval (in seconds)
+  autoRefreshInterval: 30
+  
+  # Maximum number of jobs to retrieve
+  maxJobsToRetrieve: 10000
+
+# Logging
+logging:
+  level: "info"
+  format: "json"
