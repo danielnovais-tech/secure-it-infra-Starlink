@@ -14,7 +14,7 @@ import hmac
 import time
 import os
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from pathlib import Path
 import http.server
 import socketserver
