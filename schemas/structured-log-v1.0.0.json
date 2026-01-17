@@ -1,0 +1,314 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://starlink-security.example.com/schemas/structured-log/v1.0.0",
+  "title": "Starlink Security Structured Log Schema",
+  "description": "Versioned JSON Schema for all Starlink Security log types (operational, security, audit)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "timestamp",
+    "logger",
+    "level",
+    "module",
+    "line",
+    "message",
+    "service",
+    "component"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version of this schema (semver format)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "enum": ["1.0.0"],
+      "examples": ["1.0.0"]
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO 8601 timestamp with timezone",
+      "format": "date-time",
+      "examples": ["2026-01-16T19:29:09.456Z", "2026-01-16T19:29:09.456+00:00"]
+    },
+    "logger": {
+      "type": "string",
+      "description": "Name of the logger that generated this entry",
+      "minLength": 1,
+      "maxLength": 256,
+      "examples": ["starlink-security", "starlink-security.auth", "starlink-security.network"]
+    },
+    "level": {
+      "type": "string",
+      "description": "Log level/severity",
+      "enum": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+      "examples": ["INFO", "ERROR"]
+    },
+    "module": {
+      "type": "string",
+      "description": "Python module that generated the log",
+      "minLength": 1,
+      "maxLength": 256,
+      "examples": ["starlink_security", "auth_handler", "network_monitor"]
+    },
+    "line": {
+      "type": "integer",
+      "description": "Line number in source code",
+      "minimum": 1,
+      "examples": [42, 156]
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable log message",
+      "minLength": 1,
+      "maxLength": 4096,
+      "examples": ["User login successful", "Unauthorized access attempt detected"]
+    },
+    "service": {
+      "type": "string",
+      "description": "Service name in the Starlink ecosystem",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9-]+$",
+      "examples": ["starlink-security", "satellite-monitor", "ground-station-api"]
+    },
+    "component": {
+      "type": "string",
+      "description": "Component or subsystem within the service",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9-]+$",
+      "examples": ["authentication", "authorization", "telemetry", "configuration"]
+    },
+    "error_code": {
+      "type": "string",
+      "description": "Standardized error code for filtering and alerting",
+      "pattern": "^[A-Z]{2,4}-\\d{3}$",
+      "examples": ["SEC-001", "AUTH-002", "NET-003", "CFG-001", "SYS-002"]
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlation ID for tracing across distributed systems",
+      "minLength": 1,
+      "maxLength": 256,
+      "examples": ["req-12345", "trace-abc123", "span-xyz789"]
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Request identifier for HTTP/API calls",
+      "minLength": 1,
+      "maxLength": 256,
+      "examples": ["req-12345-67890", "api-call-abc123"]
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session identifier for user sessions",
+      "minLength": 1,
+      "maxLength": 256,
+      "examples": ["sess-abc123", "session-xyz789"]
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User identifier (email, username, or system ID)",
+      "minLength": 1,
+      "maxLength": 256,
+      "examples": ["user@example.com", "admin-service", "system-monitor"]
+    },
+    "privacy_tags": {
+      "type": "array",
+      "description": "Tags indicating data sensitivity and privacy requirements",
+      "items": {
+        "type": "string",
+        "enum": [
+          "PII",
+          "PHI",
+          "CONFIDENTIAL",
+          "INTERNAL",
+          "PUBLIC",
+          "REDACTED",
+          "ENCRYPTED"
+        ]
+      },
+      "uniqueItems": true,
+      "examples": [["PII", "CONFIDENTIAL"], ["PUBLIC"], ["REDACTED"]]
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "IP address (IPv4 or IPv6) - mark with PII tag if user-identifiable",
+      "oneOf": [
+        {
+          "format": "ipv4"
+        },
+        {
+          "format": "ipv6"
+        }
+      ],
+      "examples": ["192.168.1.100", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"]
+    },
+    "environment": {
+      "type": "string",
+      "description": "Deployment environment",
+      "enum": ["development", "staging", "production", "test"],
+      "examples": ["production", "staging"]
+    },
+    "hostname": {
+      "type": "string",
+      "description": "Hostname or pod name where log was generated",
+      "minLength": 1,
+      "maxLength": 256,
+      "examples": ["starlink-sec-pod-123", "security-server-01.example.com"]
+    },
+    "process_id": {
+      "type": "integer",
+      "description": "Process ID of the logging application",
+      "minimum": 1,
+      "examples": [1234, 56789]
+    },
+    "thread_id": {
+      "type": "integer",
+      "description": "Thread ID that generated the log",
+      "minimum": 1,
+      "examples": [140234567890, 140234567891]
+    },
+    "exception": {
+      "type": "string",
+      "description": "Exception stacktrace if applicable",
+      "minLength": 1,
+      "maxLength": 16384,
+      "examples": ["Traceback (most recent call last):\\n  File ...\\nValueError: Invalid input"]
+    },
+    "duration_ms": {
+      "type": "number",
+      "description": "Duration in milliseconds for operations",
+      "minimum": 0,
+      "examples": [123.45, 1500.0]
+    },
+    "status_code": {
+      "type": "integer",
+      "description": "HTTP status code or operation result code",
+      "minimum": 100,
+      "maximum": 599,
+      "examples": [200, 404, 500]
+    },
+    "resource": {
+      "type": "string",
+      "description": "Resource being accessed or modified",
+      "minLength": 1,
+      "maxLength": 1024,
+      "examples": ["/api/admin", "/data/satellite/telemetry", "/config/security"]
+    },
+    "action": {
+      "type": "string",
+      "description": "Action being performed",
+      "enum": [
+        "CREATE",
+        "READ",
+        "UPDATE",
+        "DELETE",
+        "LOGIN",
+        "LOGOUT",
+        "AUTHENTICATE",
+        "AUTHORIZE",
+        "EXECUTE",
+        "ACCESS"
+      ],
+      "examples": ["LOGIN", "UPDATE", "READ"]
+    },
+    "result": {
+      "type": "string",
+      "description": "Result of the action",
+      "enum": ["SUCCESS", "FAILURE", "PARTIAL", "PENDING"],
+      "examples": ["SUCCESS", "FAILURE"]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional context-specific metadata",
+      "additionalProperties": true,
+      "examples": [
+        {
+          "satellite_id": "sat-1234",
+          "ground_station": "gs-west-01"
+        },
+        {
+          "config_key": "max_retry",
+          "old_value": 3,
+          "new_value": 5
+        }
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "description": "Arbitrary tags for categorization and filtering",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "uniqueItems": true,
+      "examples": [["security", "audit"], ["performance", "monitoring"]]
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "schema_version": "1.0.0",
+      "timestamp": "2026-01-16T19:29:09.456Z",
+      "logger": "starlink-security",
+      "level": "INFO",
+      "module": "starlink_security",
+      "line": 98,
+      "message": "User login successful",
+      "service": "starlink-security",
+      "component": "authentication",
+      "correlation_id": "req-12345",
+      "request_id": "req-12345",
+      "user_id": "user@example.com",
+      "privacy_tags": ["PII"],
+      "ip_address": "192.168.1.100",
+      "environment": "production",
+      "action": "LOGIN",
+      "result": "SUCCESS"
+    },
+    {
+      "schema_version": "1.0.0",
+      "timestamp": "2026-01-16T19:29:10.123Z",
+      "logger": "starlink-security.auth",
+      "level": "ERROR",
+      "module": "auth_handler",
+      "line": 156,
+      "message": "Unauthorized access attempt",
+      "service": "starlink-security",
+      "component": "authorization",
+      "error_code": "SEC-002",
+      "correlation_id": "req-67890",
+      "user_id": "user-67890",
+      "privacy_tags": ["PII", "CONFIDENTIAL"],
+      "ip_address": "203.0.113.42",
+      "environment": "production",
+      "resource": "/admin/settings",
+      "action": "ACCESS",
+      "result": "FAILURE"
+    },
+    {
+      "schema_version": "1.0.0",
+      "timestamp": "2026-01-16T19:29:11.789Z",
+      "logger": "starlink-security.config",
+      "level": "WARNING",
+      "module": "config_manager",
+      "line": 203,
+      "message": "Configuration updated",
+      "service": "starlink-security",
+      "component": "configuration",
+      "error_code": "CFG-001",
+      "user_id": "admin@example.com",
+      "privacy_tags": ["INTERNAL"],
+      "environment": "production",
+      "resource": "/config/security",
+      "action": "UPDATE",
+      "result": "SUCCESS",
+      "metadata": {
+        "config_key": "max_retry_attempts",
+        "old_value": 3,
+        "new_value": 5
+      }
+    }
+  ]
+}
