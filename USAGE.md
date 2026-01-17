@@ -190,6 +190,7 @@ The module provides structured logging with both console and file outputs:
 - **File logging**: JSON format at DEBUG level in `~/.starlink_security/logs/starlink_security_YYYYMMDD.log`
 
 Example log entry:
+
 ```json
 {
     "timestamp": "2026-01-15T22:12:16.728000",
@@ -203,6 +204,7 @@ Example log entry:
 ### Encryption
 
 The module automatically generates and stores an encryption key on first use at:
+
 - `~/.starlink_security/config/encryption.key`
 
 This key persists across instances and is used for secure communications. The module supports automatic key rotation:
@@ -214,6 +216,7 @@ if foundation._needs_key_rotation():
 ```
 
 Key backups are created at:
+
 - `~/.starlink_security/config/encryption.key.backup.YYYYMMDDHHMMSS`
 
 ## API Reference
@@ -221,12 +224,15 @@ Key backups are created at:
 ### Classes
 
 #### `StarlinkSecurityFoundation`
+
 Main class for security operations with lifecycle management.
 
 **Initialization:**
+
 - `__init__(config_path: Optional[str] = None, module_factory: Optional[Callable] = None)` - Initialize with optional configuration file and module factory for dependency injection
 
 **Attributes:**
+
 - `config: Dict[str, Any]` - Validated configuration dictionary
 - `security_level: SecurityLevel` - Current security level
 - `connection_type: ConnectionType` - Current connection type
@@ -240,10 +246,12 @@ Main class for security operations with lifecycle management.
 - `logger: logging.Logger` - Structured logger instance
 
 **Lifecycle Methods:**
+
 - `start()` - Start all security modules and begin operations
 - `stop()` - Stop all security modules and cease operations
 
 **Core Methods:**
+
 - `log_event(event: SecurityEvent)` - Log a security event (thread-safe)
 - `update_metrics(metrics: NetworkMetrics)` - Update network metrics (thread-safe)
 - `set_security_level(level: SecurityLevel)` - Change security level
@@ -252,46 +260,56 @@ Main class for security operations with lifecycle management.
 - `get_unresolved_events()` - Get unresolved security events (thread-safe)
 
 **Monitoring & Observability:**
+
 - `get_metrics_summary()` - Get comprehensive metrics for monitoring/observability
   - Returns: active_threats_count, unresolved_events_count, queue_utilization, network_metrics, module status, key age, etc.
 
 **Security Methods:**
+
 - `rotate_encryption_key()` - Rotate encryption key with automatic backup
 - `_needs_key_rotation()` - Check if key rotation is needed based on age
 
 **Private Methods:**
+
 - `_load_config(config_path)` - Load and validate configuration from file
 - `_initialize_encryption()` - Initialize encryption key with age tracking
 - `_initialize_modules()` - Initialize security modules via factory pattern
 - `_default_module_factory(name, enabled)` - Default module factory
 
 #### `SecurityModule`
+
 Base class for security modules with lifecycle management.
 
 **Methods:**
+
 - `start()` - Start the module
 - `stop()` - Stop the module
 - `get_status()` - Get module status dictionary
 
 **Attributes:**
+
 - `name: str` - Module name
 - `enabled: bool` - Whether module is enabled
 - `status: str` - Current status (initialized, active, stopped)
 - `logger: logging.Logger` - Module-specific logger
 
 #### `SecurityLevel` (Enum)
+
 - `NORMAL` - Normal operations
 - `ELEVATED` - Increased security monitoring
 - `CRITICAL` - Maximum security protocols
 - `RECOVERY` - System recovery mode
 
 #### `ConnectionType` (Enum)
+
 - `STARLINK_ONLY` - Starlink as sole connection
 - `HYBRID` - Starlink + backup connection
 - `FAILOVER` - Primary failed, using Starlink
 
 #### `SecurityEvent` (Dataclass)
+
 Security event data structure with fields:
+
 - `timestamp: datetime` - When the event occurred
 - `event_type: str` - Type of event
 - `severity: str` - Event severity level
@@ -301,7 +319,9 @@ Security event data structure with fields:
 - `resolved: bool` - Resolution status
 
 #### `NetworkMetrics` (Dataclass)
+
 Network performance metrics with fields:
+
 - `latency: float` - Network latency
 - `jitter: float` - Network jitter
 - `packet_loss: float` - Packet loss percentage
@@ -330,6 +350,7 @@ except OSError as e:
 - cryptography>=42.0.4
 
 Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
