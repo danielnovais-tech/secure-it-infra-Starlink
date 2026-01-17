@@ -1,0 +1,36 @@
+# Starlink Security Foundation Configuration
+# This is a sample configuration file showing all available options
+
+security:
+  encryption_enabled: true
+  vpn_required: true
+  minimum_tls_version: "TLSv1.3"
+  threat_intelligence_feeds:
+    - "https://feeds.dshield.org/block.txt"
+    - "https://rules.emergingthreats.net/blockrules/compromised-ips.txt"
+
+monitoring:
+  network_scan_interval: 300  # seconds
+  threat_check_interval: 60   # seconds
+  log_retention_days: 90      # days
+
+starlink:
+  gateway_ip: "192.168.100.1"
+  api_endpoint: "http://192.168.100.1:9200"
+  performance_thresholds:
+    max_latency: 100      # milliseconds
+    max_jitter: 20        # milliseconds
+    max_packet_loss: 2    # percentage
+    min_throughput: 10    # Mbps
+
+enterprise:
+  critical_services:
+    - vpn
+    - authentication
+    - database
+  backup_connections:
+    - cellular
+    - satellite_backup
+  recovery_procedures:
+    - failover
+    - degraded_mode
