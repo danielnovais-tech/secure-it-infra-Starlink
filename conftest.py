@@ -51,3 +51,17 @@ def pytest_configure(config):  # noqa: D401
             )
         except Exception as exc:  # pragma: no cover
             print("[DEBUG] secure_it_infra import failed:", repr(exc))
+
+        try:
+            import starlink_security  # noqa: F401
+
+            import starlink_security as _ss
+
+            print(
+                "[DEBUG] starlink_security file=",
+                getattr(_ss, "__file__", None),
+                "path=",
+                getattr(_ss, "__path__", None),
+            )
+        except Exception as exc:  # pragma: no cover
+            print("[DEBUG] starlink_security import failed:", repr(exc))
