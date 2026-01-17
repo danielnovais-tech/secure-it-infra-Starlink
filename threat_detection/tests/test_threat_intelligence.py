@@ -1,6 +1,6 @@
-"""
-Tests for Threat Intelligence Updater
-"""
+"""Tests for Threat Intelligence Updater."""
+
+import os
 
 from threat_detection.modules.threat_intelligence import ThreatIntelligenceUpdater
 

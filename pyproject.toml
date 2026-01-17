@@ -72,7 +72,12 @@ line_length = 120
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-v --tb=short"
-testpaths = ["."]
+testpaths = [
+    "tests",
+    "incident_response/tests",
+    "sesf/tests",
+    "threat_detection/tests",
+]
 python_files = "test_*.py"
 
 [tool.mypy]

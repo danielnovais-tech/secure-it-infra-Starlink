@@ -1,7 +1,6 @@
-"""
-Tests for Brute-force Detector
-"""
+"""Tests for Brute-force Detector."""
 
+import os
 import tempfile
 from threat_detection.modules.brute_force_detector import BruteForceDetector
 
