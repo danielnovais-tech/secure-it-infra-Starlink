@@ -206,7 +206,7 @@ class PrivacyEnforcer:
         'ipv4': r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b'
     }
     
-    def __init__(self, strict_environments: Set[str] = None):
+    def __init__(self, strict_environments: Optional[Set[str]] = None):
         """
         Initialize privacy enforcer.
         

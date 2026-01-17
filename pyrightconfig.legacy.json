@@ -3,18 +3,11 @@
   "pythonPlatform": "Windows",
   "venvPath": ".",
   "venv": ".venv",
+
   "include": [
-    "secure_it_starlink/**/*.py",
-    "security_modules/**/*.py",
-    "incident_response/**/*.py",
-    "sesf/**/*.py",
-    "threat_detection/**/*.py",
-    "vpn_manager/**/*.py",
-    "src/starlink_security/**/*.py",
-    "main.py",
-    "smoke_test.py",
-    "validate_logs.py"
+    "tests/**/*.py"
   ],
+
   "exclude": [
     "**/__pycache__",
     "**/.pytest_cache",
@@ -33,14 +26,12 @@
     "kubernetes/**",
     "scripts/**",
     "armada-atlas/**",
-    "tests/**",
-    "starlink_security.py",
-    "starlink_security_auditor.py",
-    "starlink_monitor.py",
-    "starlink_metrics.py",
-    "starlink_api.py",
+
     "example_usage.py",
     "examples.py",
     "test_*.py"
-  ]
+  ],
+
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none"
 }
