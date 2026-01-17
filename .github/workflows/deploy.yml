@@ -210,7 +210,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ~> 1.6
+          terraform_version: 1.6.x
 
       - name: Validate environment
         run: |
@@ -223,9 +223,19 @@ jobs:
         run: |
           ./scripts/deploy.sh ${{ inputs.environment }} ${{ inputs.action }}
         env:
-          # Add AWS credentials here when ready to deploy
+          # WARNING: This workflow is currently non-functional - AWS credentials are not configured.
+          # 
+          # To enable deployments, configure AWS credentials using one of these methods:
+          # 
+          # Option 1 (Quick but less secure): Use GitHub secrets with long-lived credentials
           # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # 
+          # Option 2 (Recommended): Use OIDC authentication with AWS IAM roles
+          # See docs/FUTURE_IMPROVEMENTS.md for OIDC implementation guide.
+          # This provides automatic credential rotation and better security.
+          #
+          # DO NOT merge or enable this workflow until credentials are properly configured.
           TF_IN_AUTOMATION: true
 
       - name: Upload plan artifact

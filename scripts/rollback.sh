@@ -63,7 +63,7 @@ if [ "$ENVIRONMENT" == "production" ]; then
 fi
 
 # Check if state file exists
-if [ ! -f "terraform.tfstate" ] && [ ! -f ".terraform/terraform.tfstate" ]; then
+if [ ! -f "terraform.tfstate" ]; then
     print_error "No Terraform state found. Cannot perform rollback."
     exit 1
 fi
@@ -97,8 +97,11 @@ case $option in
             print_info "Restoring from backup..."
             cp terraform.tfstate.backup terraform.tfstate
             
-            print_info "Applying restored state..."
-            terraform apply -refresh-only
+            print_info "Planning rollback changes based on restored state..."
+            terraform plan
+            
+            print_info "Applying rollback changes..."
+            terraform apply
             
             print_info "Rollback completed successfully"
         else

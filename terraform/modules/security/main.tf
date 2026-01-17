@@ -130,14 +130,6 @@ resource "aws_security_group" "db" {
   }
 
   egress {
-    description = "Allow HTTPS for AWS services and updates"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
     description = "Allow DNS queries"
     from_port   = 53
     to_port     = 53
@@ -156,6 +148,11 @@ resource "aws_security_group" "db" {
 output "app_security_group_id" {
   description = "ID of the application security group"
   value       = aws_security_group.app.id
+}
+
+output "web_security_group_id" {
+  description = "ID of the web security group"
+  value       = aws_security_group.web_sg.id
 }
 
 output "db_security_group_id" {
