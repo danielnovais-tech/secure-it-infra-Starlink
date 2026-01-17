@@ -1,0 +1,36 @@
+# Example Terraform variables configuration
+# Copy this file to terraform.tfvars and update with your values
+
+# AWS Configuration
+aws_region = "us-east-1"
+secondary_region = "us-west-2"
+environment = "prod"
+
+# Network Configuration
+vpc_cidr = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+
+# Monitoring and Alerting
+alert_email = "security-team@example.com"
+log_retention_days = 90
+
+# Incident Response
+incident_response_emails = [
+  "security-team@example.com",
+  "ops-team@example.com",
+  "manager@example.com"
+]
+
+# Compliance and Governance
+compliance_emails = [
+  "compliance@example.com",
+  "audit@example.com"
+]
+
+# VPN Configuration
+# Replace with your Starlink terminal's public IP
+customer_gateway_ip = "203.0.113.1"
+
+# Backup Configuration
+backup_retention_days = 30
+enable_multi_region_backup = true
