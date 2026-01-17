@@ -43,7 +43,6 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Set
 import re
 from datetime import datetime
-import os
 
 # Simple schema validator (no external dependencies for CI)
 class SimpleSchemaValidator:
