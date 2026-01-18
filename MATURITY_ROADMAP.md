@@ -3,6 +3,7 @@
 This roadmap outlines the current state and planned enhancements for the Starlink security infrastructure, organized as a practical checklist for implementation.
 
 ## Legend
+
 - ✅ **Implemented** - Feature is complete and deployed
 - ⏳ **In Progress** - Feature is partially implemented or currently being worked on
 - [ ] **Planned** - Feature is planned for future implementation
@@ -11,14 +12,16 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 
 ## 1. Observabilidade (Observability)
 
-### Current State ✅
+### Current State (Observability) ✅
+
 - ✅ CloudWatch dashboards for infrastructure metrics
 - ✅ Centralized logging with S3 and CloudWatch Logs
 - ✅ VPC Flow Logs for network traffic analysis
 - ✅ SNS-based automated alerting system
 - ✅ Custom metric filters for security and connectivity events
 
-### Next Steps
+### Next Steps (Observability)
+
 - [ ] **Adicionar tracing distribuído (AWS X-Ray ou OpenTelemetry)**
   - [ ] Enable AWS X-Ray for Lambda functions (incident response, compliance reporter, VPN rotation)
   - [ ] Configure X-Ray service maps for dependency visualization
@@ -45,7 +48,8 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 
 ## 2. Resiliência (Resilience)
 
-### Current State ✅
+### Current State (Resilience) ✅
+
 - ✅ Multi-AZ VPC architecture across 3 availability zones
 - ✅ Dual-tunnel VPN for high availability with BGP routing
 - ✅ AWS Backup with daily/weekly schedules
@@ -53,7 +57,8 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 - ✅ Route53 health checks for failover
 - ✅ Lambda-based automated failover procedures
 
-### Next Steps
+### Next Steps (Resilience)
+
 - [ ] **Implementar testes de caos (chaos engineering) simulando falhas de rede/AZ**
   - [ ] Set up AWS Fault Injection Simulator (FIS)
   - [ ] Create experiment template for VPN tunnel failure
@@ -88,7 +93,8 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 
 ## 3. Segurança Contínua (Continuous Security)
 
-### Current State ✅
+### Current State (Continuous Security) ✅
+
 - ✅ AWS GuardDuty for intelligent threat detection
 - ✅ Security Hub with CIS and PCI-DSS compliance standards
 - ✅ WAF with managed rule sets
@@ -97,7 +103,8 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 - ✅ Custom threat intelligence integration
 - ✅ Custom WAF regex patterns for SQL injection and suspicious user agents
 
-### Next Steps
+### Next Steps (Continuous Security)
+
 - [ ] **Rotação automática de segredos com AWS Secrets Manager** ✅ (Partially Implemented)
   - ✅ VPN pre-shared key rotation implemented
   - [ ] Extend rotation to database credentials
@@ -132,7 +139,8 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 
 ## 4. Governança e Compliance (Governance & Compliance)
 
-### Current State ✅
+### Current State (Governance & Compliance) ✅
+
 - ✅ Mandatory resource tagging policies (Environment, Project, ManagedBy, CostCenter)
 - ✅ Tag value validation and enforcement via AWS Config
 - ✅ Weekly automated compliance reports
@@ -140,7 +148,8 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 - ✅ Email notifications to compliance and audit teams
 - ✅ EventBridge-triggered reporting schedule
 
-### Next Steps
+### Next Steps (Governance & Compliance)
+
 - [ ] **Políticas de tagging obrigatórias via AWS Config** ✅ (Implemented)
   - ✅ Required tags Config rule implemented
   - ✅ Tag value validation implemented
@@ -174,14 +183,16 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 
 ## 5. Pipeline CI/CD
 
-### Current State ✅
+### Current State (CI/CD) ✅
+
 - ✅ GitHub Actions workflow for Terraform validation
 - ✅ Terraform format checking (`terraform fmt -check`)
 - ✅ Terraform syntax validation (`terraform validate`)
 - ✅ Security scanning with Checkov
 - ✅ Cost estimation ready (Infracost integration)
 
-### Next Steps
+### Next Steps (CI/CD)
+
 - [ ] **Comentários automáticos de `terraform plan` nos PRs** ✅ (Implemented)
   - ✅ Automated PR comments with terraform plan results implemented
   - [ ] Enhance plan output formatting for better readability
@@ -218,85 +229,105 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Implementation Timeline
 
 ### Quarter 1 (Next 3 Months) - Priority Items
+
 **Observability:**
+
 - AWS X-Ray integration for Lambda functions
 - CloudWatch Logs Insights query library
 - Basic unified dashboard
 
 **Resilience:**
+
 - AWS FIS basic experiments (VPN, NAT Gateway)
 - First monthly backup restoration test
 - Document failover procedures
 
 **Security:**
+
 - Extend secret rotation to databases
 - Application-specific GuardDuty filters
 - SIEM evaluation and proof of concept
 
 **Governance:**
+
 - Expand tagging to all resource types
 - Multi-format compliance reports
 - NIST 800-53 framework enablement
 
 **CI/CD:**
+
 - Enhanced PR comment formatting
 - GitHub Environments setup
 - Terratest framework installation
 
 ### Quarter 2 (3-6 Months)
+
 **Observability:**
+
 - CloudWatch Application Insights for all services
 - Complete unified observability dashboard
 - Lambda Insights for all functions
 
 **Resilience:**
+
 - Quarterly GameDay exercise
 - Full AZ failure simulation
 - Automated failover testing framework
 
 **Security:**
+
 - SIEM integration complete
 - Custom WAF rules for all API endpoints
 - Threat hunting automation
 
 **Governance:**
+
 - Automated compliance remediation
 - ISO 27001 control mapping
 - Quarterly compliance assessments
 
 **CI/CD:**
+
 - Production deployment approvals
 - Terratest coverage for all modules
 - Automated rollback procedures
 
 ### Quarter 3 (6-9 Months)
+
 **Observability:**
+
 - OpenTelemetry evaluation/pilot
 - Advanced anomaly detection
 - Prometheus/Grafana (optional)
 
 **Resilience:**
+
 - Chaos Toolkit automated experiments
 - Multi-region active-active architecture planning
 - Self-healing infrastructure POC
 
 **Security:**
+
 - Advanced threat correlation
 - Penetration testing integration
 - Security posture scoring
 
 **Governance:**
+
 - Historical compliance trending
 - Automated audit evidence collection
 - Cost optimization based on tagging
 
 **CI/CD:**
+
 - Full test automation with >80% coverage
 - Multi-environment deployment pipeline
 - Deployment analytics and insights
 
 ### Quarter 4 (9-12 Months)
+
 **All Categories:**
+
 - Review and refine all implemented features
 - Conduct maturity assessment against roadmap
 - Plan next phase of enhancements
@@ -308,12 +339,14 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Success Metrics (KPIs)
 
 ### Observability
+
 - [ ] MTTD (Mean Time to Detect) < 5 minutes
 - [ ] 100% of Lambda functions instrumented with X-Ray
 - [ ] Unified dashboard adoption by all team members
 - [ ] < 2% false positive alert rate
 
 ### Resilience
+
 - [ ] RTO (Recovery Time Objective) < 1 hour - validated quarterly
 - [ ] RPO (Recovery Point Objective) < 15 minutes - validated quarterly
 - [ ] Chaos experiment success rate > 80%
@@ -321,18 +354,21 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 - [ ] Availability 99.99% (target, currently 99.95%)
 
 ### Security
+
 - [ ] MTTR (Mean Time to Resolve) < 30 minutes for security incidents
 - [ ] 100% of secrets rotated within compliance windows
 - [ ] Zero critical Security Hub findings older than 7 days
 - [ ] SIEM event correlation < 1 minute
 
 ### Governance
+
 - [ ] 100% resource tagging compliance
 - [ ] Zero compliance violations in weekly reports
 - [ ] Quarterly audit readiness achieved
 - [ ] All frameworks (CIS, NIST, ISO 27001) > 90% compliant
 
 ### CI/CD
+
 - [ ] 100% of PRs automatically validated
 - [ ] Zero production incidents from deployments
 - [ ] Terratest coverage > 80%
@@ -344,6 +380,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Resources & Documentation
 
 ### Tools Required
+
 - AWS X-Ray / OpenTelemetry (tracing)
 - AWS Fault Injection Simulator (chaos engineering)
 - Terratest (infrastructure testing)
@@ -351,6 +388,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 - GitHub Environments (deployment control)
 
 ### Documentation to Create
+
 - [ ] Observability runbook
 - [ ] Chaos experiment playbook
 - [ ] Incident response procedures (updated)
@@ -360,6 +398,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 - [ ] SIEM integration guide
 
 ### Team Training Required
+
 - [ ] AWS X-Ray and distributed tracing
 - [ ] Chaos engineering principles and FIS
 - [ ] Terratest and infrastructure testing
@@ -373,8 +412,9 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 **Document Owner**: Infrastructure Security Team  
 **Review Frequency**: Quarterly  
 **Next Review**: 2026-04-14
-  - SMS for high-priority incidents
-  - Alert escalation policies
+
+- SMS for high-priority incidents
+- Alert escalation policies
 
 - 📋 **Intelligent Alerting**
   - Machine learning-based anomaly detection
@@ -387,7 +427,9 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Phase 3: Resilience & Chaos Engineering (📋 Planned)
 
 ### Chaos Engineering Framework
+
 - 📋 **AWS Fault Injection Simulator (FIS)**
+
   - VPN tunnel failure simulation
   - NAT Gateway failure testing
   - EC2 instance termination experiments
@@ -395,50 +437,60 @@ This roadmap outlines the current state and planned enhancements for the Starlin
   - Resource throttling tests
 
 - 📋 **Chaos Toolkit Integration**
+
   - Automated chaos experiments
   - Hypothesis-driven testing
   - Experiment templates library
   - Rollback automation
 
 - 📋 **GameDay Exercises**
+
   - Quarterly disaster recovery drills
   - Incident response simulations
   - Multi-team coordination exercises
   - Post-mortem analysis and improvements
 
-### Resilience Testing
+### Resilience Testing (Tools)
+
 - 📋 **Automated Failover Testing**
+
   - VPN tunnel automatic failover validation
   - Multi-region backup failover tests
   - DNS failover verification
   - Database replica promotion tests
 
 - 📋 **Load & Stress Testing**
+
   - VPN bandwidth stress tests
   - Connection limit testing
   - DDoS simulation scenarios
   - Recovery time objective (RTO) validation
 
 - 📋 **Backup & Recovery Validation**
+
   - Automated backup restoration tests
   - Point-in-time recovery drills
   - Cross-region recovery scenarios
   - Data integrity verification
 
 ### Incident Simulation
+
 - 📋 **Security Incident Simulations**
+
   - Breach detection and response drills
   - GuardDuty finding simulations
   - WAF rule effectiveness testing
   - Automated remediation validation
 
 - 📋 **Network Failure Scenarios**
+
   - Internet connectivity loss
   - Starlink terminal failure
   - AWS AZ outage simulation
   - BGP routing failure tests
 
 - 📋 **Application Failure Scenarios**
+
   - Lambda function failures
   - API Gateway throttling
   - Database connection exhaustion
@@ -449,6 +501,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Phase 4: Advanced Resilience (📋 Planned)
 
 ### Multi-Region Architecture
+
 - 📋 **Active-Active Multi-Region**
   - Traffic distribution across regions
   - Global load balancing with Route53
@@ -462,6 +515,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
   - Replication lag alerting
 
 ### Self-Healing Infrastructure
+
 - 📋 **Automated Recovery**
   - Auto-scaling for degraded services
   - Automatic instance replacement
@@ -475,6 +529,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
   - Cost optimization recommendations
 
 ### Advanced Security Testing
+
 - 📋 **Penetration Testing**
   - Quarterly external penetration tests
   - Red team exercises
@@ -492,6 +547,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Phase 5: Optimization & Intelligence (🎯 Long-term Goals)
 
 ### AI/ML-Powered Operations
+
 - 🎯 **Predictive Analytics**
   - Anomaly detection with ML
   - Capacity forecasting
@@ -505,6 +561,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
   - Intelligent cost optimization
 
 ### Advanced Observability
+
 - 🎯 **OpenTelemetry Integration**
   - Vendor-agnostic observability
   - Unified telemetry collection
@@ -518,6 +575,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
   - SLA/SLO tracking and reporting
 
 ### Resilience as Code
+
 - 🎯 **Chaos Engineering Platform**
   - Continuous chaos experiments
   - Automated resilience scoring
@@ -534,25 +592,29 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 
 ## Implementation Priorities
 
-### Quarter 1 (Next 3 Months)
+### Quarter 1 (Next 3 Months) — Priorities
+
 1. **AWS X-Ray Integration** - Enable distributed tracing
 2. **CloudWatch Logs Insights** - Create common query library
 3. **FIS Experiments** - Set up basic chaos experiments
 4. **Automated Backup Testing** - Monthly restoration tests
 
-### Quarter 2 (3-6 Months)
+### Quarter 2 (3-6 Months) — Priorities
+
 1. **CloudWatch Application Insights** - Enable for critical services
 2. **Multi-Channel Alerting** - Integrate PagerDuty and Slack
 3. **GameDay Exercises** - Conduct first quarterly drill
 4. **Load Testing Framework** - Establish baseline performance
 
-### Quarter 3 (6-9 Months)
+### Quarter 3 (6-9 Months) — Priorities
+
 1. **Unified Observability Dashboard** - Single pane of glass
 2. **Chaos Toolkit Integration** - Automated experiment library
 3. **Security Incident Simulations** - Monthly security drills
 4. **Intelligent Alerting** - ML-based anomaly detection
 
-### Quarter 4 (9-12 Months)
+### Quarter 4 (9-12 Months) — Priorities
+
 1. **Active-Active Multi-Region** - Begin architecture transition
 2. **Self-Healing Infrastructure** - Implement automated recovery
 3. **OpenTelemetry Pilot** - Evaluate vendor-agnostic telemetry
@@ -563,18 +625,21 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Success Metrics
 
 ### Observability Maturity
+
 - **Level 1 (Current)**: Basic monitoring and logging ✅
 - **Level 2 (Target Q2)**: Advanced APM and correlation
 - **Level 3 (Target Q4)**: Predictive analytics and AI-driven insights
 - **Level 4 (Year 2)**: Autonomous operations and optimization
 
 ### Resilience Maturity
+
 - **Level 1 (Current)**: Basic HA and backup ✅
 - **Level 2 (Target Q2)**: Chaos testing and validation
 - **Level 3 (Target Q4)**: Multi-region with auto-failover
 - **Level 4 (Year 2)**: Self-healing and predictive maintenance
 
 ### Key Performance Indicators (KPIs)
+
 - **MTTD** (Mean Time to Detect): < 5 minutes
 - **MTTR** (Mean Time to Resolve): < 30 minutes
 - **Availability**: 99.95% (current) → 99.99% (target)
@@ -588,6 +653,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Resources & Tools
 
 ### Observability Stack
+
 - AWS CloudWatch (primary)
 - AWS X-Ray (tracing)
 - CloudWatch Logs Insights (log analysis)
@@ -595,12 +661,14 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 - Optional: Prometheus + Grafana (advanced visualization)
 
 ### Resilience Testing
+
 - AWS Fault Injection Simulator (chaos engineering)
 - Chaos Toolkit (experiment automation)
 - AWS Systems Manager (automation)
 - AWS Lambda (custom testing scripts)
 
 ### CI/CD & Automation
+
 - GitHub Actions (current) ✅
 - Terraform Cloud (potential upgrade)
 - AWS CodePipeline (application deployment)
@@ -611,6 +679,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 ## Documentation & Training
 
 ### Required Documentation
+
 - 📋 Observability runbook
 - 📋 Chaos experiment playbook
 - 📋 Incident response procedures
@@ -618,6 +687,7 @@ This roadmap outlines the current state and planned enhancements for the Starlin
 - 📋 On-call playbook
 
 ### Team Training
+
 - 📋 Observability tools training
 - 📋 Chaos engineering workshop
 - 📋 Incident response drills
