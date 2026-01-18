@@ -556,7 +556,8 @@ def run_logging_self_test() -> bool:
     if USE_ASYNC_LOGGING:
         # Note: Accessing private _thread attribute since QueueListener
         # doesn't provide a public API to check thread status
-        if queue_listener and hasattr(queue_listener, '_thread') and queue_listener._thread.is_alive():
+        queue_listener_thread = getattr(queue_listener, '_thread', None) if queue_listener else None
+        if queue_listener_thread is not None and queue_listener_thread.is_alive():
             print("PASS: Async logging queue operational", file=sys.stderr)
             test_results.append(True)
         else:
@@ -605,8 +606,11 @@ def attach_correlation_id(correlation_id: str):
 
 
 # Register signal handler for dynamic log level changes (Unix-like systems only)
-if hasattr(signal, 'SIGUSR1'):
-    signal.signal(signal.SIGUSR1, handle_signal_usr1)
+# NOTE: Some platforms (e.g., Windows) do not define SIGUSR1. Using getattr
+# avoids static type-checker errors and keeps runtime behavior unchanged.
+sigusr1 = getattr(signal, 'SIGUSR1', None)
+if sigusr1 is not None:
+    signal.signal(sigusr1, handle_signal_usr1)
 
 # Register cleanup for async logging
 atexit.register(cleanup_logging)
@@ -619,8 +623,8 @@ if ENABLE_SELF_TEST:
     run_logging_self_test()
 
 
-def main():
-    """Main entry point for the Starlink Security application."""
+def logging_system_main():
+    """Main entry point for the logging-system demo in this module."""
     logger.info("Starlink Security Infrastructure starting...")
     logger.info(f"Config directory: {CONFIG_DIR}")
     logger.info(f"Data directory: {DATA_DIR}")
@@ -686,8 +690,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-Starlink Security Foundation Module
+    logging_system_main()
+
+"""Starlink Security Foundation Module
 
 Foundation for securing enterprise infrastructures using Starlink connectivity.
 Provides monitoring, enforcement, and response capabilities.
@@ -709,7 +714,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
 from cryptography.fernet import Fernet
 
 # Define directories
@@ -870,12 +875,18 @@ while using the new modular architecture.
 
 import asyncio
 from security import (
-    SecurityLevel,
-    StarlinkSecurityFoundation,
-    NetworkMonitor,
-    ThreatDetector,
-    PolicyEnforcer
+    SecurityLevel as ModularSecurityLevel,
+    StarlinkSecurityFoundation as ModularStarlinkSecurityFoundation,
+    NetworkMonitor as ModularNetworkMonitor,
+    ThreatDetector as ModularThreatDetector,
+    PolicyEnforcer as ModularPolicyEnforcer,
 )
+
+# Backward-compatible re-exports.
+# NOTE: This module contains multiple local definitions of some symbols later in the file.
+# Only alias names that are not defined locally to avoid collisions.
+NetworkMonitor = ModularNetworkMonitor
+ThreatDetector = ModularThreatDetector
 
 # Re-export for backward compatibility
 __all__ = [
@@ -885,7 +896,18 @@ __all__ = [
     'ThreatDetector',
     'PolicyEnforcer'
 ]
-Starlink Enterprise Security Foundation
+
+# NOTE:
+# This file contains multiple local definitions of SecurityLevel/StarlinkSecurityFoundation/
+# PolicyEnforcer (and others). Importing same-named symbols from the modular `security`
+# package would overwrite existing local definitions and trigger type-checking errors like:
+#   "Type 'type[security.foundation.StarlinkSecurityFoundation]' is not assignable to
+#    declared type 'type[starlink_security.StarlinkSecurityFoundation]'".
+#
+# To keep backward-compatibility while avoiding name/type collisions, the modular
+# architecture exports are available under the `Modular*` aliases above.
+
+"""Starlink Enterprise Security Foundation
 
 A comprehensive security management system for Starlink enterprise connections
 with automatic failover, monitoring, and threat detection capabilities.
@@ -893,6 +915,7 @@ with automatic failover, monitoring, and threat detection capabilities.
 
 import asyncio
 import argparse
+import contextlib
 import json
 import logging
 import os
@@ -923,16 +946,27 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-class ConnectionType(Enum):
-    """Types of network connections."""
+class EnterpriseConnectionType(Enum):
+    """Types of network connections (enterprise foundation variant).
+
+    NOTE: This file contains multiple architectures in a single module.
+    To avoid symbol collisions with the core `ConnectionType` enum defined
+    earlier (starlink_only/hybrid/failover), the enterprise variant uses a
+    distinct name.
+    """
     STARLINK_ONLY = "starlink_only"
     FAILOVER = "failover"
     DUAL_WAN = "dual_wan"
     LOAD_BALANCED = "load_balanced"
 
 
-class SecurityLevel(Enum):
-    """Security threat levels."""
+class EnterpriseSecurityLevel(Enum):
+    """Security threat levels (enterprise foundation variant).
+
+    NOTE: This module defines multiple architectures in a single file. To avoid
+    symbol collisions with the core `SecurityLevel` enum (normal/elevated/
+    critical/recovery), the enterprise variant uses a distinct name.
+    """
     MINIMAL = "minimal"
     LOW = "low"
     MODERATE = "moderate"
@@ -965,7 +999,7 @@ class ThreatInfo:
 class BackupConnectionManager:
     """Manages backup connections and failover logic."""
     
-    def __init__(self, foundation: 'StarlinkSecurityFoundation'):
+    def __init__(self, foundation: 'EnterpriseStarlinkSecurityFoundation'):
         """Initialize backup connection manager.
         
         Args:
@@ -1002,7 +1036,7 @@ class BackupConnectionManager:
             metrics.latency > 200 or
             metrics.connection_stability < 50):
             
-            if self.foundation.connection_type == ConnectionType.STARLINK_ONLY:
+            if self.foundation.connection_type == EnterpriseConnectionType.STARLINK_ONLY:
                 await self.activate_failover()
     
     async def activate_failover(self):
@@ -1020,7 +1054,7 @@ class BackupConnectionManager:
         
         if best_backup:
             self.active_backup = best_backup
-            self.foundation.connection_type = ConnectionType.FAILOVER
+            self.foundation.connection_type = EnterpriseConnectionType.FAILOVER
             
             await self.foundation.trigger_event(
                 "failover_activated",
@@ -1039,7 +1073,7 @@ class BackupConnectionManager:
             )
 
 
-class StarlinkSecurityFoundation:
+class EnterpriseStarlinkSecurityFoundation:
     """Main security foundation class."""
     
     def __init__(self, config_path: Optional[str] = None):
@@ -1049,13 +1083,21 @@ class StarlinkSecurityFoundation:
             config_path: Optional path to configuration file
         """
         self.config_path = config_path
-        self.security_level = SecurityLevel.MINIMAL
-        self.connection_type = ConnectionType.STARLINK_ONLY
+        self.security_level = EnterpriseSecurityLevel.MINIMAL
+        self.connection_type = EnterpriseConnectionType.STARLINK_ONLY
         self.metrics = SecurityMetrics()
         self.active_threats: List[ThreatInfo] = []
         self.running = False
+        # Background task for the main loop when using async start()/stop().
+        # This avoids blocking callers that want to run other components concurrently.
+        self._main_task: Optional[asyncio.Task] = None
         self.backup_manager = BackupConnectionManager(self)
         self.events: List[Dict[str, Any]] = []
+        # Provide a stable per-instance logger attribute for callers.
+        # Some code paths (and static type checkers) expect `foundation.logger`.
+        self.logger: logging.Logger = logger
+        # Defined for compatibility with other StarlinkSecurityFoundation variants.
+        self.audit_formatters: list[Any] = []
         
         logger.info("Starlink Security Foundation initialized")
         
@@ -1186,6 +1228,40 @@ class StarlinkSecurityFoundation:
             raise
         finally:
             logger.info("Main loop stopped")
+
+    async def start(self) -> None:
+        """Start the foundation without blocking the caller.
+
+        This method exists for parity with other foundation variants and to
+        support call sites that do: `await foundation.start()`.
+        """
+        if self._main_task is not None and not self._main_task.done():
+            logger.info("Foundation already started")
+            return
+        # Schedule the run loop in the background so callers can `gather()` other tasks.
+        self._main_task = asyncio.create_task(self.run(), name="enterprise_foundation_main_loop")
+
+    async def stop(self) -> None:
+        """Stop the foundation and wait for the main loop to exit.
+
+        This method exists for parity with other foundation variants and to
+        support call sites that do: `await foundation.stop()`.
+        """
+        self.running = False
+
+        task = self._main_task
+        if task is None:
+            return
+
+        try:
+            await asyncio.wait_for(task, timeout=5.0)
+        except asyncio.TimeoutError:
+            # If the loop is stuck, cancel the task to unblock shutdown.
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        finally:
+            self._main_task = None
     
     def cleanup(self):
         """Cleanup resources."""
@@ -1193,9 +1269,9 @@ class StarlinkSecurityFoundation:
         self.running = False
 
 
-async def main():
+async def enterprise_foundation_main():
     """Main entry point."""
-    foundation = StarlinkSecurityFoundation()
+    foundation = EnterpriseStarlinkSecurityFoundation()
     
     # Initialize and start all components
     network_monitor = NetworkMonitor(foundation)
@@ -1240,9 +1316,26 @@ async def main():
     if args.status:
         # Show current status
         metrics = foundation.metrics
-        print(f"Security Level: {foundation.security_level.value}")
-        print(f"Connection Type: {foundation.connection_type.value}")
-        print(f"Security Score: {metrics.security_score:.1f}/100")
+        # Not all StarlinkSecurityFoundation variants expose `security_level`/`connection_type`.
+        # Use getattr() so static type checkers (and runtime) won't fail when a different
+        # foundation implementation is wired in.
+        security_level = getattr(foundation, "security_level", None)
+        security_level_value = getattr(security_level, "value", security_level)
+        print(f"Security Level: {security_level_value}")
+
+        connection_type = getattr(foundation, "connection_type", None)
+        connection_type_value = getattr(connection_type, "value", connection_type)
+        print(f"Connection Type: {connection_type_value}")
+        # `foundation.metrics` may be a dataclass (e.g., SecurityMetrics/NetworkMetrics)
+        # or a plain dict depending on which foundation variant is in use.
+        security_score = getattr(metrics, "security_score", None)
+        if security_score is None and isinstance(metrics, dict):
+            security_score = metrics.get("security_score")
+
+        if isinstance(security_score, (int, float)):
+            print(f"Security Score: {security_score:.1f}/100")
+        else:
+            print("Security Score: N/A")
         print(f"Connection Stability: {metrics.connection_stability:.1f}/100")
         print(f"Active Threats: {len(foundation.active_threats)}")
         return
@@ -1390,15 +1483,29 @@ class AuditLogger:
         self.last_hash = "0" * 64  # Genesis hash
         self._lock = threading.Lock()
         self.logger = logging.getLogger("starlink_security.audit")
+        # In-memory chain of parsed audit entries.
+        # This is used by some components (e.g., RetentionEnforcer) for
+        # lightweight retention operations without re-reading the file.
+        # NOTE: The file on disk remains the source of truth.
+        self.audit_chain: List[Dict[str, Any]] = []
         
         # Load last hash if file exists
         if self.audit_file.exists():
             try:
                 with open(self.audit_file, 'r') as f:
-                    lines = f.readlines()
-                    if lines:
-                        last_entry = json.loads(lines[-1])
-                        self.last_hash = last_entry.get("hash", self.last_hash)
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                        except json.JSONDecodeError:
+                            # Skip malformed lines.
+                            continue
+                        self.audit_chain.append(entry)
+
+                    if self.audit_chain:
+                        self.last_hash = self.audit_chain[-1].get("hash", self.last_hash)
             except (IOError, json.JSONDecodeError) as e:
                 self.logger.warning(f"Failed to load audit log: {e}")
     
@@ -1428,6 +1535,8 @@ class AuditLogger:
             try:
                 with open(self.audit_file, 'a') as f:
                     f.write(json.dumps(entry) + '\n')
+                # Keep in-memory chain in sync.
+                self.audit_chain.append(entry)
                 self.last_hash = current_hash
                 self.logger.info(f"Audit logged: {action}")
             except IOError as e:
@@ -2452,7 +2561,7 @@ class PolicyVersionTracker:
                 return max(filtered, key=lambda v: v.timestamp)
             return None
 
-class StarlinkSecurityFoundation:
+class DemoStarlinkSecurityFoundation:
     """
     Foundation for securing enterprise infrastructures using Starlink connectivity.
     Provides monitoring, enforcement, and response capabilities with lifecycle management.
@@ -2518,6 +2627,10 @@ class StarlinkSecurityFoundation:
         with self._lock:
             self.active_threats: Set[str] = set()
             self.events: List[SecurityEvent] = []
+
+        # Async event handlers (used by demo code and integrations).
+        # Signature matches StarlinkSecurityFoundation.register_event_handler().
+        self.event_handlers: list[Callable[[SecurityEvent], Awaitable[None]]] = []
         
         # Metrics with thread safety
         with self._metrics_lock:
@@ -3421,6 +3534,42 @@ class StarlinkSecurityFoundation:
             "description": event.description
         }
         self.logger.info(f"Security event logged: {json.dumps(event_data)}")
+
+    async def trigger_event(
+        self,
+        event_type: str,
+        severity: str,
+        source: str,
+        message: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Create, log, and dispatch a security event.
+
+        This provides parity with other StarlinkSecurityFoundation variants and fixes
+        demo/runtime usage like: `await foundation.trigger_event(...)`.
+        """
+        event = SecurityEvent(
+            timestamp=datetime.now(),
+            event_type=event_type,
+            severity=severity,
+            source=source,
+            description=message,
+            metadata=metadata or {},
+        )
+
+        # Persist + process through configured processor.
+        self.log_event(event)
+
+        # Notify async subscribers.
+        for handler in list(self.event_handlers):
+            try:
+                await handler(event)
+            except Exception as e:
+                self.logger.error(f"Event handler failed: {e}")
+
+    def register_event_handler(self, handler: Callable[[SecurityEvent], Awaitable[None]]) -> None:
+        """Register an async handler to receive events from trigger_event()."""
+        self.event_handlers.append(handler)
     
     def update_metrics(self, metrics: NetworkMetrics) -> None:
         """
@@ -3642,7 +3791,7 @@ class GeoReplication:
         
         return results
     
-    def restore_with_verification(self, region: str = None) -> Optional[bytes]:
+    def restore_with_verification(self, region: Optional[str] = None) -> Optional[bytes]:
         """
         Restore state data with integrity verification.
         Falls back to other regions if primary fails.
@@ -4052,8 +4201,11 @@ class UnifiedCLI:
     def _execute_command(self, command: str, args: Dict[str, Any]) -> Dict[str, Any]:
         """Execute command on the foundation."""
         if command == "rotate_key":
-            self.foundation.rotate_encryption_key()
-            return {"message": "Encryption key rotated successfully"}
+            rotate_fn = getattr(self.foundation, "rotate_encryption_key", None)
+            if callable(rotate_fn):
+                rotate_fn()
+                return {"message": "Encryption key rotated successfully"}
+            return {"message": "Encryption key rotation is not supported by this foundation"}
         
         elif command == "reload_config":
             # reload_config doesn't take parameters, it reloads from existing path
@@ -4109,7 +4261,7 @@ class RESTAPIGateway:
     Provides token-based authentication and exposes foundation operations.
     """
     
-    def __init__(self, foundation: 'StarlinkSecurityFoundation', secret_key: str = None):
+    def __init__(self, foundation: 'StarlinkSecurityFoundation', secret_key: Optional[str] = None):
         self.foundation = foundation
         self.secret_key = secret_key or secrets.token_hex(32)
         self.tokens = {}  # token -> (username, expiry)
@@ -4148,7 +4300,7 @@ class RESTAPIGateway:
                 return True
             return False
     
-    def handle_request(self, endpoint: str, method: str, token: str, data: Dict = None) -> Dict[str, Any]:
+    def handle_request(self, endpoint: str, method: str, token: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Handle API requests with authentication.
         
@@ -4170,9 +4322,14 @@ class RESTAPIGateway:
                 return {"data": self.foundation.get_metrics_summary(), "status": 200}
             
             elif endpoint == "/prometheus" and method == "GET":
-                return {"data": self.foundation.get_prometheus_metrics(), "status": 200}
+                metrics_fn = getattr(self.foundation, "get_prometheus_metrics", None)
+                if callable(metrics_fn):
+                    return {"data": metrics_fn(), "status": 200}
+                return {"error": "Prometheus metrics not supported by foundation", "status": 501}
             
             elif endpoint == "/events" and method == "POST":
+                if data is None:
+                    return {"error": "Event data required", "status": 400}
                 if not data:
                     return {"error": "Event data required", "status": 400}
                 event = SecurityEvent(**data)
@@ -4192,8 +4349,8 @@ class RESTAPIGateway:
                 return {"message": "Encryption key rotated", "status": 200}
             
             elif endpoint == "/audit/export" and method == "POST":
-                profile = data.get("profile", "iso27001") if data else "iso27001"
-                output = data.get("output", "audit_export.json") if data else "audit_export.json"
+                profile = data.get("profile", "iso27001") if data is not None else "iso27001"
+                output = data.get("output", "audit_export.json") if data is not None else "audit_export.json"
                 formatter = ComplianceProfile.create_formatter(profile)
                 self.foundation.export_compliance_audit(formatter, output)
                 return {"message": f"Audit exported to {output}", "status": 200}
@@ -4252,7 +4409,7 @@ class PluginRegistry:
                 return self.plugins[category][name]["class"]
             return None
     
-    def list_plugins(self, category: str = None) -> Dict[str, Any]:
+    def list_plugins(self, category: Optional[str] = None) -> Dict[str, Any]:
         """List all registered plugins, optionally filtered by category."""
         with self._lock:
             if category:
@@ -4483,11 +4640,15 @@ class DataResidencyPolicy:
     def enforce_replication(self, tenant_id: str, geo_replication: 'GeoReplication') -> List[str]:
         """Filter replication regions based on tenant policy."""
         with self._lock:
+            # GeoReplication tracks configured regions in `backup_locations`.
+            # (There is no `regions` attribute on GeoReplication.)
+            available_regions = list(geo_replication.backup_locations.keys())
+
             if tenant_id not in self.policies:
-                return list(geo_replication.regions.keys())
-            
-            allowed = self.policies[tenant_id]
-            return [r for r in geo_replication.regions if r in allowed]
+                return available_regions
+
+            allowed = set(self.policies[tenant_id])
+            return [r for r in available_regions if r in allowed]
 
 
 class RetentionEnforcer:
@@ -4547,13 +4708,47 @@ class WebDashboard:
     
     def get_dashboard_data(self) -> Dict[str, Any]:
         """Get all data for dashboard display."""
+        prometheus_fn = getattr(self.foundation, "get_prometheus_metrics", None)
+        prometheus_metrics = prometheus_fn() if callable(prometheus_fn) else ""
+
+        scorer_fn = getattr(self.foundation, "get_scorer_explainability", None)
+        scorer_status = (
+            scorer_fn()
+            if callable(scorer_fn)
+            else {
+                "scorer_type": "unknown",
+                "is_healthy": False,
+                "error": "get_scorer_explainability not supported by this foundation",
+            }
+        )
+
+        # Some foundation variants do not expose a `state_store` attribute.
+        # Use getattr() to keep runtime compatibility and satisfy static type checkers.
+        threats: list[Any] = []
+        state_store = getattr(self.foundation, "state_store", None)
+        if state_store is not None:
+            get_threats = getattr(state_store, "get_threats", None)
+            if callable(get_threats):
+                try:
+                    # `get_threats()` is obtained via getattr(), so static type checkers
+                    # infer its return as `object`. Guard and narrow to an Iterable.
+                    from collections.abc import Iterable as IterableABC
+                    from typing import cast
+
+                    result = get_threats()
+                    if isinstance(result, IterableABC):
+                        threats = list(cast("Iterable[Any]", result))
+                    else:
+                        threats = []
+                except Exception:
+                    threats = []
         return {
             "metrics": self.foundation.get_metrics_summary(),
-            "prometheus": self.foundation.get_prometheus_metrics(),
-            "threats": list(self.foundation.state_store.get_threats()),
+            "prometheus": prometheus_metrics,
+            "threats": threats,
             "rbac_audit": self.foundation.get_rbac_audit_log() if hasattr(self.foundation, 'get_rbac_audit_log') else [],
             "cluster_health": self.foundation.cluster_manager.get_status() if hasattr(self.foundation, 'cluster_manager') else {},
-            "scorer_status": self.foundation.get_scorer_explainability()
+            "scorer_status": scorer_status,
         }
     
     def render_html(self) -> str:
@@ -4643,8 +4838,25 @@ class PolicySimulationSandbox:
         
         for event in sample:
             # Current scorer
-            current_result = self.foundation.threat_scorer.score(event)
-            current_scores.append(current_result['risk'])
+            # NOTE: Not all foundation variants expose a `threat_scorer` attribute.
+            # Use getattr() to keep runtime compatibility and satisfy static type checkers.
+            current_result: Dict[str, Any]
+            current_scorer = getattr(self.foundation, "threat_scorer", None)
+            if current_scorer is not None and hasattr(current_scorer, "score"):
+                current_result = current_scorer.score(event)
+            else:
+                # Fall back to the foundation-level scoring method if available.
+                score_threat_fn = getattr(self.foundation, "score_threat", None)
+                if callable(score_threat_fn):
+                    current_result = score_threat_fn(event)
+                else:
+                    # Last-resort fallback to allow simulation to proceed.
+                    current_result = {
+                        "risk": DynamicWorkerPool.DEFAULT_RISK_SCORE,
+                        "factors": {"fallback": "no_current_scorer"},
+                    }
+
+            current_scores.append(current_result["risk"])
             
             # New scorer
             new_result = new_scorer.score(event)
@@ -4684,12 +4896,24 @@ class PolicySimulationSandbox:
         
         # Count affected entries
         affected = 0
-        if hasattr(self.foundation, 'audit_logger'):
-            with self.foundation.audit_logger._lock:
-                affected = sum(
-                    1 for entry in self.foundation.audit_logger.audit_chain
-                    if entry.get("timestamp", datetime.now()) < cutoff_date
-                )
+        # NOTE: Some foundation variants do not define `audit_logger`.
+        # Use getattr() to keep runtime compatibility and satisfy static type checkers.
+        audit_logger = getattr(self.foundation, "audit_logger", None)
+        if audit_logger is not None:
+            lock = getattr(audit_logger, "_lock", None)
+            chain = getattr(audit_logger, "audit_chain", None)
+            if chain is not None:
+                if lock is not None:
+                    with lock:
+                        affected = sum(
+                            1 for entry in chain
+                            if entry.get("timestamp", datetime.now()) < cutoff_date
+                        )
+                else:
+                    affected = sum(
+                        1 for entry in chain
+                        if entry.get("timestamp", datetime.now()) < cutoff_date
+                    )
         
         return {
             "profile": profile,
@@ -4855,7 +5079,7 @@ class KMSKeyProvider(KeyProvider):
     Supports AWS KMS, Azure Key Vault, GCP KMS.
     """
     
-    def __init__(self, provider: str = "aws", region: str = "us-east-1", key_id: str = None):
+    def __init__(self, provider: str = "aws", region: str = "us-east-1", key_id: Optional[str] = None):
         """
         Initialize KMS key provider.
         
@@ -4952,7 +5176,7 @@ class SecretsManager:
     Retrieves secrets with short-lived tokens and auto-refresh.
     """
     
-    def __init__(self, provider: str = "vault", endpoint: str = None, ttl_seconds: int = 3600):
+    def __init__(self, provider: str = "vault", endpoint: Optional[str] = None, ttl_seconds: int = 3600):
         """
         Initialize secrets manager.
         
@@ -5049,8 +5273,14 @@ class SBOMGenerator:
         self.components = []
         self.dependencies = []
     
-    def add_component(self, name: str, version: str, supplier: str = None,
-                     licenses: List[str] = None, hashes: Dict[str, str] = None):
+    def add_component(
+        self,
+        name: str,
+        version: str,
+        supplier: Optional[str] = None,
+        licenses: Optional[List[str]] = None,
+        hashes: Optional[Dict[str, str]] = None,
+    ):
         """
         Add component to SBOM.
         
@@ -5502,7 +5732,7 @@ class CanaryDeployment:
     Integrates with PolicySimulationSandbox for pre-flight checks.
     """
     
-    def __init__(self, sandbox: 'PolicySimulationSandbox' = None):
+    def __init__(self, sandbox: Optional['PolicySimulationSandbox'] = None):
         """
         Initialize canary deployment manager.
         
@@ -5550,7 +5780,7 @@ class CanaryDeployment:
         
         return canary_id
     
-    def should_use_canary(self, canary_id: str, tenant_id: str = None) -> bool:
+    def should_use_canary(self, canary_id: str, tenant_id: Optional[str] = None) -> bool:
         """
         Determine if request should use canary scorer.
         
@@ -6036,7 +6266,7 @@ class APIRateLimiter:
         self.blocked_ips: Set[str] = set()
         self.ip_reputation: Dict[str, int] = {}  # IP -> reputation score (0-100)
     
-    def check_rate_limit(self, tenant_id: str, ip_address: str = None) -> bool:
+    def check_rate_limit(self, tenant_id: str, ip_address: Optional[str] = None) -> bool:
         """
         Check if request is within rate limit.
         
@@ -6285,7 +6515,7 @@ class PrivacyGovernanceManager:
         user_id: str, 
         purpose: str, 
         granted: bool,
-        expiry_date: str = None
+        expiry_date: Optional[str] = None
     ):
         """
         Record user consent.
@@ -6571,7 +6801,7 @@ class GlobalTrafficManager:
         with self.lock:
             self.tenant_regions[tenant_id] = region_id
     
-    def route_request(self, tenant_id: str = None) -> Optional[str]:
+    def route_request(self, tenant_id: Optional[str] = None) -> Optional[str]:
         """
         Route request to appropriate region.
         
@@ -7541,7 +7771,9 @@ class StarlinkSecurityFoundation:
         self.config = config or self._default_config()
         self.running = False
         self.metrics = {}
-        self.event_handlers = []
+        self.event_handlers: list[Callable[[SecurityEvent], Awaitable[None]]] = []
+        # Defined for compatibility with other StarlinkSecurityFoundation variants.
+        self.audit_formatters: list[Any] = []
         logger.info("Starlink Security Foundation initialized")
     
     def _default_config(self) -> Dict[str, Any]:
@@ -7555,15 +7787,36 @@ class StarlinkSecurityFoundation:
                 'backup_connections': ['cellular_backup', 'satellite_backup']
             }
         }
+
+    def get_security_report(self) -> Dict[str, Any]:
+        """Generate a basic security report.
+
+        NOTE: This module contains multiple foundation implementations.
+        Some call sites expect a `get_security_report()` method; providing it
+        here ensures backward-compatible behavior and satisfies static type
+        checkers.
+        """
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "running": self.running,
+            "config": self.config,
+            "metrics": self.metrics,
+        }
     
-    async def trigger_event(self, event_type: str, severity: str, source: str, 
-                           message: str, metadata: Optional[Dict[str, Any]] = None):
+    async def trigger_event(
+        self,
+        event_type: str,
+        severity: str,
+        source: str,
+        message: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """Trigger a security event."""
         event = SecurityEvent(
             event_type=event_type,
             severity=severity,
             source=source,
-            message=message,
+            description=message,
             timestamp=datetime.now(),
             metadata=metadata or {}
         )
@@ -7573,7 +7826,7 @@ class StarlinkSecurityFoundation:
         for handler in self.event_handlers:
             await handler(event)
     
-    def register_event_handler(self, handler):
+    def register_event_handler(self, handler: Callable[[SecurityEvent], Awaitable[None]]) -> None:
         """Register an event handler."""
         self.event_handlers.append(handler)
 
@@ -7581,7 +7834,10 @@ class StarlinkSecurityFoundation:
 class PolicyEnforcer:
     """Enforce security policies based on threat level."""
     
-    def __init__(self, foundation: StarlinkSecurityFoundation):
+    # NOTE: This module contains multiple *Foundation* implementations.
+    # Accept a broader type here to avoid static type mismatches when wiring
+    # PolicyEnforcer with EnterpriseStarlinkSecurityFoundation or other variants.
+    def __init__(self, foundation: Any):
         self.foundation = foundation
         self.active_policies = {
             "network_access": {
@@ -7639,7 +7895,7 @@ class PolicyEnforcer:
 class IncidentResponder:
     """Respond to security incidents."""
     
-    def __init__(self, foundation: StarlinkSecurityFoundation):
+    def __init__(self, foundation: DemoStarlinkSecurityFoundation):
         self.foundation = foundation
         self.incidents = []
     
@@ -7713,7 +7969,7 @@ class IncidentResponder:
 class VPNManager:
     """Manage VPN connections for secure remote access."""
     
-    def __init__(self, foundation: StarlinkSecurityFoundation):
+    def __init__(self, foundation: DemoStarlinkSecurityFoundation):
         self.foundation = foundation
         self.vpn_status = "disconnected"
         self.last_connection = None
@@ -7791,7 +8047,7 @@ class VPNManager:
 class BackupManager:
     """Manage backup connections and failover."""
     
-    def __init__(self, foundation: StarlinkSecurityFoundation):
+    def __init__(self, foundation: DemoStarlinkSecurityFoundation):
         self.foundation = foundation
         self.backup_connections = {}
         self.active_backup = None
@@ -7862,10 +8118,10 @@ class BackupManager:
             # In production, would actually initiate failover
 
 
-async def main():
+async def demo_main():
     """Main entry point for demonstration."""
     # Create security foundation
-    foundation = StarlinkSecurityFoundation()
+    foundation = DemoStarlinkSecurityFoundation()
     foundation.running = True
     
     # Initialize components
@@ -7911,5 +8167,32 @@ async def main():
     foundation.running = False
 
 
+# ---------------------------------------------------------------------------
+# Public API exports
+# ---------------------------------------------------------------------------
+# This module contains multiple architectures and local/demo implementations.
+# To avoid ambiguity for API consumers, export the modular architecture
+# foundation as the canonical `StarlinkSecurityFoundation`, while keeping the
+# local implementation available under an explicit name.
+
+# NOTE (type checking): This module defines a local `StarlinkSecurityFoundation`
+# class earlier, but we intentionally re-export the modular implementation as the
+# canonical symbol for runtime users. Use `cast(Any, ...)` to avoid type checker
+# assignment errors.
+from typing import cast
+
+LegacyStarlinkSecurityFoundation = StarlinkSecurityFoundation
+StarlinkSecurityFoundation = cast(Any, ModularStarlinkSecurityFoundation)
+
+__all__ = [
+    "SecurityLevel",
+    "StarlinkSecurityFoundation",
+    "LegacyStarlinkSecurityFoundation",
+    "NetworkMonitor",
+    "ThreatDetector",
+    "PolicyEnforcer",
+]
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(demo_main())

@@ -14,7 +14,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from vpn_manager import VPNManager
+from vpn_manager.vpn_manager import VPNManager
 
 
 class TestVPNManager(unittest.TestCase):

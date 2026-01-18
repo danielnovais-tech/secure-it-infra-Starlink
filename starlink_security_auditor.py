@@ -257,11 +257,11 @@ class StarlinkSecurityAuditor:
         self.results['checks'].append(check_results)
         return check_results
 
-    def generate_report(self, output_file: str = None) -> str:
+    def generate_report(self, output_file: Optional[str] = None) -> str:
         """Generate a comprehensive security report.
         
         Args:
-            output_file: Path to save the report (JSON format)
+            output_file: Optional path to save the report (JSON format)
             
         Returns:
             JSON string containing the report
@@ -279,7 +279,7 @@ class StarlinkSecurityAuditor:
         
         report_json = json.dumps(self.results, indent=2)
         
-        if output_file:
+        if output_file is not None:
             try:
                 with open(output_file, 'w') as f:
                     f.write(report_json)
@@ -556,7 +556,7 @@ class StarlinkSecurityAuditor:
         return True
 
 
-def run_comprehensive_audit(config_file: str = None, output_report: str = None) -> Dict:
+def run_comprehensive_audit(config_file: Optional[str] = None, output_report: Optional[str] = None) -> Dict:
     """Run a comprehensive security audit.
     
     Args:
@@ -637,9 +637,10 @@ def generate_security_recommendations(audit_results: Dict) -> str:
     return "\n".join(recommendations)
 
 
-def main():
-    # Legacy/duplicated CLI entrypoint removed (a later main() exists below).
-    pass
+## NOTE:
+# A legacy/duplicated CLI entrypoint previously existed here as `main()`.
+# It has been removed to avoid redeclaration; the actual CLI entrypoint is
+# defined later in this file.
 
 import json
 import logging
@@ -1189,7 +1190,7 @@ class SecurityAuditor:
         return report
     
     def save_report(self, report: AuditReport) -> None:
-        """Save audit report to file."""
+        # Save audit report to file.
         output_file = self.config.get('reporting', {}).get('output_file', 'security_audit_report.json')
         
         try:

@@ -1,10 +1,40 @@
 """Security Manager - Main orchestration class for security monitoring."""
 import asyncio
+import importlib
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Protocol
 from datetime import datetime
 
-from security_modules import SecurityEvent, PolicyEnforcer, IncidentResponder
+from security_modules import PolicyEnforcer, IncidentResponder
+
+# NOTE:
+# Pylance reports `SecurityEvent` as an unknown symbol when imported from the
+# `security_modules` package directly (e.g., when it is defined in a submodule
+# but not re-exported in `security_modules/__init__.py`). To keep this module
+# working regardless of where `SecurityEvent` is defined, resolve it dynamically.
+_SECURITY_EVENT_IMPORT_CANDIDATES = (
+    "security_modules.security_event",
+    "security_modules.events",
+    "security_modules.models",
+    "security_modules",  # fallback if it is actually exported here
+)
+
+# NOTE: Typed as `Any` so static analyzers don't treat it as `Optional`.
+# A runtime guard below ensures we fail fast if it cannot be resolved.
+SecurityEvent: Any = None  # will be replaced with the actual class
+for _mod_name in _SECURITY_EVENT_IMPORT_CANDIDATES:
+    try:
+        _mod = importlib.import_module(_mod_name)
+        SecurityEvent = getattr(_mod, "SecurityEvent")
+        break
+    except (ImportError, AttributeError):
+        continue
+
+if SecurityEvent is None:
+    raise ImportError(
+        "Could not import 'SecurityEvent' from security_modules. "
+        "Expected it in one of: " + ", ".join(_SECURITY_EVENT_IMPORT_CANDIDATES)
+    )
 
 # Configure logging
 logging.basicConfig(
@@ -12,6 +42,22 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+class SecurityEventLike(Protocol):
+    """Structural type for security events.
+
+    This avoids using the runtime-resolved `SecurityEvent` variable in type
+    annotations (which Pylance disallows), while still documenting the expected
+    event shape.
+    """
+
+    event_type: str
+    severity: str
+    source: str
+    timestamp: datetime
+    description: str
+    metadata: Optional[Dict[str, Any]]
 
 
 class SecurityManager:
@@ -24,7 +70,7 @@ class SecurityManager:
             'incident_responder': IncidentResponder()
         }
         self.events_queue: asyncio.Queue = asyncio.Queue()
-        self.event_log: List[SecurityEvent] = []
+        self.event_log: List[SecurityEventLike] = []
         self.running = False
     
     async def start(self):
@@ -66,7 +112,7 @@ class SecurityManager:
         except Exception as e:
             logger.error(f"Error processing events: {e}")
     
-    async def _handle_event(self, event: SecurityEvent):
+    async def _handle_event(self, event: SecurityEventLike):
         """Handle a security event."""
         # Log the event
         self._log_event(event)
@@ -75,7 +121,7 @@ class SecurityManager:
         if event.severity in ["critical", "high"]:
             await self.security_modules['incident_responder'].handle_incident(event)
     
-    def _log_event(self, event: SecurityEvent):
+    def _log_event(self, event: SecurityEventLike):
         """Log a security event.
         
         Args:
@@ -84,7 +130,7 @@ class SecurityManager:
         self.event_log.append(event)
         logger.info(f"Event logged: {event.event_type} - {event.severity} - {event.description}")
     
-    def add_event(self, event: SecurityEvent):
+    def add_event(self, event: SecurityEventLike):
         """Add a security event to the queue.
         
         Args:
@@ -99,7 +145,7 @@ class SecurityManager:
         severity: str,
         source: str,
         description: str,
-        metadata: Dict[str, Any] = None
+        metadata: Optional[Dict[str, Any]] = None
     ):
         """Create and queue a security event.
         
@@ -110,6 +156,10 @@ class SecurityManager:
             description: Description of the event
             metadata: Additional metadata
         """
+        if SecurityEvent is None:
+            raise RuntimeError(
+                "SecurityEvent class was not resolved. This should have been caught at import time."
+            )
         event = SecurityEvent(
             event_type=event_type,
             severity=severity,
@@ -120,7 +170,7 @@ class SecurityManager:
         )
         self.add_event(event)
     
-    def get_event_log(self) -> List[SecurityEvent]:
+    def get_event_log(self) -> List[SecurityEventLike]:
         """Get the event log.
         
         Returns:
@@ -128,7 +178,7 @@ class SecurityManager:
         """
         return self.event_log.copy()
     
-    def get_incidents(self) -> List[SecurityEvent]:
+    def get_incidents(self) -> List[SecurityEventLike]:
         """Get list of handled incidents.
         
         Returns:

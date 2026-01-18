@@ -95,7 +95,7 @@ class StarlinkSecurityFoundation:
     Provides monitoring, enforcement, and response capabilities.
     """
     
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: Optional[str] = None):
         """Initialize the security foundation."""
         self.config = self._load_config(config_path)
         self.security_level = SecurityLevel.NORMAL
@@ -113,7 +113,7 @@ class StarlinkSecurityFoundation:
         
         logger.info("Starlink Security Foundation initialized")
     
-    def _load_config(self, config_path: str) -> Dict:
+    def _load_config(self, config_path: Optional[str]) -> Dict:
         """Load configuration from file or defaults."""
         default_config = {
             "security": {
@@ -138,6 +138,7 @@ class StarlinkSecurityFoundation:
             },
         }
         
+        # TODO: If/when configuration files are supported, load from config_path when provided.
         return default_config
     
     def _initialize_modules(self):
@@ -181,8 +182,14 @@ class StarlinkSecurityFoundation:
         except Exception as e:
             logger.error(f"Failed to log event: {e}")
     
-    async def trigger_event(self, event_type: str, severity: str, 
-                           source: str, description: str, metadata: Dict = None):
+    async def trigger_event(
+        self,
+        event_type: str,
+        severity: str,
+        source: str,
+        description: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
         """Trigger a new security event."""
         event = SecurityEvent(
             timestamp=datetime.now(),

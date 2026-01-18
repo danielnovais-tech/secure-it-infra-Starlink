@@ -19,11 +19,37 @@ __version__ = "1.0.0"
 
 # Public symbols expected by legacy tests (e.g. `test_security.py`).
 StarlinkSecurityFoundation: Any
+LegacyStarlinkSecurityFoundation: Any
 PolicyEnforcer: Any
 IncidentResponder: Any
 VPNManager: Any
 BackupManager: Any
 SecurityEvent: Any
+NetworkMonitor: Any
+SecurityLevel: Any
+ConnectionType: Any
+NetworkMetrics: Any
+
+# Public symbols used by the newer `starlink_security/*.py` implementation.
+ConnectionMonitor: Any
+LatencyAwarePolicyManager: Any
+ConnectionResilience: Any
+RemoteManager: Any
+BandwidthOptimizer: Any
+
+
+# Import the modern package-level implementation first (keeps examples working).
+from .bandwidth_optimizer import BandwidthOptimizer as _BandwidthOptimizer
+from .connection_monitor import ConnectionMonitor as _ConnectionMonitor
+from .policy_manager import LatencyAwarePolicyManager as _LatencyAwarePolicyManager
+from .remote_manager import RemoteManager as _RemoteManager
+from .resilience import ConnectionResilience as _ConnectionResilience
+
+BandwidthOptimizer = _BandwidthOptimizer
+ConnectionMonitor = _ConnectionMonitor
+LatencyAwarePolicyManager = _LatencyAwarePolicyManager
+RemoteManager = _RemoteManager
+ConnectionResilience = _ConnectionResilience
 
 
 def _load_legacy_script() -> Optional[object]:
@@ -43,18 +69,35 @@ def _load_legacy_script() -> Optional[object]:
 _legacy = _load_legacy_script()
 if _legacy is not None:
     StarlinkSecurityFoundation = getattr(_legacy, "StarlinkSecurityFoundation")
+    if hasattr(_legacy, "LegacyStarlinkSecurityFoundation"):
+        LegacyStarlinkSecurityFoundation = getattr(_legacy, "LegacyStarlinkSecurityFoundation")
     PolicyEnforcer = getattr(_legacy, "PolicyEnforcer")
     IncidentResponder = getattr(_legacy, "IncidentResponder")
     VPNManager = getattr(_legacy, "VPNManager")
     BackupManager = getattr(_legacy, "BackupManager")
     SecurityEvent = getattr(_legacy, "SecurityEvent")
+    NetworkMonitor = getattr(_legacy, "NetworkMonitor")
+    SecurityLevel = getattr(_legacy, "SecurityLevel")
+    ConnectionType = getattr(_legacy, "ConnectionType")
+    NetworkMetrics = getattr(_legacy, "NetworkMetrics")
 
 
 __all__ = [
     "StarlinkSecurityFoundation",
+    "LegacyStarlinkSecurityFoundation",
     "PolicyEnforcer",
     "IncidentResponder",
     "VPNManager",
     "BackupManager",
     "SecurityEvent",
+    "NetworkMonitor",
+    "SecurityLevel",
+    "ConnectionType",
+    "NetworkMetrics",
+
+    "ConnectionMonitor",
+    "LatencyAwarePolicyManager",
+    "ConnectionResilience",
+    "RemoteManager",
+    "BandwidthOptimizer",
 ]

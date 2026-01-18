@@ -5,7 +5,7 @@ Example usage of Starlink Security Monitoring System
 from starlink_monitor import StarlinkMonitor
 
 
-def main():
+def starlink_security_monitor_demo():
     """Demonstrate the usage of StarlinkMonitor."""
     
     print("=== Starlink Security Monitoring System Demo ===\n")
@@ -89,7 +89,20 @@ def main():
     print()
     
     print("=== Demo Complete ===")
-Example usage of the Starlink Connection Metrics module.
+
+
+def security_monitor_demo():
+    """Backward-compatible alias for the StarlinkMonitor demo."""
+    # Kept for compatibility if external code imports and calls this name.
+    starlink_security_monitor_demo()
+
+
+def _starlink_monitor_demo():
+    """Demonstrate the usage of StarlinkMonitor."""
+    # Backward-compatible name used by the connection metrics demo below.
+    starlink_security_monitor_demo()
+
+"""Example usage of the Starlink Connection Metrics module.
 
 This script demonstrates how to use the metrics module to monitor
 and evaluate Starlink connection quality.
@@ -104,6 +117,9 @@ from starlink_metrics import (
 
 def main():
     """Demonstrate usage of the connection metrics module."""
+
+    # Run the security monitoring demo first.
+    _starlink_monitor_demo()
     
     print("=" * 60)
     print("Starlink Connection Quality Monitor - Examples")

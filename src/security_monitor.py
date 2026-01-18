@@ -192,9 +192,7 @@ async def main():
         await monitor.stop()
 
 
-if __name__ == "__main__":
-    # Run the async main function
-    asyncio.run(main())
+class SecurityMonitorAdvanced:
     """Monitor and track security metrics for Starlink infrastructure."""
     
     def __init__(self):

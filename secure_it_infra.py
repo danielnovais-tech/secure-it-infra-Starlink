@@ -36,7 +36,7 @@ logger = logging.getLogger('secure-it-infra')
 class StarlinkSecurityAuditor:
     """Security auditor for Starlink-connected enterprise infrastructures."""
     
-    def __init__(self, config_file: str = None):
+    def __init__(self, config_file: Optional[str] = None):
         """Initialize the security auditor.
         
         Args:
@@ -50,11 +50,11 @@ class StarlinkSecurityAuditor:
             'overall_score': 0
         }
         
-    def _load_config(self, config_file: str) -> Dict:
+    def _load_config(self, config_file: Optional[str]) -> Dict:
         """Load configuration from JSON file or use defaults.
         
         Args:
-            config_file: Path to configuration file
+            config_file: Path to configuration file (or None)
             
         Returns:
             Configuration dictionary
@@ -263,7 +263,7 @@ class StarlinkSecurityAuditor:
         self.results['checks'].append(check_results)
         return check_results
     
-    def generate_report(self, output_file: str = None) -> str:
+    def generate_report(self, output_file: Optional[str] = None) -> str:
         """Generate a comprehensive security report.
         
         Args:
@@ -471,12 +471,19 @@ class StarlinkSecurityAuditor:
             
             # Check for available TLS protocols
             protocols_to_check = []
-            if hasattr(ssl, 'PROTOCOL_TLS'):
-                protocols_to_check.append(ssl.PROTOCOL_TLS)
-            if hasattr(ssl, 'PROTOCOL_TLSv1_2'):
-                protocols_to_check.append(ssl.PROTOCOL_TLSv1_2)
-            if hasattr(ssl, 'PROTOCOL_TLSv1_3'):
-                protocols_to_check.append(ssl.PROTOCOL_TLSv1_3)
+            # Use getattr to avoid static/type-checker errors on platforms/Python builds
+            # where certain protocol constants are not defined.
+            proto_tls = getattr(ssl, 'PROTOCOL_TLS', None)
+            if proto_tls is not None:
+                protocols_to_check.append(proto_tls)
+
+            proto_tls12 = getattr(ssl, 'PROTOCOL_TLSv1_2', None)
+            if proto_tls12 is not None:
+                protocols_to_check.append(proto_tls12)
+
+            proto_tls13 = getattr(ssl, 'PROTOCOL_TLSv1_3', None)
+            if proto_tls13 is not None:
+                protocols_to_check.append(proto_tls13)
             
             # Check for weak protocols
             for proto in protocols_to_check:
@@ -567,7 +574,7 @@ class StarlinkSecurityAuditor:
         # For now, return True as placeholder
         return True
 
-def run_comprehensive_audit(config_file: str = None, output_report: str = None) -> Dict:
+def run_comprehensive_audit(config_file: Optional[str] = None, output_report: Optional[str] = None) -> Dict:
     """Run a comprehensive security audit.
     
     Args:

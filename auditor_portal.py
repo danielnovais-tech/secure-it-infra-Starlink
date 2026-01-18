@@ -14,7 +14,7 @@ import hmac
 import time
 import os
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, ClassVar
 from pathlib import Path
 import http.server
 import socketserver
@@ -476,11 +476,15 @@ class AuditorPortal:
 
 class PortalHTTPHandler(http.server.SimpleHTTPRequestHandler):
     """HTTP request handler for the auditor portal."""
-    
-    portal = None  # Set by server
+
+    portal: ClassVar[Optional[AuditorPortal]] = None  # Set by server
     
     def do_GET(self):
         """Handle GET requests."""
+        if self.portal is None:
+            self.send_error(500, "Portal not initialized")
+            return
+
         parsed_path = urlparse(self.path)
         path = parsed_path.path
         query = parse_qs(parsed_path.query)

@@ -52,6 +52,7 @@ class TestStarlinkAPIClient(unittest.TestCase):
         status = self.client.get_status()
         
         self.assertIsNotNone(status)
+        assert status is not None  # narrow Optional for type checkers
         self.assertEqual(status['state'], 'CONNECTED')
         self.assertEqual(status['latency_ms'], 45.2)
     

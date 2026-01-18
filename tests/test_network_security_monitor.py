@@ -5,11 +5,23 @@ Tests for Network Security Monitor
 import asyncio
 import sys
 import os
+from pathlib import Path
+import importlib.util
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add src to path (runtime) and load the module explicitly (helps IDEs/linters too)
+_SRC_DIR = Path(__file__).resolve().parents[1] / "src"
+sys.path.insert(0, str(_SRC_DIR))
 
-from network_security_monitor import NetworkSecurityMonitor, NetworkMetrics
+_MODULE_PATH = _SRC_DIR / "network_security_monitor.py"
+_spec = importlib.util.spec_from_file_location("network_security_monitor", _MODULE_PATH)
+if _spec is None or _spec.loader is None:
+    raise ImportError(f"Unable to load network_security_monitor from {_MODULE_PATH}")
+
+_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_module)
+
+NetworkSecurityMonitor = _module.NetworkSecurityMonitor
+NetworkMetrics = _module.NetworkMetrics
 
 
 async def test_metrics_initialization():

@@ -23,10 +23,11 @@ class EncryptionManager:
             key: Encryption key (32 url-safe base64-encoded bytes).
                  If None, a new key is generated.
         """
+        self._salt: Optional[bytes] = None
         if key is None:
             key = Fernet.generate_key()
-        self._fernet = Fernet(key)
-        self._key = key
+        self._fernet: Fernet = Fernet(key)
+        self._key: bytes = key
     
     @classmethod
     def from_password(
@@ -78,7 +79,7 @@ class EncryptionManager:
         Returns:
             Salt bytes if key was derived from password, None otherwise
         """
-        return getattr(self, '_salt', None)
+        return self._salt
     
     def encrypt(self, data: Union[str, bytes]) -> bytes:
         """Encrypt data.
@@ -164,8 +165,7 @@ class EncryptionManager:
         self._fernet = Fernet(new_key)
         
         # Clear salt if it exists since key is no longer password-derived
-        if hasattr(self, '_salt'):
-            delattr(self, '_salt')
+        self._salt = None
         
         return old_key
     

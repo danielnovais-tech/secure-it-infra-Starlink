@@ -80,6 +80,10 @@ class StarlinkMonitor:
     def _update_cycle(self):
         """Perform a single update cycle: fetch metrics and detect events."""
         try:
+            if self.api_client is None or self.metrics_collector is None:
+                logger.error("Monitor components not initialized; skipping update cycle")
+                return
+
             # Fetch current status from Starlink API
             status = self.api_client.get_status()
             

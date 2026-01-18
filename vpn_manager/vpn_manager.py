@@ -18,6 +18,8 @@ class VPNManager:
     """
     VPN Manager for ensuring VPN connectivity with monitoring and auto-reconnection.
     """
+
+    config: Dict[str, Any]
     
     def __init__(self, config_path: str):
         """
