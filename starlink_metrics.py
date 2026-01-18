@@ -22,6 +22,19 @@ THREAT_SEVERITY_MULTIPLIERS = {
 }
 
 
+class _QualityScoreDeduction(TypedDict):
+    reason: str
+    points: float
+    threat_id: Optional[str]
+
+
+class QualityScoreDetails(TypedDict):
+    final_score: float
+    base_score: float
+    deductions: List[_QualityScoreDeduction]
+    summary: str
+
+
 class ServiceLevel(Enum):
     """Service level classification for connection quality."""
     STABLE = "Stable"
@@ -155,19 +168,6 @@ class StarlinkConnectionQuality:
             raise ValueError("history_window_size must be a non-negative integer")
         self.history_window_size = history_window_size
         self.stability_history: deque = deque(maxlen=history_window_size if history_window_size > 0 else None)
-
-
-class _QualityScoreDeduction(TypedDict, total=False):
-    reason: str
-    points: float
-    threat_id: str
-
-
-class QualityScoreDetails(TypedDict):
-    final_score: float
-    base_score: float
-    deductions: List[_QualityScoreDeduction]
-    summary: str
     
     @overload
     def calculate_quality_score(self, return_details: Literal[False] = False) -> float: ...
@@ -206,7 +206,8 @@ class QualityScoreDetails(TypedDict):
             base_score -= deduction
             deductions_list.append({
                 "reason": f"Packet loss above {self.quality_thresholds.packet_loss_threshold}% threshold",
-                "points": -deduction
+                "points": -deduction,
+                "threat_id": None
             })
             
         if self.metrics.latency > self.quality_thresholds.latency_threshold:
@@ -214,7 +215,8 @@ class QualityScoreDetails(TypedDict):
             base_score -= deduction
             deductions_list.append({
                 "reason": f"Latency above {self.quality_thresholds.latency_threshold}ms threshold",
-                "points": -deduction
+                "points": -deduction,
+                "threat_id": None
             })
             
         if len(self.active_threats) > 0:
