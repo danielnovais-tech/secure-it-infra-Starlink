@@ -7,6 +7,7 @@ This document outlines security best practices for the Starlink Connection Metri
 ### Threshold Configuration
 
 **DO:**
+
 - Store threshold configurations in secure configuration files (e.g., `config.yaml`, `config.json`)
 - Use environment variables for sensitive settings
 - Implement role-based access control (RBAC) for configuration changes
@@ -14,6 +15,7 @@ This document outlines security best practices for the Starlink Connection Metri
 - Validate all configuration inputs
 
 **DON'T:**
+
 - Hard-code thresholds in application code
 - Allow unauthenticated users to modify thresholds
 - Store sensitive configuration in public repositories
@@ -112,6 +114,7 @@ AlertThresholds(
 When using structured logging for SIEM integration:
 
 **DO:**
+
 - Sanitize log data to prevent log injection attacks
 - Avoid logging sensitive information (credentials, PII)
 - Use proper log levels (INFO, WARNING, ERROR, CRITICAL)
@@ -119,6 +122,7 @@ When using structured logging for SIEM integration:
 - Monitor for anomalous log patterns
 
 **DON'T:**
+
 - Log raw user input without sanitization
 - Include sensitive data in logs
 - Use debug logging in production
@@ -158,6 +162,7 @@ logger.log_alert("critical", sanitized_data)
 ### Preventing Callback Abuse
 
 **DO:**
+
 - Validate callback functions before registration
 - Implement timeout mechanisms for callbacks
 - Use try-except blocks to prevent callback crashes
@@ -165,6 +170,7 @@ logger.log_alert("critical", sanitized_data)
 - Log all callback executions
 
 **DON'T:**
+
 - Allow arbitrary code execution in callbacks
 - Block the main thread with long-running callbacks
 - Ignore callback exceptions
@@ -232,12 +238,14 @@ def secure_alert_handler(level, data):
 ### Prometheus Export
 
 **DO:**
+
 - Use TLS for Prometheus scraping endpoints
 - Implement authentication for /metrics endpoint
 - Rate-limit metric scrapes
 - Validate label values to prevent injection
 
 **DON'T:**
+
 - Expose metrics publicly without authentication
 - Include sensitive data in metric labels
 - Allow unlimited scrape frequency
@@ -245,6 +253,7 @@ def secure_alert_handler(level, data):
 ### CloudWatch Export
 
 **DO:**
+
 - Use IAM roles with least privilege
 - Encrypt data in transit (HTTPS)
 - Validate metric data before sending
@@ -252,6 +261,7 @@ def secure_alert_handler(level, data):
 - Monitor CloudWatch API costs
 
 **DON'T:**
+
 - Use long-term access keys in code
 - Send unvalidated data to CloudWatch
 - Ignore API errors
@@ -290,6 +300,7 @@ def secure_cloudwatch_export(status, region='us-east-1'):
 ### Audit Trail
 
 Maintain audit trails for:
+
 - Configuration changes
 - Threshold modifications
 - Alert triggers
@@ -326,6 +337,8 @@ def log_config_change(user, old_config, new_config):
 When implementing automatic failover:
 
 **DO:**
+
+- Use secure communication channels (TLS)
 - Verify failover target before switching
 - Implement circuit breakers
 - Log all failover events
@@ -333,6 +346,7 @@ When implementing automatic failover:
 - Test failover regularly
 
 **DON'T:**
+
 - Failover without verification
 - Create failover loops
 - Ignore failover failures
@@ -353,7 +367,7 @@ When implementing automatic failover:
 
 ## Resources
 
-- OWASP Top 10: https://owasp.org/www-project-top-ten/
-- CWE/SANS Top 25: https://cwe.mitre.org/top25/
-- NIST Cybersecurity Framework: https://www.nist.gov/cyberframework
-- AWS Security Best Practices: https://aws.amazon.com/security/best-practices/
+- OWASP Top 10: [https://owasp.org/www-project-top-ten/](https://owasp.org/www-project-top-ten/)
+- CWE/SANS Top 25: [https://cwe.mitre.org/top25/](https://cwe.mitre.org/top25/)
+- NIST Cybersecurity Framework: [https://www.nist.gov/cyberframework](https://www.nist.gov/cyberframework)
+- AWS Security Best Practices: [https://aws.amazon.com/security/best-practices/](https://aws.amazon.com/security/best-practices/)
