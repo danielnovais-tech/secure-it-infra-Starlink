@@ -35,7 +35,7 @@ The schema follows **semantic versioning (semver)**:
 
 ### Schema Change Workflow
 
-```
+```text
 1. Proposal
    ├─ Create RFC document
    ├─ Identify impact (breaking vs. non-breaking)
@@ -73,7 +73,7 @@ The validator includes privacy tag enforcement to ensure sensitive data is prope
 ### Privacy Tags
 
 | Tag | Definition | Enforcement Level |
-|-----|------------|-------------------|
+| --- | ---------- | ----------------- |
 | `PII` | Personally Identifiable Information | STRICT in production |
 | `PHI` | Protected Health Information | STRICT everywhere |
 | `CONFIDENTIAL` | Business confidential data | MODERATE |
@@ -145,7 +145,8 @@ python validate_logs.py --file logs/production.log \
 ```
 
 **Error:**
-```
+
+```text
 Field 'user_id' likely contains PII but missing PII or REDACTED tag (privacy_tags: [])
 Field 'user_id' in production environment appears to contain unredacted PII: 'john.doe@example.co...'
 ```
@@ -180,7 +181,8 @@ python validate_logs.py --file logs/development.log \
 ```
 
 **Warning:**
-```
+
+```text
 ⚠️  Field 'user_id' likely contains PII but missing PII or REDACTED tag (privacy_tags: [])
 ```
 
@@ -227,7 +229,7 @@ Ensures that schema changes don't break existing log processing, dashboards, or 
 
 ### Directory Structure
 
-```
+```text
 tests/
 └── fixtures/
     └── legacy_logs/
@@ -254,7 +256,7 @@ python validate_logs.py \
 
 **Output:**
 
-```
+```text
 📊 Backward Compatibility Test Results:
    Compatible: 15
    Incompatible: 2
@@ -272,34 +274,37 @@ python validate_logs.py \
 
 ### Creating Test Samples
 
-1. **Collect Representative Samples**:
-   ```bash
-   # Extract samples from production logs
-   head -100 /var/log/starlink-security/production.log > \
-       tests/fixtures/legacy_logs/v1.0.0/prod_samples.log
-   ```
+1.**Collect Representative Samples**:
 
-2. **Organize by Version**:
-   - Create directory for each schema version
-   - Include at least 3-5 representative samples per version
-   - Cover different log levels, components, and edge cases
+```bash
+# Extract samples from production logs
+head -100 /var/log/starlink-security/production.log > \
+tests/fixtures/legacy_logs/v1.0.0/prod_samples.log
+```
 
-3. **Document Expected Behavior**:
-   ```json
-   // tests/fixtures/legacy_logs/README.md
-   {
-     "v0.9.0": {
-       "status": "deprecated",
-       "expected_result": "incompatible",
-       "notes": "Missing required fields: schema_version, service"
-     },
-     "v1.0.0": {
-       "status": "current",
-       "expected_result": "compatible",
-       "notes": "All samples should validate"
-     }
-   }
-   ```
+2.**Organize by Version**:
+
+- Create directory for each schema version
+- Include at least 3-5 representative samples per version
+- Cover different log levels, components, and edge cases
+
+3.**Document Expected Behavior**:
+
+```json
+// tests/fixtures/legacy_logs/README.md
+{
+"v0.9.0": {
+ "status": "deprecated",
+ "expected_result": "incompatible",
+ "notes": "Missing required fields: schema_version, service"
+},
+"v1.0.0": {
+"status": "current",
+"expected_result": "compatible",
+"notes": "All samples should validate"
+}
+}
+```
 
 ### Interpreting Results
 
@@ -338,18 +343,21 @@ jobs:
 
 ### Deprecation Timeline
 
-**Phase 1: Announcement (Release N)**
+Phase 1: Announcement (Release N)**
+
 - Mark field as deprecated in schema
 - Add `"deprecated": true` to field definition
 - Update field dictionary with deprecation notice
 - Notify all teams
 
-**Phase 2: Warning Period (Release N+1)**
+Phase 2: Warning Period (Release N+1)
+
 - Validator emits warnings for deprecated field usage
 - Field remains functional
 - Minimum duration: 90 days
 
-**Phase 3: Removal (Release N+2)**
+Phase 3: Removal (Release N+2)
+
 - Remove field from schema (MAJOR version bump)
 - Validator errors on deprecated field usage
 - Provide migration guide
@@ -357,6 +365,7 @@ jobs:
 ### Example Deprecation
 
 **Release 1.0.0** (Current):
+
 ```json
 {
   "user_name": {
@@ -369,6 +378,7 @@ jobs:
 ```
 
 **Release 1.1.0** (Warning Period):
+
 ```bash
 # Validator output
 ⚠️  Field 'user_name' is deprecated and will be removed in v2.0.0
@@ -376,6 +386,7 @@ jobs:
 ```
 
 **Release 2.0.0** (Removal):
+
 ```bash
 # Validator output
 ❌ Field 'user_name' is not allowed (removed in v2.0.0)
@@ -530,7 +541,7 @@ echo "Schema rolled back to v1.0.0 due to compatibility issues"
 ### Validator Modes Summary
 
 | Mode | Use Case | Behavior |
-|------|----------|----------|
+| ---- | -------- | -------- |
 | **Strict** | CI/Production | Fail on first error |
 | **Lenient** | Development/Migration | Warnings instead of errors |
 | **Privacy Enforcement** | Production logs | Reject unredacted PII |
@@ -570,7 +581,7 @@ validate-all:
 
 ## References
 
-- JSON Schema Specification: https://json-schema.org/
+- JSON Schema Specification: [https://json-schema.org/]
 - Field Dictionary: `FIELD_DICTIONARY.md`
 - CI Integration Guide: `CI_INTEGRATION.md`
 - Logging Documentation: `LOGGING.md`
