@@ -7,7 +7,7 @@ for Starlink satellite internet connections based on packet loss and latency.
 
 import logging
 from dataclasses import dataclass
-from typing import List, Optional, Callable, Dict, Any, Union
+from typing import List, Optional, Callable, Dict, Any, Union, overload, Literal, TypedDict
 from enum import Enum
 from collections import deque
 from statistics import mean
@@ -155,8 +155,27 @@ class StarlinkConnectionQuality:
             raise ValueError("history_window_size must be a non-negative integer")
         self.history_window_size = history_window_size
         self.stability_history: deque = deque(maxlen=history_window_size if history_window_size > 0 else None)
+
+
+class _QualityScoreDeduction(TypedDict, total=False):
+    reason: str
+    points: float
+    threat_id: str
+
+
+class QualityScoreDetails(TypedDict):
+    final_score: float
+    base_score: float
+    deductions: List[_QualityScoreDeduction]
+    summary: str
     
-    def calculate_quality_score(self, return_details: bool = False) -> Union[float, Dict[str, Any]]:
+    @overload
+    def calculate_quality_score(self, return_details: Literal[False] = False) -> float: ...
+
+    @overload
+    def calculate_quality_score(self, return_details: Literal[True]) -> QualityScoreDetails: ...
+
+    def calculate_quality_score(self, return_details: bool = False) -> Union[float, QualityScoreDetails]:
         """
         Calculate overall connection quality score (0-100).
         
