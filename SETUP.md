@@ -4,20 +4,23 @@
 
 ### Local Development
 
-1. **Install Dependencies**
-   ```bash
-   pip install -r requirements-dev.txt
-   ```
+1.**Install Dependencies**
 
-2. **Run Tests**
-   ```bash
-   pytest test_starlink_metrics.py test_enhanced_features.py test_observability.py test_integration.py -v
-   ```
+```bash
+pip install -r requirements-dev.txt
+```
 
-3. **Run Examples**
-   ```bash
-   python3 observability_examples.py
-   ```
+2.**Run Tests**
+
+```bash
+pytest test_starlink_metrics.py test_enhanced_features.py test_observability.py test_integration.py -v
+```
+
+3.**Run Examples**
+
+```bash
+python3 observability_examples.py
+```
 
 ## Docker Deployment
 
@@ -36,9 +39,9 @@ docker-compose up -d
 
 ### Access Services
 
-- **Metrics Endpoint**: http://localhost:9090/metrics
-- **Prometheus**: http://localhost:9091
-- **Grafana**: http://localhost:3000 (admin/admin)
+- **Metrics Endpoint**: [http://localhost:9090/metrics](http://localhost:9090/metrics)
+- **Prometheus**: [http://localhost:9091](http://localhost:9091)
+- **Grafana**: [http://localhost:3000](http://localhost:3000) (admin/admin)
 
 ## Kubernetes Deployment
 
@@ -136,8 +139,8 @@ scrape_configs:
 
 ### Grafana Dashboard
 
-1. Access Grafana at http://localhost:3000
-2. Add Prometheus data source (http://prometheus:9090)
+1. Access Grafana at [http://localhost:3000](http://localhost:3000) (admin/admin)
+2. Add Prometheus data source ([http://prometheus:9090](http://prometheus:9090))
 3. Import dashboard or create custom:
    - Connection Quality Score
    - Stability Score Over Time
@@ -235,5 +238,5 @@ kubectl top pods -l app=starlink-metrics
 ## Support
 
 - **Documentation**: See README.md, SECURITY.md, DEVOPS_CHECKLIST.md
-- **Issues**: https://github.com/danielnovais-tech/secure-it-infra-Starlink/issues
+- **Issues**: [https://github.com/danielnovais-tech/secure-it-infra-Starlink/issues](https://github.com/danielnovais-tech/secure-it-infra-Starlink/issues)
 - **Security**: See SECURITY.md for reporting vulnerabilities
