@@ -1,31 +1,60 @@
-"""Starlink Security Infrastructure Package."""
+"""Starlink Security Infrastructure.
 
-from starlink_security.config import CONFIG_DIR, DATA_DIR, LOG_DIR
+This repo currently contains multiple historical implementations that share the
+same top-level name ("starlink_security"). Some legacy tests import high-level
+symbols directly from this package.
 
-__all__ = ["CONFIG_DIR", "DATA_DIR", "LOG_DIR"]
+To keep those tests and editor tooling working, this package provides a
+compatibility layer that re-exports symbols from the legacy script
+`starlink_security.py` when present.
 """
-Starlink Security Infrastructure Package
 
-A comprehensive security solution for managed enterprise infrastructures
-supporting Starlink satellite connectivity with specialized adaptations for:
-- Latency-aware security policies
-- Connection resilience and failover
-- Remote management capabilities
-- Bandwidth-optimized security operations
-"""
+from __future__ import annotations
+
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
+from typing import Any, Optional
 
 __version__ = "1.0.0"
 
-from .connection_monitor import ConnectionMonitor
-from .policy_manager import LatencyAwarePolicyManager
-from .resilience import ConnectionResilience
-from .remote_manager import RemoteManager
-from .bandwidth_optimizer import BandwidthOptimizer
+# Public symbols expected by legacy tests (e.g. `test_security.py`).
+StarlinkSecurityFoundation: Any
+PolicyEnforcer: Any
+IncidentResponder: Any
+VPNManager: Any
+BackupManager: Any
+SecurityEvent: Any
+
+
+def _load_legacy_script() -> Optional[object]:
+    legacy_path = Path(__file__).resolve().parent.parent / "starlink_security.py"
+    if not legacy_path.exists():
+        return None
+
+    spec = spec_from_file_location("_starlink_security_legacy", legacy_path)
+    if spec is None or spec.loader is None:
+        return None
+
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_legacy = _load_legacy_script()
+if _legacy is not None:
+    StarlinkSecurityFoundation = getattr(_legacy, "StarlinkSecurityFoundation")
+    PolicyEnforcer = getattr(_legacy, "PolicyEnforcer")
+    IncidentResponder = getattr(_legacy, "IncidentResponder")
+    VPNManager = getattr(_legacy, "VPNManager")
+    BackupManager = getattr(_legacy, "BackupManager")
+    SecurityEvent = getattr(_legacy, "SecurityEvent")
+
 
 __all__ = [
-    "ConnectionMonitor",
-    "LatencyAwarePolicyManager",
-    "ConnectionResilience",
-    "RemoteManager",
-    "BandwidthOptimizer",
+    "StarlinkSecurityFoundation",
+    "PolicyEnforcer",
+    "IncidentResponder",
+    "VPNManager",
+    "BackupManager",
+    "SecurityEvent",
 ]
