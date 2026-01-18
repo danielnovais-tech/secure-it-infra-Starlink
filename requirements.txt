@@ -1,2 +1,5 @@
 
 aiohttp>=3.9
+fastapi>=0.110
+httpx>=0.25
+uvicorn>=0.24
