@@ -1,13 +1,14 @@
 # Security Best Practices for Starlink Enterprise Deployments
 
 ## Overview
+
 This document outlines security best practices specifically designed for enterprise infrastructures using Starlink satellite connectivity, with emphasis on defense-in-depth, encryption, and connectivity-resilient security.
 
 ## 1. Defense-in-Depth Approach
 
 ### Layered Security Model
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │     Physical Security Layer             │
 │  - Starlink dish protection             │
@@ -64,6 +65,7 @@ This document outlines security best practices specifically designed for enterpr
 ### Encryption at Rest
 
 **Full Disk Encryption (LUKS)**:
+
 ```bash
 # Check encryption status
 lsblk -f
@@ -75,6 +77,7 @@ cryptsetup luksOpen /dev/sdX encrypted_volume
 ```
 
 **File-Level Encryption**:
+
 ```bash
 # For sensitive files
 gpg --encrypt --recipient admin@company.com sensitive-data.txt
@@ -84,6 +87,7 @@ gpg --encrypt --recipient admin@company.com sensitive-data.txt
 ```
 
 **Best Practices**:
+
 - Encrypt all volumes containing sensitive data
 - Use strong passphrases (20+ characters)
 - Secure key management (hardware security modules recommended)
@@ -93,6 +97,7 @@ gpg --encrypt --recipient admin@company.com sensitive-data.txt
 ### Encryption in Transit
 
 **TLS/SSL for All Services**:
+
 ```bash
 # Generate strong certificates
 openssl req -x509 -nodes -days 365 -newkey rsa:4096 \
@@ -104,6 +109,7 @@ openssl x509 -in /etc/ssl/certs/server.crt -text -noout
 ```
 
 **VPN Configuration**:
+
 ```bash
 # OpenVPN with strong encryption
 cipher AES-256-GCM
@@ -115,6 +121,7 @@ tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
 ```
 
 **Best Practices**:
+
 - TLS 1.3 minimum (disable TLS 1.0, 1.1)
 - Strong cipher suites only
 - Perfect forward secrecy (PFS)
@@ -124,13 +131,15 @@ tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
 ### Starlink-Specific Encryption Considerations
 
 **VPN over Satellite**:
+
 - VPN is **mandatory** for Starlink deployments
 - Satellite links are potentially interceptable
 - All traffic should be encrypted end-to-end
 - Use VPN with strong encryption even for "secure" protocols
 
 **Recommended VPN Configuration**:
-```
+
+```bash
 # OpenVPN config for Starlink
 dev tun
 proto udp  # Better for high-latency Starlink
@@ -148,6 +157,7 @@ keepalive 10 120  # Important for Starlink handoffs
 ### User Access Management
 
 **Role-Based Access Control (RBAC)**:
+
 ```bash
 # Create role-specific groups
 sudo groupadd starlink-admin
@@ -159,6 +169,7 @@ sudo usermod -aG starlink-operator john
 ```
 
 **Sudo Configuration**:
+
 ```bash
 # /etc/sudoers.d/starlink-security
 # Allow admin group specific commands only
@@ -170,6 +181,7 @@ sudo usermod -aG starlink-operator john
 ```
 
 **SSH Key Management**:
+
 ```bash
 # Disable password authentication
 sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
@@ -184,6 +196,7 @@ ssh-keygen -t ed25519 -a 100
 ### File Permission Best Practices
 
 **Sensitive Files**:
+
 ```bash
 # SSH private keys
 chmod 600 ~/.ssh/id_*
@@ -201,6 +214,7 @@ chmod 000 /etc/gshadow
 ```
 
 **Service Accounts**:
+
 ```bash
 # Create service account with no login
 useradd -r -s /usr/sbin/nologin service-account
@@ -213,12 +227,14 @@ chmod 750 /opt/service
 ### Application-Level Access Control
 
 **API Security**:
+
 - Token-based authentication
 - Rate limiting per user/IP
 - Scope-based access control
 - Regular token rotation
 
 **Database Access**:
+
 ```sql
 -- Create limited privilege user
 CREATE USER 'app_user'@'localhost' IDENTIFIED BY 'strong_password';
@@ -232,7 +248,7 @@ FLUSH PRIVILEGES;
 
 ### Network Topology for Starlink Deployments
 
-```
+```text
                     Internet
                        │
                  [Starlink Dish]
@@ -257,6 +273,7 @@ FLUSH PRIVILEGES;
 ### VLAN Configuration
 
 **Create VLANs**:
+
 ```bash
 # Install VLAN support
 sudo apt-get install vlan
@@ -271,6 +288,7 @@ sudo ip link add link eth0 name eth0.30 type vlan id 30  # Guest
 ```
 
 **Firewall Rules Between VLANs**:
+
 ```bash
 # Allow management to all
 iptables -A FORWARD -i eth0.10 -j ACCEPT
@@ -287,7 +305,8 @@ iptables -A FORWARD -i eth0.30 -o eth0.10 -j DROP
 ### DMZ Configuration
 
 **DMZ for Public Services**:
-```
+
+```text
 Internet → Starlink → Firewall → DMZ (VLAN 40) → Web Servers
                          ↓
                    Internal Network (VLAN 20)
@@ -296,6 +315,7 @@ Internet → Starlink → Firewall → DMZ (VLAN 40) → Web Servers
 ```
 
 **Rules**:
+
 - Internet can access DMZ on specific ports (80, 443)
 - DMZ can access internal network on specific ports
 - Internal network cannot be accessed from Internet
@@ -306,12 +326,14 @@ Internet → Starlink → Firewall → DMZ (VLAN 40) → Web Servers
 ### Satellite Link Security
 
 **Threats**:
+
 - Signal interception (satellite broadcast)
 - Weather-related outages
 - Potential jamming
 - Higher latency affecting security protocols
 
 **Mitigations**:
+
 - **Always use VPN**: Encrypt all traffic before Starlink
 - **Implement failover**: Backup connectivity option
 - **Session resilience**: Handle connection interruptions
@@ -320,6 +342,7 @@ Internet → Starlink → Firewall → DMZ (VLAN 40) → Web Servers
 ### Connectivity Resilience
 
 **Dual-WAN Setup**:
+
 ```bash
 # Configure failover to cellular/fiber backup
 # Primary: Starlink (high bandwidth)
@@ -340,12 +363,16 @@ done
 ### Remote Site Security
 
 **Challenges**:
+
 - Limited on-site IT support
 - Physical security concerns
 - Connectivity interruptions
 - Delayed security updates
 
 **Solutions**:
+
+- **Remote management**: VPN + SSH access
+- **Physical security**: Lockable enclosures for Starlink dish and equipment
 - **Automated security updates**: Unattended upgrades
 - **Remote monitoring**: SIEM with alerting
 - **Local redundancy**: Multiple Starlink terminals if critical
@@ -356,6 +383,7 @@ done
 ### Automated Security Auditing
 
 **Schedule Regular Audits**:
+
 ```bash
 # Daily quick checks
 0 1 * * * /opt/secure-it-infra-Starlink/starlink_security_auditor.py -q
@@ -371,6 +399,9 @@ done
 ### Security Metrics
 
 **Key Performance Indicators**:
+
+- Number of vulnerabilities detected (target: 0 critical/major)
+- Time to patch vulnerabilities (target: <48 hours)
 - Audit pass rate (target: 95%+)
 - Time to remediate critical findings (target: <24 hours)
 - VPN uptime (target: 99.9%)
@@ -380,6 +411,7 @@ done
 ### Incident Response
 
 **Response Workflow**:
+
 1. Detection (automated alerts)
 2. Triage (classify severity)
 3. Containment (isolate affected systems)
@@ -388,6 +420,7 @@ done
 6. Lessons learned (update procedures)
 
 **Starlink-Specific Considerations**:
+
 - Remote incident response over satellite
 - Bandwidth limitations for forensics data
 - Potential need for on-site presence
@@ -398,6 +431,7 @@ done
 ### Security Policy Documentation
 
 **Required Policies**:
+
 - Acceptable Use Policy
 - Remote Access Policy (VPN mandatory)
 - Encryption Policy (all sensitive data)
@@ -407,6 +441,7 @@ done
 ### Audit Trail
 
 **Logging Requirements**:
+
 ```bash
 # Centralized logging
 # rsyslog configuration for remote logging
@@ -428,6 +463,7 @@ done
 ### Compliance Frameworks
 
 **Applicable Standards**:
+
 - **CIS Controls**: Implement CIS benchmarks
 - **NIST Cybersecurity Framework**: Identify, Protect, Detect, Respond, Recover
 - **ISO 27001**: Information security management
@@ -437,6 +473,13 @@ done
 ## 8. Security Checklist for Starlink Deployments
 
 ### Initial Deployment
+
+- [ ] Risk assessment completed
+- [ ] Starlink dish location secured
+- [ ] Starlink dish installed in secure location
+- [ ] Edge firewall configured
+- [ ] Starlink dish physically secured
+- [ ] Edge firewall configured
 - [ ] VPN configured and tested
 - [ ] Firewall rules implemented
 - [ ] Network segmentation in place
@@ -447,6 +490,7 @@ done
 - [ ] Backup connectivity tested
 
 ### Monthly Reviews
+
 - [ ] Review audit reports
 - [ ] Update firewall rules
 - [ ] Review user access
@@ -456,6 +500,7 @@ done
 - [ ] Update security documentation
 
 ### Quarterly Tasks
+
 - [ ] Penetration testing
 - [ ] Security awareness training
 - [ ] Policy review and update
