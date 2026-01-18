@@ -1336,8 +1336,17 @@ async def enterprise_foundation_main():
             print(f"Security Score: {security_score:.1f}/100")
         else:
             print("Security Score: N/A")
-        print(f"Connection Stability: {metrics.connection_stability:.1f}/100")
-        print(f"Active Threats: {len(foundation.active_threats)}")
+        if isinstance(metrics, dict):
+            connection_stability = metrics.get("connection_stability")
+        else:
+            connection_stability = getattr(metrics, "connection_stability", None)
+
+        if isinstance(connection_stability, (int, float)):
+            print(f"Connection Stability: {connection_stability:.1f}/100")
+        else:
+            print("Connection Stability: N/A")
+        active_threats = getattr(foundation, "active_threats", [])
+        print(f"Active Threats: {len(active_threats) if hasattr(active_threats, '__len__') else 0}")
         return
     
     if args.daemon:
@@ -1372,11 +1381,29 @@ async def enterprise_foundation_main():
     
     # Run the foundation
     try:
-        await foundation.run()
+        run_fn = getattr(foundation, "run", None)
+        if callable(run_fn):
+            import inspect
+
+            run_result = run_fn()
+            if inspect.isawaitable(run_result):
+                await run_result
+        else:
+            start_fn = getattr(foundation, "start", None)
+            if callable(start_fn):
+                import inspect
+
+                start_result = start_fn()
+                if inspect.isawaitable(start_result):
+                    await start_result
     except KeyboardInterrupt:
         logger.info("Shutdown requested by user")
-        foundation.running = False
-        foundation.cleanup()
+        if hasattr(foundation, "running"):
+            foundation.running = False
+
+        cleanup_fn = getattr(foundation, "cleanup", None)
+        if callable(cleanup_fn):
+            cleanup_fn()
 """
 Starlink Security Infrastructure
 Enterprise-grade security management for Starlink infrastructure
@@ -4209,8 +4236,11 @@ class UnifiedCLI:
         
         elif command == "reload_config":
             # reload_config doesn't take parameters, it reloads from existing path
-            self.foundation.reload_config()
-            return {"message": "Configuration reloaded successfully"}
+            reload_fn = getattr(self.foundation, "reload_config", None)
+            if callable(reload_fn):
+                reload_fn()
+                return {"message": "Configuration reloaded successfully"}
+            return {"message": "Configuration reload is not supported by this foundation"}
         
         elif command == "export_audit":
             output = args.get("output", "audit.json")
@@ -4220,27 +4250,56 @@ class UnifiedCLI:
             if formatter in ComplianceProfile.PROFILES:
                 fmt = ComplianceProfile.create_formatter(formatter)
             else:
-                fmt = self.foundation.audit_formatters[0] if self.foundation.audit_formatters else None
+                audit_formatters = getattr(self.foundation, "audit_formatters", None)
+                fmt = audit_formatters[0] if isinstance(audit_formatters, list) and audit_formatters else None
             
-            if fmt:
-                self.foundation.export_compliance_audit(fmt, output)
-                return {"message": f"Audit exported to {output}"}
-            else:
+            if not fmt:
                 return {"message": "No formatter available"}
+
+            export_fn = getattr(self.foundation, "export_compliance_audit", None)
+            if callable(export_fn):
+                export_fn(fmt, output)
+                return {"message": f"Audit exported to {output}"}
+            return {"message": "Audit export is not supported by this foundation"}
         
         elif command == "ingest_feed":
             connector_type = args.get("connector_type", "STIX")
             config = args.get("config", {})
+
+            if not isinstance(config, dict):
+                config = {}
             
             if connector_type == "STIX":
-                connector = STIXTAXIIConnector(config)
+                server_url = (
+                    config.get("server_url")
+                    or config.get("url")
+                    or config.get("taxii_server_url")
+                    or config.get("taxii_url")
+                )
+                if not isinstance(server_url, str) or not server_url:
+                    return {"message": "STIX/TAXII server_url is required in config"}
+                collection = config.get("collection") or config.get("taxii_collection") or "default"
+                connector = STIXTAXIIConnector(server_url, collection)
             elif connector_type == "MISP":
-                connector = MISPConnector(config)
+                misp_url = config.get("misp_url") or config.get("url")
+                if not isinstance(misp_url, str) or not misp_url:
+                    return {"message": "MISP misp_url is required in config"}
+                api_key = config.get("api_key") or config.get("misp_api_key")
+                if not api_key:
+                    return {"message": "MISP api_key is required in config"}
+                connector = MISPConnector(misp_url, str(api_key))
             else:
                 return {"message": f"Unknown connector type: {connector_type}"}
             
-            indicators = self.foundation.integrate_threat_feed(connector)
-            return {"message": f"Ingested {len(indicators)} threat indicators"}
+            integrate_fn = getattr(self.foundation, "integrate_threat_feed", None)
+            if not callable(integrate_fn):
+                return {"message": "Threat feed ingestion is not supported by this foundation"}
+
+            indicators = integrate_fn(connector)
+            from collections.abc import Sized
+
+            count = len(indicators) if isinstance(indicators, Sized) else 0
+            return {"message": f"Ingested {count} threat indicators"}
         
         else:
             raise ValueError(f"Unknown command: {command}")
@@ -4319,7 +4378,10 @@ class RESTAPIGateway:
         
         try:
             if endpoint == "/metrics" and method == "GET":
-                return {"data": self.foundation.get_metrics_summary(), "status": 200}
+                metrics_fn = getattr(self.foundation, "get_metrics_summary", None)
+                if callable(metrics_fn):
+                    return {"data": metrics_fn(), "status": 200}
+                return {"error": "Metrics summary not supported by foundation", "status": 501}
             
             elif endpoint == "/prometheus" and method == "GET":
                 metrics_fn = getattr(self.foundation, "get_prometheus_metrics", None)
@@ -4333,27 +4395,54 @@ class RESTAPIGateway:
                 if not data:
                     return {"error": "Event data required", "status": 400}
                 event = SecurityEvent(**data)
-                self.foundation.log_event(event)
-                return {"message": "Event logged successfully", "status": 200}
+                log_event_fn = getattr(self.foundation, "log_event", None)
+                if callable(log_event_fn):
+                    log_event_fn(event)
+                    return {"message": "Event logged successfully", "status": 200}
+                return {"error": "Event logging not supported by foundation", "status": 501}
             
             elif endpoint == "/threats" and method == "GET":
-                threats = self.foundation.state_store.get_threats()
-                return {"data": list(threats), "status": 200}
+                state_store = getattr(self.foundation, "state_store", None)
+                get_threats_fn = getattr(state_store, "get_threats", None) if state_store is not None else None
+                if callable(get_threats_fn):
+                    threats_obj = get_threats_fn()
+                    if threats_obj is None:
+                        return {"data": [], "status": 200}
+
+                    from collections.abc import Iterable as IterableABC
+
+                    if isinstance(threats_obj, (str, bytes)):
+                        return {"data": [threats_obj], "status": 200}
+
+                    if isinstance(threats_obj, IterableABC):
+                        return {"data": list(threats_obj), "status": 200}
+
+                    return {"data": [threats_obj], "status": 200}
+                return {"error": "Threat listing not supported by foundation", "status": 501}
             
             elif endpoint == "/config/reload" and method == "POST":
-                self.foundation.reload_config()
-                return {"message": "Configuration reloaded", "status": 200}
+                reload_fn = getattr(self.foundation, "reload_config", None)
+                if callable(reload_fn):
+                    reload_fn()
+                    return {"message": "Configuration reloaded", "status": 200}
+                return {"error": "Configuration reload not supported by foundation", "status": 501}
             
             elif endpoint == "/keys/rotate" and method == "POST":
-                self.foundation.rotate_encryption_key()
-                return {"message": "Encryption key rotated", "status": 200}
+                rotate_fn = getattr(self.foundation, "rotate_encryption_key", None)
+                if callable(rotate_fn):
+                    rotate_fn()
+                    return {"message": "Encryption key rotated", "status": 200}
+                return {"error": "Key rotation not supported by foundation", "status": 501}
             
             elif endpoint == "/audit/export" and method == "POST":
                 profile = data.get("profile", "iso27001") if data is not None else "iso27001"
                 output = data.get("output", "audit_export.json") if data is not None else "audit_export.json"
                 formatter = ComplianceProfile.create_formatter(profile)
-                self.foundation.export_compliance_audit(formatter, output)
-                return {"message": f"Audit exported to {output}", "status": 200}
+                export_fn = getattr(self.foundation, "export_compliance_audit", None)
+                if callable(export_fn):
+                    export_fn(formatter, output)
+                    return {"message": f"Audit exported to {output}", "status": 200}
+                return {"error": "Audit export not supported by foundation", "status": 501}
             
             else:
                 return {"error": f"Unknown endpoint: {endpoint}", "status": 404}
@@ -4379,7 +4468,7 @@ class PluginRegistry:
         self._lock = threading.RLock()
         self.logger = logging.getLogger(__name__)
     
-    def register_plugin(self, category: str, name: str, plugin_class: type, metadata: Dict = None):
+    def register_plugin(self, category: str, name: str, plugin_class: type, metadata: Optional[Dict[str, Any]] = None):
         """Register a plugin in the marketplace."""
         if category not in self.plugins:
             raise ValueError(f"Unknown plugin category: {category}")
@@ -4708,6 +4797,9 @@ class WebDashboard:
     
     def get_dashboard_data(self) -> Dict[str, Any]:
         """Get all data for dashboard display."""
+        metrics_summary_fn = getattr(self.foundation, "get_metrics_summary", None)
+        metrics_summary = metrics_summary_fn() if callable(metrics_summary_fn) else {}
+
         prometheus_fn = getattr(self.foundation, "get_prometheus_metrics", None)
         prometheus_metrics = prometheus_fn() if callable(prometheus_fn) else ""
 
@@ -4737,17 +4829,24 @@ class WebDashboard:
 
                     result = get_threats()
                     if isinstance(result, IterableABC):
-                        threats = list(cast("Iterable[Any]", result))
+                        threats = list(cast(IterableABC, result))
                     else:
                         threats = []
                 except Exception:
                     threats = []
+
+        rbac_fn = getattr(self.foundation, "get_rbac_audit_log", None)
+        rbac_audit = rbac_fn() if callable(rbac_fn) else []
+
+        cluster_manager = getattr(self.foundation, "cluster_manager", None)
+        get_status_fn = getattr(cluster_manager, "get_status", None) if cluster_manager is not None else None
+        cluster_health = get_status_fn() if callable(get_status_fn) else {}
         return {
-            "metrics": self.foundation.get_metrics_summary(),
+            "metrics": metrics_summary,
             "prometheus": prometheus_metrics,
             "threats": threats,
-            "rbac_audit": self.foundation.get_rbac_audit_log() if hasattr(self.foundation, 'get_rbac_audit_log') else [],
-            "cluster_health": self.foundation.cluster_manager.get_status() if hasattr(self.foundation, 'cluster_manager') else {},
+            "rbac_audit": rbac_audit,
+            "cluster_health": cluster_health,
             "scorer_status": scorer_status,
         }
     
@@ -4843,12 +4942,20 @@ class PolicySimulationSandbox:
             current_result: Dict[str, Any]
             current_scorer = getattr(self.foundation, "threat_scorer", None)
             if current_scorer is not None and hasattr(current_scorer, "score"):
-                current_result = current_scorer.score(event)
+                score_obj = current_scorer.score(event)
+                current_result = score_obj if isinstance(score_obj, dict) else {
+                    "risk": DynamicWorkerPool.DEFAULT_RISK_SCORE,
+                    "factors": {"fallback": "invalid_score_result"},
+                }
             else:
                 # Fall back to the foundation-level scoring method if available.
                 score_threat_fn = getattr(self.foundation, "score_threat", None)
                 if callable(score_threat_fn):
-                    current_result = score_threat_fn(event)
+                    score_obj = score_threat_fn(event)
+                    current_result = score_obj if isinstance(score_obj, dict) else {
+                        "risk": DynamicWorkerPool.DEFAULT_RISK_SCORE,
+                        "factors": {"fallback": "invalid_score_result"},
+                    }
                 else:
                     # Last-resort fallback to allow simulation to proceed.
                     current_result = {
@@ -5815,7 +5922,7 @@ class CanaryDeployment:
         return random.random() * 100 < config["canary_percentage"]
     
     def record_canary_result(self, canary_id: str, is_canary: bool,
-                            risk_score: float, baseline_risk: float = None):
+                            risk_score: float, baseline_risk: Optional[float] = None):
         """
         Record canary deployment result.
         
