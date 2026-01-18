@@ -3,6 +3,7 @@
   "pythonPlatform": "Windows",
   "venvPath": ".",
   "venv": ".venv",
+  "reportMissingModuleSource": "none",
   "include": [
     "secure_it_starlink/**/*.py",
     "security/**/*.py",
