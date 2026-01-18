@@ -57,7 +57,8 @@ class ThreatDetector:
                     for feed_url in feeds:
                         async with aiohttp.ClientSession() as session:
                             try:
-                                async with session.get(feed_url, timeout=10) as response:
+                                timeout = aiohttp.ClientTimeout(total=10)
+                                async with session.get(feed_url, timeout=timeout) as response:
                                     if response.status == 200:
                                         content = await response.text()
                                         # Parse and add to intelligence set

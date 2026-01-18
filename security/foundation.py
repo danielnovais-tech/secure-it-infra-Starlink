@@ -4,7 +4,7 @@ Core StarlinkSecurityFoundation class
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Dict, Set, List, Callable
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
 from .types import SecurityLevel
 from .logging_utils import StructuredLogger
 from .metrics import MetricsCollector
@@ -13,16 +13,16 @@ from .metrics import MetricsCollector
 class StarlinkSecurityFoundation:
     """Main security foundation class with metrics and structured logging."""
     
-    def __init__(self, config: Dict = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or self._default_config()
         self.running = False
         self.active_threats: Set[str] = set()
         self.security_level = SecurityLevel.NORMAL
-        self.event_handlers: List[Callable] = []
+        self.event_handlers: List[Callable[[Dict[str, Any]], Awaitable[None]]] = []
         self.logger = StructuredLogger(__name__)
         self.metrics = MetricsCollector()
         
-    def _default_config(self) -> Dict:
+    def _default_config(self) -> Dict[str, Any]:
         """Return default configuration."""
         return {
             'monitoring': {
@@ -38,7 +38,7 @@ class StarlinkSecurityFoundation:
         }
     
     async def trigger_event(self, event_type: str, severity: str, source: str, 
-                          message: str, data: Dict = None):
+                          message: str, data: Optional[Dict[str, Any]] = None):
         """Trigger a security event with metrics tracking."""
         event = {
             'type': event_type,

@@ -5,6 +5,7 @@
   "venv": ".venv",
   "include": [
     "secure_it_starlink/**/*.py",
+    "security/**/*.py",
     "security_modules/**/*.py",
     "incident_response/**/*.py",
     "sesf/**/*.py",

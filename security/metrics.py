@@ -5,7 +5,7 @@ Performance metrics tracking for Starlink Security Foundation
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 class MetricsCollector:
@@ -61,13 +61,16 @@ class PerformanceTimer:
     def __init__(self, metrics: MetricsCollector, operation: str):
         self.metrics = metrics
         self.operation = operation
-        self.start_time = None
+        self.start_time: Optional[float] = None
     
     def __enter__(self):
         self.start_time = time.time()
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.start_time is None:
+            return False
+
         duration = time.time() - self.start_time
         self.metrics.record_response_time(self.operation, duration)
         return False
