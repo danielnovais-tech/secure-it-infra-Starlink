@@ -581,7 +581,8 @@ validate-all:
 
 ## References
 
-- JSON Schema Specification: [https://json-schema.org/]
+- JSON Schema Specification: [https://json-schema.org/](https://json-schema.org/)
+- Semantic Versioning: [https://semver.org/](https://semver.org/)
 - Field Dictionary: `FIELD_DICTIONARY.md`
 - CI Integration Guide: `CI_INTEGRATION.md`
 - Logging Documentation: `LOGGING.md`
