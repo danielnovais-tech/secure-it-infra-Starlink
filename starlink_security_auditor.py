@@ -17,7 +17,7 @@ import sys
 import ipaddress
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 # Configure logging
 logging.basicConfig(
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class StarlinkSecurityAuditor:
     """Security auditor for Starlink-connected enterprise infrastructures."""
     
-    def __init__(self, config_file: str = None):
+    def __init__(self, config_file: Optional[str] = None):
         """Initialize the security auditor.
         
         Args:
@@ -44,7 +44,7 @@ class StarlinkSecurityAuditor:
             'overall_score': 0
         }
         
-    def _load_config(self, config_file: str) -> Dict:
+    def _load_config(self, config_file: Optional[str]) -> Dict:
         """Load configuration from JSON file or use defaults.
         
         Args:
@@ -638,69 +638,8 @@ def generate_security_recommendations(audit_results: Dict) -> str:
 
 
 def main():
-    """Main entry point for the security tool."""
-    parser = argparse.ArgumentParser(
-        description='Starlink Enterprise Security Audit Tool',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --audit --config config.json
-  %(prog)s --audit --output report.json
-  %(prog)s --check-network
-"""
-    )
-    
-    parser.add_argument(
-        '--audit',
-        action='store_true',
-        help='Run comprehensive security audit'
-    )
-    parser.add_argument(
-        '--check-network',
-        action='store_true',
-        help='Check network security only'
-    )
-    parser.add_argument(
-        '--check-services',
-        action='store_true',
-        help='Check services security only'
-    )
-    parser.add_argument(
-        '--check-encryption',
-        action='store_true',
-        help='Check encryption status only'
-    )
-    parser.add_argument(
-        '--check-vpn',
-        action='store_true',
-        help='Validate VPN configuration only'
-    )
-    parser.add_argument(
-        '-c', '--config',
-        help='Path to configuration file'
-    )
-    parser.add_argument(
-        '-o', '--output',
-        help='Path to save audit report'
-    )
-    parser.add_argument(
-        '--recommendations',
-        action='store_true',
-        help='Generate security recommendations'
-    )
-    parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        help='Enable verbose output'
-Starlink Security Auditor
-A comprehensive security auditing tool for Starlink-based enterprise infrastructures.
-
-This tool performs security audits across multiple domains:
-- Network security
-- Service vulnerabilities
-- Encryption status
-- VPN configuration
-"""
+    # Legacy/duplicated CLI entrypoint removed (a later main() exists below).
+    pass
 
 import json
 import logging
