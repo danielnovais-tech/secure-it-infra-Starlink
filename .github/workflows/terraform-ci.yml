@@ -139,8 +139,11 @@ jobs:
   cost-estimation:
     name: Cost Estimation
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     needs: terraform-validate
+
+    env:
+      INFRACOST_API_KEY: ${{ env.INFRACOST_API_KEY }}
 
     steps:
       - name: Checkout code
@@ -157,10 +160,13 @@ jobs:
 
       - name: Setup Infracost
         uses: infracost/actions/setup@v3
+        id: infracost_setup
+        if: env.INFRACOST_API_KEY != ''
         with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
+          api-key: ${{ env.INFRACOST_API_KEY }}
 
       - name: Generate Infracost JSON
+        if: env.INFRACOST_API_KEY != ''
         run: |
           infracost breakdown --path=terraform \
             --format=json \
@@ -173,11 +179,14 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const setupOutcome = '${{ steps.infracost_setup.outcome }}';
+            const hasKey = setupOutcome === 'success';
             const output = `#### Cost Estimation 💰
-            
-            Cost estimation requires \`INFRACOST_API_KEY\` secret to be configured.
-            Once configured, this will show estimated monthly costs for infrastructure changes.
-            
+
+            ${hasKey
+              ? 'Infracost is configured and ran for this PR. See workflow logs for details.'
+              : 'Cost estimation requires the `INFRACOST_API_KEY` secret to be configured. Once configured, this will show estimated monthly costs for infrastructure changes.'}
+
             [Learn more about Infracost](https://www.infracost.io/)`;
 
             github.rest.issues.createComment({
