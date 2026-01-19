@@ -10,6 +10,10 @@ on:
       - main
     paths:
       - 'terraform/**'
+  workflow_call:
+    secrets:
+      INFRACOST_API_KEY:
+        required: false
 
 permissions:
   contents: read
@@ -142,9 +146,6 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     needs: terraform-validate
 
-    env:
-      INFRACOST_API_KEY: ${{ env.INFRACOST_API_KEY }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -161,16 +162,16 @@ jobs:
       - name: Setup Infracost
         uses: infracost/actions/setup@v3
         id: infracost_setup
-        if: env.INFRACOST_API_KEY != ''
+        continue-on-error: true
         with:
-          api-key: ${{ env.INFRACOST_API_KEY }}
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
 
       - name: Generate Infracost JSON
-        if: env.INFRACOST_API_KEY != ''
+        if: steps.infracost_setup.outcome == 'success'
         run: |
           infracost breakdown --path=terraform \
             --format=json \
-            --out-file=/tmp/infracost.json || echo "Infracost analysis skipped (API key not configured)"
+            --out-file=/tmp/infracost.json
         continue-on-error: true
 
       - name: Comment PR with Cost Estimate

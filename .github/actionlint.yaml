@@ -1,0 +1,8 @@
+# Configuration for actionlint (used by various editor/CI integrations).
+# We intentionally reference an optional secret `INFRACOST_API_KEY`.
+# Some local linters can't know repo secrets and report a false-positive warning.
+
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+    ignore:
+      - 'Context access might be invalid: INFRACOST_API_KEY'
