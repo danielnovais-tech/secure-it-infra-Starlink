@@ -5298,6 +5298,7 @@ class SecretsManager:
         self.lock = threading.RLock()
         self.refresh_thread = None
         self.running = False
+        self.logger = logging.getLogger('starlink-security.secrets')
     
     def get_secret(self, secret_path: str) -> str:
         """
@@ -5360,7 +5361,7 @@ class SecretsManager:
                             "expires_at": now + timedelta(seconds=self.ttl_seconds)
                         }
                     except Exception as e:
-                        logger.debug(f"Failed to update value, keeping old value: {e}")
+                        self.logger.debug(f"Failed to update value, keeping old value: {e}")
                         pass  # Keep old value on error
     
     def _fetch_from_provider(self, secret_path: str) -> str:
