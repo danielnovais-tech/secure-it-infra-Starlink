@@ -6,7 +6,6 @@ Shows how to integrate VPN management into your own applications
 
 from vpn_manager.vpn_manager import VPNManager as CoreVPNManager
 import time
-import sys
 import os
 import logging
 from typing import Any
