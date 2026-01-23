@@ -37,6 +37,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.1.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
@@ -58,25 +59,24 @@ Repository = "https://github.com/danielnovais-tech/secure-it-infra-Starlink"
 secure-it-starlink = "secure_it_starlink.main:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["secure_it_starlink*", "security_modules*"]
+where = ["." ]
+include = ["secure_it_starlink*", "security_modules*" ]
 
 [tool.black]
 line-length = 120
 target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
 extend-exclude = """
 (
-    \\.(venv|mypy_cache|ruff_cache|pytest_cache)\\/|
-    \\.__pycache__\\/|
-    \\.(git|hg|svn)\\/|
-    build\\/|
-    dist\\/|
-    \\.*\\.egg-info\\/|
-    logs\\/|
-    data\\/|
-    schemas\\/
-)
-"""
+    \\.venv|mypy_cache|ruff_cache|pytest_cache)\/|
+    \.__pycache__\/|
+    \.(git|hg|svn)\/|
+    build\/|
+    dist\/|
+    \.*\.egg-info\/|
+    logs\/|
+    data\/|
+    schemas\/|
+)"
 
 [tool.ruff]
 line-length = 120
