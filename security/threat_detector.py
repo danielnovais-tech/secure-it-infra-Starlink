@@ -127,7 +127,7 @@ class ThreatDetector:
                 # Simulate threat detection (using secrets for security-sensitive randomness)
                 if secrets.SystemRandom().random() < THREAT_SIMULATION_PROBABILITY:
                     threat_types = ["suspicious_traffic", "malware_indicator", "brute_force_attempt"]
-                    threat = secrets.choice(threat_types)
+                    threat = secrets.SystemRandom().choice(threat_types)
                     
                     self.foundation.active_threats.add(threat)
                     
