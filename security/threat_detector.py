@@ -3,7 +3,7 @@ ThreatDetector module - Detects security threats and anomalies
 """
 
 import asyncio
-import random
+import secrets
 from datetime import datetime
 import aiohttp
 from .types import THREAT_INTELLIGENCE_FEED_LIMIT, THREAT_SIMULATION_PROBABILITY
@@ -124,10 +124,10 @@ class ThreatDetector:
         """Scan for known threats with performance tracking."""
         try:
             with PerformanceTimer(self.foundation.metrics, 'threat_scan'):
-                # Simulate threat detection
-                if random.random() < THREAT_SIMULATION_PROBABILITY:
+                # Simulate threat detection (using secrets for security-sensitive randomness)
+                if secrets.SystemRandom().random() < THREAT_SIMULATION_PROBABILITY:
                     threat_types = ["suspicious_traffic", "malware_indicator", "brute_force_attempt"]
-                    threat = random.choice(threat_types)
+                    threat = secrets.choice(threat_types)
                     
                     self.foundation.active_threats.add(threat)
                     
