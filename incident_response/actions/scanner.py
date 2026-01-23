@@ -4,7 +4,7 @@ Scanner action implementation.
 Handles security scanning during incident response.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime
 
 
@@ -44,12 +44,12 @@ class ScannerAction:
         
         elif scan_type == 'forensic':
             steps.append(f"Forensic analysis initiated on {target}")
-            steps.append(f"Deep file system analysis in progress")
-            steps.append(f"Analyzing system artifacts and indicators")
+            steps.append("Deep file system analysis in progress")
+            steps.append("Analyzing system artifacts and indicators")
         
         elif scan_type == 'quick':
             steps.append(f"Quick scan initiated on {target}")
-            steps.append(f"Scanning critical system areas")
+            steps.append("Scanning critical system areas")
         
         # Threat handling
         if config.get('quarantine_threats'):
@@ -59,21 +59,21 @@ class ScannerAction:
         # Memory analysis
         if config.get('memory_dump'):
             steps.append(f"Memory dump captured from {target}")
-            steps.append(f"Memory analysis in progress")
-            steps.append(f"Searching for malicious code in memory")
+            steps.append("Memory analysis in progress")
+            steps.append("Searching for malicious code in memory")
         
         # Network analysis
         if config.get('network_traffic_analysis'):
             steps.append(f"Network traffic capture started for {target}")
-            steps.append(f"Analyzing network connections and protocols")
-            steps.append(f"Detecting anomalous network behavior")
+            steps.append("Analyzing network connections and protocols")
+            steps.append("Detecting anomalous network behavior")
         
         # Forensic artifact collection
         if config.get('artifact_collection'):
             steps.append(f"Collecting forensic artifacts from {target}")
-            steps.append(f"Preserving event logs and audit trails")
-            steps.append(f"Capturing system configuration and state")
-            steps.append(f"Collecting browser history and cache")
+            steps.append("Preserving event logs and audit trails")
+            steps.append("Capturing system configuration and state")
+            steps.append("Collecting browser history and cache")
         
         # Results
         findings = {

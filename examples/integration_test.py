@@ -6,11 +6,6 @@ Validates that all security modules work together correctly
 
 import sys
 import os
-
-# Add the repository root to the path
-repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, repo_root)
-
 from modules import (
     FirewallRuleManager,
     VPNManager,
@@ -21,13 +16,17 @@ from modules import (
     SecurityMonitor
 )
 
+# Add the repository root to the path
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, repo_root)
+
 def test_network_security():
     """Test network security modules"""
     print("Testing Network Security Modules...")
     
     firewall = FirewallRuleManager()
     assert len(firewall.configure_starlink_access()) == 3, "Starlink rules failed"
-    assert firewall.enable_geo_fencing(['US'])['enabled'] == True, "Geo-fencing failed"
+    assert firewall.enable_geo_fencing(['US'])['enabled'], "Geo-fencing failed"
     
     vpn = VPNManager()
     tunnel = vpn.create_tunnel('test.example.com', '10.0.0.0/24')
@@ -43,12 +42,12 @@ def test_access_control():
     print("Testing Access Control Modules...")
     
     mfa = MFAManager()
-    assert mfa.register_user('test_001', 'testuser') == True, "MFA registration failed"
-    assert mfa.verify_mfa('test_001', '123456') == True, "MFA verification failed"
+    assert mfa.register_user('test_001', 'testuser'), "MFA registration failed"
+    assert mfa.verify_mfa('test_001', '123456'), "MFA verification failed"
     
     rbac = RBACManager()
-    assert rbac.assign_role('test_001', 'admin') == True, "Role assignment failed"
-    assert rbac.check_permission('test_001', 'read') == True, "Permission check failed"
+    assert rbac.assign_role('test_001', 'admin'), "Role assignment failed"
+    assert rbac.check_permission('test_001', 'read'), "Permission check failed"
     
     print("  ✓ Access Control: PASSED")
     return True
@@ -83,7 +82,7 @@ def test_threat_detection():
     assert alert['severity'] == 'high', "Anomaly detection failed"
     
     behavioral = ids.enable_behavioral_analysis()
-    assert behavioral['enabled'] == True, "Behavioral analysis failed"
+    assert behavioral['enabled'], "Behavioral analysis failed"
     
     print("  ✓ Threat Detection: PASSED")
     return True
@@ -134,7 +133,7 @@ def test_integration():
     assert rbac.check_permission('integration_test', 'read'), "Integration: rbac failed"
     assert len(encryption.encrypted_volumes) >= 0, "Integration: encryption failed"
     assert len(ids.configure_ids_rules()) > 0, "Integration: ids failed"
-    assert monitor.monitoring_active == True, "Integration: monitoring failed"
+    assert monitor.monitoring_active, "Integration: monitoring failed"
     
     print("  ✓ Full Integration: PASSED")
     return True

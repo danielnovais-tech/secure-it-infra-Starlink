@@ -53,7 +53,7 @@ def main():
     auth = AuthenticationModule(config.get('authentication'))
     result = auth.authenticate("admin@starlink.example", "SecurePass123!", "123456")
     if result["success"]:
-        print(f"   ✓ User authenticated")
+        print("   ✓ User authenticated")
         print(f"   Session token: {result['session_token'][:20]}...")
     
     # 5. Encryption Example
@@ -61,7 +61,7 @@ def main():
     encryption = EncryptionModule(config.get('security'))
     data = b"Starlink satellite telemetry: position=45.5N,122.6W"
     encrypted = encryption.encrypt(data)
-    print(f"   ✓ Data encrypted")
+    print("   ✓ Data encrypted")
     print(f"   Key ID: {encrypted['key_id']}")
     print(f"   Algorithm: {encrypted['algorithm']}")
     

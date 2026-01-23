@@ -4,9 +4,8 @@ Downloads and processes threat intelligence feeds from DShield and Emerging Thre
 """
 
 import os
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Set
+from datetime import datetime
+from typing import List, Set
 import urllib.request
 import urllib.error
 

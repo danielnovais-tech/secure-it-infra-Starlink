@@ -2,7 +2,6 @@
 Tests for Bandwidth Optimizer Module
 """
 
-import pytest
 from datetime import datetime
 from starlink_security.bandwidth_optimizer import (
     BandwidthOptimizer,

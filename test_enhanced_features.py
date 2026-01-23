@@ -185,7 +185,7 @@ class TestAlertIntegration:
             alert_callback=alert_handler
         )
         
-        status = quality.get_connection_status()
+        quality.get_connection_status()
         
         # Alert should have been triggered
         assert len(alerts_received) == 1
@@ -206,7 +206,7 @@ class TestAlertIntegration:
             alert_callback=alert_handler
         )
         
-        status = quality.get_connection_status()
+        quality.get_connection_status()
         
         # Alert should have been triggered
         assert len(alerts_received) == 1
@@ -250,7 +250,7 @@ class TestHistoricalSmoothing:
         metrics = ConnectionMetrics(packet_loss=5.0, latency=100.0)
         quality = StarlinkConnectionQuality(metrics)
         
-        stability = quality.calculate_stability_score()
+        quality.calculate_stability_score()
         
         # History should be empty
         assert len(quality.stability_history) == 0

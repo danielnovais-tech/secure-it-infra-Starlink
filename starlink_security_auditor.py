@@ -15,9 +15,11 @@ import ssl
 import subprocess
 import sys
 import ipaddress
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any, Tuple
+from dataclasses import dataclass, asdict
 
 # Configure logging
 logging.basicConfig(
@@ -642,17 +644,6 @@ def generate_security_recommendations(audit_results: Dict) -> str:
 # It has been removed to avoid redeclaration; the actual CLI entrypoint is
 # defined later in this file.
 
-import json
-import logging
-import subprocess
-import socket
-import os
-import sys
-from datetime import datetime
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, asdict
-from pathlib import Path
-
 
 @dataclass
 class AuditResult:
@@ -1207,7 +1198,7 @@ class SecurityAuditor:
         print("="*80)
         print(f"Timestamp: {report.timestamp}")
         print(f"Hostname: {report.hostname}")
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"  Total Checks: {report.summary['total']}")
         print(f"  Passed: {report.summary['PASS']}")
         print(f"  Failed: {report.summary['FAIL']}")
@@ -1235,7 +1226,6 @@ class SecurityAuditor:
 
 def main():
     """Main entry point for the security auditor."""
-    import argparse
     
     parser = argparse.ArgumentParser(
         description='Starlink Security Auditor - Comprehensive security auditing for enterprise Starlink infrastructures'

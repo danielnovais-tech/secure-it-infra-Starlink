@@ -9,9 +9,8 @@ import time
 import logging
 import subprocess
 import yaml
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict
 from datetime import datetime
-from pathlib import Path
 
 
 class VPNManager:
@@ -333,7 +332,7 @@ class VPNManager:
                 status = self.get_vpn_status()
                 
                 if status['connected'] and status['healthy']:
-                    self.logger.info(f"VPN status: Connected and healthy")
+                    self.logger.info("VPN status: Connected and healthy")
                     self.consecutive_failures = 0
                 elif status['connected'] and not status['healthy']:
                     self.consecutive_failures += 1

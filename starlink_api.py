@@ -27,9 +27,6 @@ import uvicorn
 from starlink_metrics import (
     ConnectionMetrics,
     StarlinkConnectionQuality,
-    QualityThresholds,
-    StabilityThresholds,
-    AlertThresholds,
 )
 from observability import MetricsExporter, StructuredLogger, PeriodicReporter
 

@@ -13,9 +13,7 @@ from starlink_metrics import (
     StarlinkConnectionQuality,
     QualityThresholds,
     StabilityThresholds,
-    AlertThresholds,
-    ServiceLevel,
-    monitor_connection
+    AlertThresholds
 )
 
 
@@ -107,7 +105,7 @@ def example_2_alert_integration():
         status = quality.get_connection_status()
         
         if 'alert_level' not in status:
-            print(f"  ✓ No alerts - Connection is stable")
+            print("  ✓ No alerts - Connection is stable")
         print(f"  Status: {status['status']}, Stability: {status['stability_score']:.3f}")
     
     print(f"\n  Total alerts triggered: {len(alerts_log)}")
@@ -196,7 +194,7 @@ def example_5_dynamic_scaling():
         metrics,
         stability_thresholds=default_stability
     )
-    print(f"  Max Latency Threshold: 500ms")
+    print("  Max Latency Threshold: 500ms")
     print(f"  Stability Score: {quality_default.calculate_stability_score():.3f}")
     
     # Fiber-optimized: lower latency expectations
@@ -210,9 +208,9 @@ def example_5_dynamic_scaling():
         metrics,
         stability_thresholds=fiber_stability
     )
-    print(f"  Max Latency Threshold: 100ms")
+    print("  Max Latency Threshold: 100ms")
     print(f"  Stability Score: {quality_fiber.calculate_stability_score():.3f}")
-    print(f"  (Lower score reflects that 200ms is poor for fiber)")
+    print("  (Lower score reflects that 200ms is poor for fiber)")
     
     # Long-distance satellite: higher latency tolerance
     print("\n5c. Long-Distance Satellite:")
@@ -225,9 +223,9 @@ def example_5_dynamic_scaling():
         metrics,
         stability_thresholds=satellite_stability
     )
-    print(f"  Max Latency Threshold: 800ms")
+    print("  Max Latency Threshold: 800ms")
     print(f"  Stability Score: {quality_satellite.calculate_stability_score():.3f}")
-    print(f"  (Higher score reflects that 200ms is acceptable)")
+    print("  (Higher score reflects that 200ms is acceptable)")
 
 
 def example_6_complete_monitoring_solution():
@@ -244,7 +242,7 @@ def example_6_complete_monitoring_solution():
         print(f"\n  📊 Monitoring Alert [{level.upper()}]")
         print(f"     Service Level: {data['service_level']}")
         print(f"     Stability: {data['stability']:.3f}")
-        print(f"     Recommendation: ", end="")
+        print("     Recommendation: ", end="")
         if level == "critical":
             print("Immediate attention required - Consider failover")
         else:
@@ -271,7 +269,7 @@ def example_6_complete_monitoring_solution():
     
     status = quality.get_connection_status()
     
-    print(f"\nCurrent Status Report:")
+    print("\nCurrent Status Report:")
     print(f"  Connection Status: {status['status']}")
     print(f"  Service Level: {status['service_level']}")
     print(f"  Quality Score: {status['quality_score']}/100")
