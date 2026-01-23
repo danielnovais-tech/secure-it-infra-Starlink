@@ -3,7 +3,7 @@ Access Control Module - Multi-Factor Authentication
 Enterprise-grade MFA for secure remote access
 """
 
-import hashlib
+import secrets
 import time
 
 class MFAManager:
@@ -34,12 +34,24 @@ class MFAManager:
         return True
     
     def generate_totp_secret(self, user_id):
-        """Generate TOTP secret for time-based authentication"""
+        """
+        Generate TOTP secret for time-based authentication
+        
+        Args:
+            user_id: User identifier
+            
+        Returns:
+            Cryptographically secure random secret
+            
+        Note:
+            Uses secrets module for cryptographically secure random generation.
+            In production, integrate with proper TOTP library like pyotp.
+        """
         if user_id not in self.registered_users:
             raise ValueError("User not registered")
             
-        # Generate unique secret based on user_id
-        secret = hashlib.sha256(f"{user_id}-{time.time()}".encode()).hexdigest()[:32]
+        # Generate cryptographically secure random secret
+        secret = secrets.token_urlsafe(32)[:32]  # 32 character base64url-safe secret
         self.registered_users[user_id]['totp_secret'] = secret
         return secret
     
@@ -50,17 +62,33 @@ class MFAManager:
         Args:
             user_id: User identifier
             token: MFA token to verify
+            
+        Returns:
+            Boolean indicating verification success
+            
+        Note:
+            This is a stub implementation for demonstration purposes.
+            In production, integrate with proper TOTP library like pyotp.
+            
+            Example production implementation:
+                import pyotp
+                totp = pyotp.TOTP(user['totp_secret'])
+                return totp.verify(token)
         """
         if user_id not in self.registered_users:
             return False
             
-        # Simplified verification logic
         user = self.registered_users[user_id]
         if user['status'] != 'active':
             return False
-            
-        # In production, this would verify against actual TOTP/SMS/hardware token
-        return len(token) >= 6
+        
+        # Production implementation requires proper TOTP verification
+        # Current implementation is for demonstration only
+        raise NotImplementedError(
+            "MFA verification requires proper TOTP implementation. "
+            "Install pyotp library and implement TOTP verification: "
+            "pip install pyotp && use pyotp.TOTP(secret).verify(token)"
+        )
     
     def enable_risk_based_auth(self, user_id):
         """

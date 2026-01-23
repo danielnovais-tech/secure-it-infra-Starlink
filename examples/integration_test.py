@@ -44,7 +44,12 @@ def test_access_control():
     
     mfa = MFAManager()
     assert mfa.register_user('test_001', 'testuser') == True, "MFA registration failed"
-    assert mfa.verify_mfa('test_001', '123456') == True, "MFA verification failed"
+    # MFA verification now raises NotImplementedError (proper stub)
+    try:
+        mfa.verify_mfa('test_001', '123456')
+        assert False, "MFA verification should raise NotImplementedError"
+    except NotImplementedError:
+        pass  # Expected behavior
     
     rbac = RBACManager()
     assert rbac.assign_role('test_001', 'admin') == True, "Role assignment failed"
@@ -64,7 +69,7 @@ def test_encryption():
     tls = encryption.enable_tls_for_starlink()
     assert tls['tls_version'] == '1.3', "TLS configuration failed"
     
-    fingerprint = encryption.classify_and_fingerprint_data('test_data')
+    fingerprint = encryption.create_data_fingerprint('test_data')
     assert fingerprint['data_fingerprint'] is not None, "Data fingerprinting failed"
     assert fingerprint['timestamp'] > 0, "Timestamp generation failed"
     
