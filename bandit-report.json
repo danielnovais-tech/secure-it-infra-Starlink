@@ -1,0 +1,483 @@
+{
+  "errors": [],
+  "generated_at": "2026-01-23T22:11:52Z",
+  "metrics": {
+    "./starlink_security.py": {
+      "CONFIDENCE.HIGH": 14,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 13,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 6506,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 16,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 16,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 6999,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "security/__init__.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 16,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "security/foundation.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 69,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "security/logging_utils.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 57,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "security/metrics.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 59,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "security/network_monitor.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 75,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "security/policy_enforcer.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 57,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "security/threat_detector.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 146,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "security/types.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 14,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "704 import os\n705 import pickle\n706 import queue\n",
+      "col_offset": 0,
+      "end_col_offset": 13,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 502,
+        "link": "https://cwe.mitre.org/data/definitions/502.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Consider possible security implications associated with pickle module.",
+      "line_number": 705,
+      "line_range": [
+        705
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_imports.html#b403-import-pickle",
+      "test_id": "B403",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "1198         \n1199         self.metrics.packet_loss = random.uniform(0, 15)\n1200         self.metrics.latency = random.uniform(10, 250)\n",
+      "col_offset": 35,
+      "end_col_offset": 56,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 1199,
+      "line_range": [
+        1199
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "1199         self.metrics.packet_loss = random.uniform(0, 15)\n1200         self.metrics.latency = random.uniform(10, 250)\n1201         self.metrics.connection_stability = random.uniform(40, 100)\n",
+      "col_offset": 31,
+      "end_col_offset": 54,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 1200,
+      "line_range": [
+        1200
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "1200         self.metrics.latency = random.uniform(10, 250)\n1201         self.metrics.connection_stability = random.uniform(40, 100)\n1202         self.metrics.bandwidth_usage = random.uniform(0, 100)\n",
+      "col_offset": 44,
+      "end_col_offset": 67,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 1201,
+      "line_range": [
+        1201
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "1201         self.metrics.connection_stability = random.uniform(40, 100)\n1202         self.metrics.bandwidth_usage = random.uniform(0, 100)\n1203         self.metrics.security_score = max(0, 100 - len(self.active_threats) * 10)\n",
+      "col_offset": 39,
+      "end_col_offset": 61,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 1202,
+      "line_range": [
+        1202
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "2985             with open(self._state_file, 'rb') as f:\n2986                 state = pickle.load(f)\n2987             \n",
+      "col_offset": 24,
+      "end_col_offset": 38,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 502,
+        "link": "https://cwe.mitre.org/data/definitions/502.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Pickle and modules that wrap it can be unsafe when used to deserialize untrusted data, possible security issue.",
+      "line_number": 2986,
+      "line_range": [
+        2986
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b301-pickle",
+      "test_id": "B301",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "4140                 if fault[\"component\"] == component and fault[\"type\"] == \"failure\":\n4141                     return random.random() < fault[\"failure_rate\"]\n4142         \n",
+      "col_offset": 27,
+      "end_col_offset": 42,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 4141,
+      "line_range": [
+        4141
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "4931         \n4932         sample = random.sample(self.historical_events, min(sample_size, len(self.historical_events)))\n4933         \n",
+      "col_offset": 17,
+      "end_col_offset": 101,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 4932,
+      "line_range": [
+        4932
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "5362                         }\n5363                     except Exception:\n5364                         pass  # Keep old value on error\n5365     \n",
+      "col_offset": 20,
+      "end_col_offset": 28,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 703,
+        "link": "https://cwe.mitre.org/data/definitions/703.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Try, Except, Pass detected.",
+      "line_number": 5363,
+      "line_range": [
+        5363,
+        5364
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/plugins/b110_try_except_pass.html",
+      "test_id": "B110",
+      "test_name": "try_except_pass"
+    },
+    {
+      "code": "5916                 # New tenant - assign based on percentage\n5917                 use_canary = random.random() * 100 < config[\"canary_percentage\"]\n5918                 self.tenant_assignments[tenant_id] = \"canary\" if use_canary else \"baseline\"\n",
+      "col_offset": 29,
+      "end_col_offset": 44,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 5917,
+      "line_range": [
+        5917
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "5921         # Random percentage-based routing\n5922         return random.random() * 100 < config[\"canary_percentage\"]\n5923     \n",
+      "col_offset": 15,
+      "end_col_offset": 30,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 5922,
+      "line_range": [
+        5922
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "8105         statuses = [\"connected\", \"disconnected\", \"connecting\"]\n8106         new_status = random.choice(statuses)\n8107         \n",
+      "col_offset": 21,
+      "end_col_offset": 44,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 8106,
+      "line_range": [
+        8106
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "8150         \n8151         return random.random() > 0.3  # 70% success rate for simulation\n8152 \n",
+      "col_offset": 15,
+      "end_col_offset": 30,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 8151,
+      "line_range": [
+        8151
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "8196             was_available = info[\"available\"]\n8197             info[\"available\"] = random.random() > 0.2  # 80% available\n8198             \n",
+      "col_offset": 32,
+      "end_col_offset": 47,
+      "filename": "./starlink_security.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 8197,
+      "line_range": [
+        8197
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "36                 \"require_mfa\": True,\n37                 \"password_complexity\": True,\n38                 \"session_timeout\": 3600\n39             }\n40         }\n41     \n42     async def apply_security_level(self, level: SecurityLevel):\n",
+      "col_offset": 16,
+      "end_col_offset": 37,
+      "filename": "security/policy_enforcer.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 259,
+        "link": "https://cwe.mitre.org/data/definitions/259.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: 'True'",
+      "line_number": 37,
+      "line_range": [
+        35,
+        36,
+        37,
+        38,
+        39
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    },
+    {
+      "code": "127                 # Simulate threat detection\n128                 if random.random() < THREAT_SIMULATION_PROBABILITY:\n129                     threat_types = [\"suspicious_traffic\", \"malware_indicator\", \"brute_force_attempt\"]\n",
+      "col_offset": 19,
+      "end_col_offset": 34,
+      "filename": "security/threat_detector.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 128,
+      "line_range": [
+        128
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "129                     threat_types = [\"suspicious_traffic\", \"malware_indicator\", \"brute_force_attempt\"]\n130                     threat = random.choice(threat_types)\n131                     \n",
+      "col_offset": 29,
+      "end_col_offset": 56,
+      "filename": "security/threat_detector.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 330,
+        "link": "https://cwe.mitre.org/data/definitions/330.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Standard pseudo-random generators are not suitable for security/cryptographic purposes.",
+      "line_number": 130,
+      "line_range": [
+        130
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.3/blacklists/blacklist_calls.html#b311-random",
+      "test_id": "B311",
+      "test_name": "blacklist"
+    }
+  ]
+}
