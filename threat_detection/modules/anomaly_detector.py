@@ -3,7 +3,6 @@ Anomaly Detection Module
 Scans for anomalies in network traffic and system behavior
 """
 
-import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple

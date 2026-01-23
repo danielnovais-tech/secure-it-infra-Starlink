@@ -1,6 +1,5 @@
 """Tests for the security logging and alerting module."""
 
-import pytest
 from secure_it_starlink.logging import (
     SecurityLogger, AlertManager, LogLevel, AlertSeverity
 )

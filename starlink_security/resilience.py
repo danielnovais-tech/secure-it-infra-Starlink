@@ -6,7 +6,7 @@ intermittent Starlink connectivity typical in remote locations.
 """
 
 import time
-from typing import List, Dict, Optional, Callable
+from typing import List, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
 import threading

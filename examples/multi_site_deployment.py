@@ -6,17 +6,16 @@ Demonstrates setting up secure infrastructure for multiple rural sites with Star
 
 import sys
 import os
-
-# Add the repository root to the path
-repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, repo_root)
-
 from modules import (
     FirewallRuleManager,
     VPNManager,
     RBACManager,
     SecurityMonitor
 )
+
+# Add the repository root to the path
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, repo_root)
 
 def main():
     """Multi-site deployment demonstration"""
@@ -107,36 +106,36 @@ def main():
         # Site-specific rules based on type
         if site['type'] == 'healthcare':
             # HIPAA compliance rules
-            rule = firewall.add_rule(
+            firewall.add_rule(
                 rule_type='inbound',
                 source='telehealth_network',
                 destination=site['subnet'],
                 port=443,
                 action='allow'
             )
-            print(f"      ✓ Healthcare-specific rules (HIPAA compliance)")
+            print("      ✓ Healthcare-specific rules (HIPAA compliance)")
             
         elif site['type'] == 'industrial':
             # OT/ICS security
-            rule = firewall.add_rule(
+            firewall.add_rule(
                 rule_type='inbound',
                 source='scada_network',
                 destination=site['subnet'],
                 port=502,  # Modbus
                 action='allow'
             )
-            print(f"      ✓ Industrial control system rules")
+            print("      ✓ Industrial control system rules")
             
         elif site['type'] == 'research':
             # Research data transfer
-            rule = firewall.add_rule(
+            firewall.add_rule(
                 rule_type='outbound',
                 source=site['subnet'],
                 destination='university_network',
                 port=22,  # SSH
                 action='allow'
             )
-            print(f"      ✓ Research collaboration rules")
+            print("      ✓ Research collaboration rules")
         print()
     
     # 5. Configure Role-Based Access Control
@@ -178,7 +177,7 @@ def main():
     
     # Configure SIEM for all sites
     siem = monitor.configure_siem_integration()
-    print(f"   Log Sources:")
+    print("   Log Sources:")
     for source in siem['log_sources']:
         print(f"      • {source}")
     print(f"   ✓ Retention: {siem['retention_period_days']} days")
@@ -194,7 +193,7 @@ def main():
         print(f"      • {playbook}")
     print()
     
-    print(f"   Response SLAs:")
+    print("   Response SLAs:")
     for severity, sla in ir_config['response_time_sla'].items():
         print(f"      • {severity.capitalize()}: {sla}")
     print()
@@ -219,8 +218,8 @@ def main():
         print(f"    Type: {site['type']}")
         print(f"    Subnet: {site['subnet']}")
         print(f"    Starlink IP: {site['starlink_ip']}")
-        print(f"    VPN Status: Connected")
-        print(f"    Security: Configured")
+        print("    VPN Status: Connected")
+        print("    Security: Configured")
     print()
     
     print("Next Steps:")

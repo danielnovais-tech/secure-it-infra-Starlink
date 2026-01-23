@@ -2,7 +2,6 @@
 Core StarlinkSecurityFoundation class
 """
 
-import asyncio
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
 from .types import SecurityLevel

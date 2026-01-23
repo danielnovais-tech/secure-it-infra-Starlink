@@ -7,7 +7,7 @@ import unittest
 import os
 import tempfile
 import yaml
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 import sys
 from pathlib import Path
 

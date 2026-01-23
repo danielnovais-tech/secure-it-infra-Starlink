@@ -636,13 +636,13 @@ def main():
             tester = BackwardCompatibilityTester(str(schema_path))
             compatible, incompatible, results = tester.test_samples(args.samples, args.lenient)
             
-            print(f"\n📊 Backward Compatibility Test Results:")
+            print("\n📊 Backward Compatibility Test Results:")
             print(f"   Compatible: {compatible}")
             print(f"   Incompatible: {incompatible}")
             print(f"   Total Samples: {compatible + incompatible}")
             
             if incompatible > 0:
-                print(f"\n❌ Incompatible Samples:")
+                print("\n❌ Incompatible Samples:")
                 for result in results:
                     if not result['compatible']:
                         print(f"\n   File: {result['file']}")

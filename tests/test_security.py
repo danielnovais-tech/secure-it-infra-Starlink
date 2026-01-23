@@ -7,7 +7,6 @@ import asyncio
 import json
 import sys
 import os
-from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -15,10 +14,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from starlink_security import (
     StarlinkSecurityFoundation,
     NetworkMonitor,
-    SecurityEvent,
     SecurityLevel,
-    ConnectionType,
-    NetworkMetrics
+    ConnectionType
 )
 
 
@@ -106,7 +103,7 @@ def test_network_monitor_initialization():
     assert monitor.foundation == foundation
     assert monitor.last_scan is None
     assert len(monitor.devices) == 0
-    assert monitor.initialize() == True
+    assert monitor.initialize()
     
     print("✓ Network monitor initialization test passed")
 

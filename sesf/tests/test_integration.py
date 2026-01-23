@@ -116,12 +116,12 @@ class TestSESFIntegration(unittest.TestCase):
         self.assertTrue(auth_result["success"])
         
         # Step 2: Check network access
-        network_result = network.check_firewall("10.0.0.1", "192.168.1.1", "HTTPS", 443)
+        network.check_firewall("10.0.0.1", "192.168.1.1", "HTTPS", 443)
         monitoring.log_event("network", {"access": "granted"}, "INFO")
         
         # Step 3: Encrypt sensitive data
         data = b"Satellite telemetry data"
-        encrypted = encryption.encrypt(data)
+        encryption.encrypt(data)
         monitoring.log_event("encryption", {"operation": "encrypt"}, "INFO")
         
         # Step 4: Compliance logging

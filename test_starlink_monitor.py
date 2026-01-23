@@ -4,7 +4,6 @@ Unit tests for Starlink Security Monitoring System
 
 import unittest
 from unittest.mock import patch
-import time
 from starlink_monitor import StarlinkMonitor, SecurityMetrics
 
 

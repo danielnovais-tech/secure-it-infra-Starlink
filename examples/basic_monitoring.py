@@ -6,7 +6,6 @@ Demonstrates network monitoring, logging, and alerting capabilities.
 
 from secure_it_starlink.network import NetworkMonitor
 from secure_it_starlink.logging import SecurityLogger, AlertManager, AlertSeverity
-import time
 
 
 def main():

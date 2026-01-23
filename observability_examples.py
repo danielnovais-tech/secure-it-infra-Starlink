@@ -158,16 +158,16 @@ def example_periodic_reporting():
     
     report = reporter.generate_report(sla_thresholds=sla_thresholds)
     
-    print(f"\nReport Summary:")
+    print("\nReport Summary:")
     print(f"  Period: {report['period_start']} to {report['period_end']}")
     print(f"  Total Measurements: {report['total_measurements']}")
-    print(f"\nQuality Metrics:")
+    print("\nQuality Metrics:")
     print(f"  Average Quality Score: {report['summary']['quality_score']['avg']:.1f}/100")
     print(f"  Average Stability Score: {report['summary']['stability_score']['avg']:.3f}")
     print(f"  Average Packet Loss: {report['summary']['packet_loss']['avg']:.1f}%")
     print(f"  Average Latency: {report['summary']['latency']['avg']:.1f}ms")
     
-    print(f"\nService Level Distribution:")
+    print("\nService Level Distribution:")
     for level, count in report['service_level_distribution'].items():
         if count > 0:
             percentage = (count / report['total_measurements']) * 100
@@ -175,7 +175,7 @@ def example_periodic_reporting():
     
     print(f"\nUptime: {report['uptime_percentage']:.1f}%")
     
-    print(f"\nSLA Compliance:")
+    print("\nSLA Compliance:")
     for metric, compliance in report['sla_compliance'].items():
         status_icon = "✓" if compliance['compliant'] else "✗"
         print(f"  {status_icon} {metric}: {compliance['actual']:.2f} (threshold: {compliance['threshold']})")
@@ -243,7 +243,7 @@ def example_complete_monitoring_system():
         logger.log_metrics(status)
         
         # Export to Prometheus (would be scraped in production)
-        prometheus = exporter.export_prometheus(status, labels={"env": "prod"})
+        exporter.export_prometheus(status, labels={"env": "prod"})
         
         print(f"  Quality: {status['quality_score']}/100")
         print(f"  Stability: {status['stability_score']:.3f}")
@@ -252,7 +252,7 @@ def example_complete_monitoring_system():
     # Generate final report
     print("\n" + "-" * 70)
     report = reporter.generate_report()
-    print(f"\nMonitoring Session Report:")
+    print("\nMonitoring Session Report:")
     print(f"  Measurements: {report['total_measurements']}")
     print(f"  Avg Quality: {report['summary']['quality_score']['avg']:.1f}/100")
     print(f"  Uptime: {report['uptime_percentage']:.1f}%")

@@ -2,7 +2,6 @@
 Tests for Remote Manager Module
 """
 
-import pytest
 from datetime import datetime
 from starlink_security.remote_manager import (
     RemoteManager,

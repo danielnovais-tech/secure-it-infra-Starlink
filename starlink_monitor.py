@@ -6,7 +6,6 @@ including security score calculation and connection stability metrics.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 import time
 
 
