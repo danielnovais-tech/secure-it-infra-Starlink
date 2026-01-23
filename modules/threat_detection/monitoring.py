@@ -95,18 +95,9 @@ class SecurityMonitor:
             Dictionary with compliance check results
             
         Note:
-            This is a demonstration stub showing the structure of compliance results.
-            In production, integrate with actual compliance checking tools like:
-            - AWS Security Hub
-            - Azure Security Center
-            - Google Cloud Security Command Center
-            - OpenSCAP
-            - Chef InSpec
-            
-            Example production integration:
-                from compliance_tool import ComplianceChecker
-                checker = ComplianceChecker(framework)
-                return checker.run_checks()
+            This is a demonstration stub. In production, integrate with actual
+            compliance checking tools (AWS Security Hub, Azure Security Center,
+            Google Cloud Security Command Center, OpenSCAP, Chef InSpec).
         """
         check_result = {
             'framework': framework,

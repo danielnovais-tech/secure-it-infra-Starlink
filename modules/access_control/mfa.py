@@ -86,8 +86,7 @@ class MFAManager:
         # Current implementation is for demonstration only
         raise NotImplementedError(
             "MFA verification requires proper TOTP implementation. "
-            "Install pyotp library and implement TOTP verification: "
-            "pip install pyotp && use pyotp.TOTP(secret).verify(token)"
+            "See documentation for integration details."
         )
     
     def enable_risk_based_auth(self, user_id):

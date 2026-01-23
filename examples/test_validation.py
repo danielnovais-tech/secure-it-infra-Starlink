@@ -174,7 +174,7 @@ class MFASecurityTests(unittest.TestCase):
             mfa.verify_mfa('user1', '123456')
         
         self.assertIn('TOTP', str(cm.exception))
-        self.assertIn('pyotp', str(cm.exception))
+        self.assertIn('documentation', str(cm.exception))
 
 
 class ComplianceCheckTests(unittest.TestCase):

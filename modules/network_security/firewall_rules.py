@@ -65,9 +65,23 @@ class FirewallRuleManager:
         Raises:
             ValueError: If identifier is invalid
         """
-        # Allow IP addresses or CIDR notation (simple check)
+        # Allow IP addresses or CIDR notation using ipaddress module for validation
         if '.' in str(identifier) or ':' in str(identifier):
-            return True
+            try:
+                import ipaddress
+                # Try to parse as IP address or network
+                try:
+                    ipaddress.ip_address(identifier)
+                    return True
+                except ValueError:
+                    # Try as network/CIDR
+                    ipaddress.ip_network(identifier, strict=False)
+                    return True
+            except (ValueError, ImportError):
+                # If ipaddress module not available or invalid format, fall through
+                # In this case, still allow it if it looks like an IP (has dots/colons)
+                if '.' in str(identifier) or ':' in str(identifier):
+                    return True
             
         # Check against valid identifiers
         if identifier not in VALID_NETWORK_IDENTIFIERS:
