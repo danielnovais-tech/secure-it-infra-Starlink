@@ -125,9 +125,9 @@ class ThreatDetector:
         try:
             with PerformanceTimer(self.foundation.metrics, 'threat_scan'):
                 # Simulate threat detection
-                if random.random() < THREAT_SIMULATION_PROBABILITY:
+                if random.random() < THREAT_SIMULATION_PROBABILITY:  # nosec B311 - Simulation only
                     threat_types = ["suspicious_traffic", "malware_indicator", "brute_force_attempt"]
-                    threat = random.choice(threat_types)
+                    threat = random.choice(threat_types)  # nosec B311 - Simulation only
                     
                     self.foundation.active_threats.add(threat)
                     
