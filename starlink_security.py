@@ -5271,6 +5271,7 @@ class SecretsManager:
         self.lock = threading.RLock()
         self.refresh_thread = None
         self.running = False
+        self.logger = logging.getLogger('starlink-security.secrets')
     
     def get_secret(self, secret_path: str) -> str:
         """
