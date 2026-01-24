@@ -1,6 +1,5 @@
 """Tests for encryption module."""
 
-import base64
 
 import pytest
 

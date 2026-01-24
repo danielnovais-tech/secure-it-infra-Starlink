@@ -1,6 +1,5 @@
 """Tests for connection type module."""
 
-import pytest
 
 from secure_it_infra.connection_type import ConnectionType
 

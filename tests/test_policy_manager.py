@@ -2,7 +2,6 @@
 Tests for Latency-Aware Policy Manager
 """
 
-import pytest
 from starlink_security.policy_manager import (
     LatencyAwarePolicyManager,
     SecurityLevel,

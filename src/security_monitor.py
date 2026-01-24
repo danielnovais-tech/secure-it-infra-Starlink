@@ -5,18 +5,14 @@ Provides real-time monitoring of security metrics, status, and events.
 
 import asyncio
 import logging
-from typing import Dict, Any, List
-from datetime import datetime
+from typing import Dict, Any, List, Optional
+from datetime import datetime, timezone
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-"""Security monitoring module for Starlink infrastructure."""
-import logging
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 

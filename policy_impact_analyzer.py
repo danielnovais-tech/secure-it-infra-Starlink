@@ -189,7 +189,7 @@ class PolicyImpactAnalyzer:
                         "article": "Article 5(1)(f) - Data must be processed securely",
                         "description": f"Removing privacy tag requirements for {field_path} may lead to unredacted PII in logs"
                     })
-                elif "redaction_required" in field_path and new_value == False:
+                elif "redaction_required" in field_path and not new_value:
                     impacts.append({
                         "framework": ComplianceFramework.GDPR.value,
                         "risk_level": RiskLevel.HIGH.value,
@@ -201,7 +201,7 @@ class PolicyImpactAnalyzer:
             
             # Check HIPAA impacts
             if any(phi in field_path.lower() for phi in ["phi", "patient", "medical", "health", "diagnosis"]):
-                if "encryption" in field_path and new_value == False:
+                if "encryption" in field_path and not new_value:
                     impacts.append({
                         "framework": ComplianceFramework.HIPAA.value,
                         "risk_level": RiskLevel.CRITICAL.value,
@@ -240,7 +240,7 @@ class PolicyImpactAnalyzer:
             
             # Check ISO27001 impacts
             if "audit" in field_path.lower() or "logging" in field_path.lower():
-                if change_type == "removed" or (change_type == "modified" and new_value == False):
+                if change_type == "removed" or (change_type == "modified" and not new_value):
                     impacts.append({
                         "framework": ComplianceFramework.ISO27001.value,
                         "risk_level": RiskLevel.HIGH.value,

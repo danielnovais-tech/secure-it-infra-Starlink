@@ -80,7 +80,7 @@ class EncryptionManager:
             }
         }
     
-    def classify_and_fingerprint_data(self, data, classification='confidential'):
+    def create_data_fingerprint(self, data, classification='confidential'):
         """
         Create a fingerprint for data classification and tracking
         
@@ -112,6 +112,11 @@ class EncryptionManager:
             'note': 'Production implementation requires proper encryption library',
             'timestamp': time.time()
         }
+    
+    # Backward compatibility alias
+    def classify_and_fingerprint_data(self, data, classification='confidential'):
+        """Deprecated: Use create_data_fingerprint instead."""
+        return self.create_data_fingerprint(data, classification)
     
     def configure_end_to_end_encryption(self):
         """

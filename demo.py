@@ -101,7 +101,7 @@ def main():
                 metrics_collector.update_metrics(status)
                 
                 # Display current metrics
-                print(f"\n📊 Current Metrics:")
+                print("\n📊 Current Metrics:")
                 print(f"   State: {status.get('state', 'UNKNOWN')}")
                 print(f"   Latency: {status.get('latency_ms', 0):.1f} ms")
                 print(f"   Downlink: {status.get('downlink_mbps', 0):.1f} Mbps")
@@ -112,7 +112,7 @@ def main():
                 # Display recent events
                 recent_events = metrics_collector.get_recent_events(5)
                 if recent_events:
-                    print(f"\n🚨 Events Detected:")
+                    print("\n🚨 Events Detected:")
                     for event in recent_events[-3:]:  # Show last 3 events
                         severity_icon = "⚠️" if event['severity'] == 'WARNING' else "ℹ️"
                         print(f"   {severity_icon} [{event['type']}] {event['message']}")

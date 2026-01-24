@@ -1,6 +1,9 @@
 """Configuration constants for Starlink Security."""
 
 from pathlib import Path
+from typing import Dict, Any
+from dataclasses import dataclass, asdict
+import json
 
 # Directory constants
 CONFIG_DIR = Path("/etc/starlink-security")
@@ -9,10 +12,6 @@ LOG_DIR = Path("/var/log/starlink-security")
 """
 Configuration schemas and utilities for Starlink security infrastructure
 """
-
-from typing import Dict, Any
-from dataclasses import dataclass, asdict
-import json
 
 
 @dataclass

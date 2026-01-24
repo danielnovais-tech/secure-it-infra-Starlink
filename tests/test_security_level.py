@@ -1,6 +1,5 @@
 """Tests for security level module."""
 
-import pytest
 
 from secure_it_infra.security_level import SecurityLevel
 

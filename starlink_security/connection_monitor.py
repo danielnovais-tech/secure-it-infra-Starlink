@@ -6,7 +6,7 @@ and bandwidth metrics to inform security policy decisions.
 """
 
 import time
-from typing import Dict, Optional, Callable, List
+from typing import Optional, Callable, List
 from dataclasses import dataclass
 from enum import Enum
 

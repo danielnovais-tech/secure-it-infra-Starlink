@@ -34,7 +34,7 @@ class PolicyEnforcer:
             },
             "authentication": {
                 "require_mfa": True,
-                "password_complexity": True,  # nosec B105 - Configuration flag, not a password
+                "password_complexity": True,  # nosec B105 - This is a config flag, not a password
                 "session_timeout": 3600
             }
         }

@@ -7,7 +7,6 @@ import unittest
 import tempfile
 import os
 import yaml
-import json
 from network_monitor import NetworkMonitor
 
 
@@ -283,7 +282,7 @@ class TestNetworkMonitor(unittest.TestCase):
             output_file = f.name
         
         try:
-            report = monitor.generate_report(sample_results, output_file)
+            monitor.generate_report(sample_results, output_file)
             
             # Verify file was created and contains content
             self.assertTrue(os.path.exists(output_file))

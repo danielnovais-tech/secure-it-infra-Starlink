@@ -6,12 +6,11 @@ Demonstrates compliance checking and reporting for SOC 2, ISO 27001, and GDPR
 
 import sys
 import os
+from modules import SecurityMonitor
 
 # Add the repository root to the path
 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, repo_root)
-
-from modules import SecurityMonitor
 
 def main():
     """Compliance monitoring demonstration"""
@@ -77,21 +76,21 @@ def main():
         
         # Recommendations based on score
         if result['compliance_score'] < 95:
-            print(f"      Recommendations:")
+            print("      Recommendations:")
             if framework_id == 'SOC2':
-                print(f"         • Review access control policies")
-                print(f"         • Enhance logging retention")
-                print(f"         • Update incident response procedures")
+                print("         • Review access control policies")
+                print("         • Enhance logging retention")
+                print("         • Update incident response procedures")
             elif framework_id == 'ISO27001':
-                print(f"         • Complete risk assessment updates")
-                print(f"         • Review information security policies")
-                print(f"         • Conduct management review")
+                print("         • Complete risk assessment updates")
+                print("         • Review information security policies")
+                print("         • Conduct management review")
             elif framework_id == 'GDPR':
-                print(f"         • Update privacy notices")
-                print(f"         • Review data retention policies")
-                print(f"         • Document lawful basis for processing")
+                print("         • Update privacy notices")
+                print("         • Review data retention policies")
+                print("         • Document lawful basis for processing")
         else:
-            print(f"      Status: Excellent - maintain current controls")
+            print("      Status: Excellent - maintain current controls")
         print()
     
     # 4. Recent Security Events
@@ -110,22 +109,22 @@ def main():
     
     # Monthly report
     print("   Monthly Compliance Report:")
-    print(f"      Period: January 2026")
-    print(f"      Status: Generated")
-    print(f"      Contents:")
-    print(f"         • Executive Summary")
-    print(f"         • Framework Compliance Status")
-    print(f"         • Security Metrics")
-    print(f"         • Incident Summary")
-    print(f"         • Remediation Actions")
+    print("      Period: January 2026")
+    print("      Status: Generated")
+    print("      Contents:")
+    print("         • Executive Summary")
+    print("         • Framework Compliance Status")
+    print("         • Security Metrics")
+    print("         • Incident Summary")
+    print("         • Remediation Actions")
     print()
     
     # Quarterly audit
     print("   Quarterly Audit Schedule:")
-    print(f"      Q1 2026: Internal Audit (March)")
-    print(f"      Q2 2026: External Audit (June)")
-    print(f"      Q3 2026: Penetration Testing (September)")
-    print(f"      Q4 2026: Management Review (December)")
+    print("      Q1 2026: Internal Audit (March)")
+    print("      Q2 2026: External Audit (June)")
+    print("      Q3 2026: Penetration Testing (September)")
+    print("      Q4 2026: Management Review (December)")
     print()
     
     # 6. Starlink-Specific Compliance
@@ -164,7 +163,7 @@ def main():
         for i, item in enumerate(action_items, 1):
             print(f"   {i}. [{item['priority']}] {item['framework']}")
             print(f"      Action: {item['action']}")
-            print(f"      Due Date: Within 30 days")
+            print("      Due Date: Within 30 days")
             print()
     else:
         print("   ✓ No action items - all frameworks compliant")

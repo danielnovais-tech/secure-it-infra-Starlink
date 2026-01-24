@@ -5,7 +5,7 @@ Dynamically adjusts security policies based on connection quality
 to balance security requirements with operational constraints.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from dataclasses import dataclass
 from enum import Enum
 from .connection_monitor import ConnectionQuality, ConnectionMetrics

@@ -14,6 +14,11 @@ from __future__ import annotations
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any, Optional
+from .bandwidth_optimizer import BandwidthOptimizer as _BandwidthOptimizer
+from .connection_monitor import ConnectionMonitor as _ConnectionMonitor
+from .policy_manager import LatencyAwarePolicyManager as _LatencyAwarePolicyManager
+from .remote_manager import RemoteManager as _RemoteManager
+from .resilience import ConnectionResilience as _ConnectionResilience
 
 __version__ = "1.0.0"
 
@@ -39,12 +44,6 @@ BandwidthOptimizer: Any
 
 
 # Import the modern package-level implementation first (keeps examples working).
-from .bandwidth_optimizer import BandwidthOptimizer as _BandwidthOptimizer
-from .connection_monitor import ConnectionMonitor as _ConnectionMonitor
-from .policy_manager import LatencyAwarePolicyManager as _LatencyAwarePolicyManager
-from .remote_manager import RemoteManager as _RemoteManager
-from .resilience import ConnectionResilience as _ConnectionResilience
-
 BandwidthOptimizer = _BandwidthOptimizer
 ConnectionMonitor = _ConnectionMonitor
 LatencyAwarePolicyManager = _LatencyAwarePolicyManager

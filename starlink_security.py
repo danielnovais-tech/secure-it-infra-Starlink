@@ -12,10 +12,29 @@ import signal
 import sys
 import threading
 import time
+import hashlib
+import pickle
+import queue
+import random
+import secrets
+import warnings
+import asyncio
+import argparse
+import contextlib
 from collections import Counter
 from pathlib import Path
 from queue import Queue
-from typing import Dict, Optional
+from typing import Dict, Optional, Any, Awaitable, Callable, List, Set, cast
+from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from cryptography.fernet import Fernet
+from security import (
+    StarlinkSecurityFoundation as ModularStarlinkSecurityFoundation,
+    NetworkMonitor as ModularNetworkMonitor,
+    ThreatDetector as ModularThreatDetector,
+)
 
 # Constants - use local directories if system directories are not writable
 if os.access("/etc", os.W_OK):
@@ -159,7 +178,7 @@ class ResilientHTTPHandler(logging.handlers.HTTPHandler):
                     self.failure_count = 0
                 logging_metrics.record_handler_success('http')
                 return
-            except Exception as e:
+            except Exception:
                 with self._lock:
                     self.failure_count += 1
                     if self.failure_count >= self.circuit_threshold:
@@ -698,24 +717,6 @@ Foundation for securing enterprise infrastructures using Starlink connectivity.
 Provides monitoring, enforcement, and response capabilities.
 """
 
-import hashlib
-import json
-import logging
-import os
-import queue
-import random
-import secrets
-import threading
-import time
-import warnings
-from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta
-from enum import Enum
-from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set
-from cryptography.fernet import Fernet
-
 # Define directories
 CONFIG_DIR = Path.home() / ".starlink_security" / "config"
 DATA_DIR = Path.home() / ".starlink_security" / "data"
@@ -872,15 +873,6 @@ This is the main entry point that provides backward compatibility
 while using the new modular architecture.
 """
 
-import asyncio
-from security import (
-    SecurityLevel as ModularSecurityLevel,
-    StarlinkSecurityFoundation as ModularStarlinkSecurityFoundation,
-    NetworkMonitor as ModularNetworkMonitor,
-    ThreatDetector as ModularThreatDetector,
-    PolicyEnforcer as ModularPolicyEnforcer,
-)
-
 # Backward-compatible re-exports.
 # NOTE: This module contains multiple local definitions of some symbols later in the file.
 # Only alias names that are not defined locally to avoid collisions.
@@ -911,19 +903,6 @@ __all__ = [
 A comprehensive security management system for Starlink enterprise connections
 with automatic failover, monitoring, and threat detection capabilities.
 """
-
-import asyncio
-import argparse
-import contextlib
-import json
-import logging
-import os
-import sys
-from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-from datetime import datetime
 
 # Configure logging
 # Use local logs directory if /var/log is not writable
@@ -1111,7 +1090,7 @@ class EnterpriseStarlinkSecurityFoundation:
         """
         try:
             with open(config_path, 'r') as f:
-                config = json.load(f)
+                json.load(f)
                 logger.info(f"Configuration loaded from {config_path}")
                 # Process configuration here
         except FileNotFoundError:
@@ -1195,10 +1174,11 @@ class EnterpriseStarlinkSecurityFoundation:
         # In a real implementation, this would collect actual metrics
         import random
         
-        self.metrics.packet_loss = random.uniform(0, 15)  # nosec B311 - Simulation only
-        self.metrics.latency = random.uniform(10, 250)  # nosec B311 - Simulation only
-        self.metrics.connection_stability = random.uniform(40, 100)  # nosec B311 - Simulation only
-        self.metrics.bandwidth_usage = random.uniform(0, 100)  # nosec B311 - Simulation only
+        # Using random for simulation purposes only (not security-critical)
+        self.metrics.packet_loss = random.uniform(0, 15)  # nosec B311
+        self.metrics.latency = random.uniform(10, 250)  # nosec B311
+        self.metrics.connection_stability = random.uniform(40, 100)  # nosec B311
+        self.metrics.bandwidth_usage = random.uniform(0, 100)  # nosec B311
         self.metrics.security_score = max(0, 100 - len(self.active_threats) * 10)
         self.metrics.threat_count = len(self.active_threats)
         self.metrics.last_updated = datetime.now()
@@ -1407,15 +1387,6 @@ async def enterprise_foundation_main():
 Starlink Security Infrastructure
 Enterprise-grade security management for Starlink infrastructure
 """
-
-import asyncio
-import json
-import logging
-import random
-from datetime import datetime
-from pathlib import Path
-from dataclasses import dataclass
-from typing import Dict, List, Any, Optional
 
 # Configure logging
 logging.basicConfig(
@@ -2306,7 +2277,7 @@ class AzureSentinelAdapter(SIEMAdapter):
     def push_metrics(self, metrics: Dict[str, Any]) -> bool:
         """Push metrics to Azure Sentinel."""
         try:
-            self.logger.info(f"Pushed metrics to Azure Sentinel")
+            self.logger.info("Pushed metrics to Azure Sentinel")
             return True
         except Exception as e:
             self.logger.error(f"Failed to push metrics to Azure Sentinel: {e}")
@@ -4137,7 +4108,8 @@ class ChaosTestingFramework:
             
             for fault in self.active_faults:
                 if fault["component"] == component and fault["type"] == "failure":
-                    return random.random() < fault["failure_rate"]  # nosec B311 - Test simulation only
+                    # Using random for fault injection simulation (not security-critical)
+                    return random.random() < fault["failure_rate"]  # nosec B311
         
         return False
     
@@ -4928,6 +4900,7 @@ class PolicySimulationSandbox:
         if not self.historical_events:
             return {"error": "No historical events available"}
         
+        # Using random for historical event sampling (not security-critical)
         sample = random.sample(self.historical_events, min(sample_size, len(self.historical_events)))  # nosec B311
         
         current_scores = []
@@ -4995,7 +4968,7 @@ class PolicySimulationSandbox:
         if profile not in ComplianceProfile.PROFILES:
             return {"error": f"Unknown compliance profile: {profile}"}
         
-        formatter = ComplianceProfile.create_formatter(profile)
+        ComplianceProfile.create_formatter(profile)
         retention_days = ComplianceProfile.PROFILES[profile]["retention_days"]
         
         cutoff_date = datetime.now() - timedelta(days=retention_days)
@@ -5361,7 +5334,7 @@ class SecretsManager:
                             "expires_at": now + timedelta(seconds=self.ttl_seconds)
                         }
                     except Exception as e:
-                        self.logger.debug(f"Failed to update value, keeping old value: {e}")
+                        logging.warning(f"Failed to refresh secret {key}: {e}")
                         pass  # Keep old value on error
     
     def _fetch_from_provider(self, secret_path: str) -> str:
@@ -5914,12 +5887,12 @@ class CanaryDeployment:
                 if tenant_id in self.tenant_assignments:
                     return self.tenant_assignments[tenant_id] == "canary"
                 
-                # New tenant - assign based on percentage
+                # New tenant - assign based on percentage (using secrets for security)
                 use_canary = secrets.SystemRandom().random() * 100 < config["canary_percentage"]
                 self.tenant_assignments[tenant_id] = "canary" if use_canary else "baseline"
                 return use_canary
         
-        # Random percentage-based routing
+        # Random percentage-based routing (using secrets for security)
         return secrets.SystemRandom().random() * 100 < config["canary_percentage"]
     
     def record_canary_result(self, canary_id: str, is_canary: bool,
@@ -7657,15 +7630,15 @@ class CapacityPlanningManager:
             
             if "event_volume_limit" in budget_limits:
                 if forecast["projected_event_volume"] > budget_limits["event_volume_limit"] * 0.8:
-                    alerts.append(f"Approaching event volume budget limit (80%)")
+                    alerts.append("Approaching event volume budget limit (80%)")
             
             if "scoring_load_limit" in budget_limits:
                 if forecast["projected_scoring_load"] > budget_limits["scoring_load_limit"] * 0.8:
-                    alerts.append(f"Approaching scoring load budget limit (80%)")
+                    alerts.append("Approaching scoring load budget limit (80%)")
             
             if "storage_limit_gb" in budget_limits:
                 if forecast["projected_storage_gb"] > budget_limits["storage_limit_gb"] * 0.8:
-                    alerts.append(f"Approaching storage budget limit (80%)")
+                    alerts.append("Approaching storage budget limit (80%)")
             
             return alerts
 
@@ -8104,7 +8077,8 @@ class VPNManager:
         """Check current VPN status."""
         # Simulate VPN status check
         statuses = ["connected", "disconnected", "connecting"]
-        new_status = random.choice(statuses)  # nosec B311 - Simulation only
+        # Using random for VPN status simulation (not security-critical)
+        new_status = random.choice(statuses)  # nosec B311
         
         if new_status != self.vpn_status:
             old_status = self.vpn_status
@@ -8149,7 +8123,8 @@ class VPNManager:
         # result = subprocess.run(['sudo', 'systemctl', 'start', 'openvpn@client'])
         # return result.returncode == 0
         
-        return random.random() > 0.3  # nosec B311 - Simulation only
+        # Using random for VPN connection simulation (not security-critical)
+        return random.random() > 0.3  # nosec B311 - 70% success rate for simulation
 
 
 class BackupManager:
@@ -8195,7 +8170,8 @@ class BackupManager:
         for backup_name, info in self.backup_connections.items():
             # Simulate availability check
             was_available = info["available"]
-            info["available"] = random.random() > 0.2  # nosec B311 - Simulation only
+            # Using random for availability simulation (not security-critical)
+            info["available"] = random.random() > 0.2  # nosec B311 - 80% available
             
             if was_available != info["available"]:
                 status = "available" if info["available"] else "unavailable"
@@ -8287,7 +8263,6 @@ async def demo_main():
 # class earlier, but we intentionally re-export the modular implementation as the
 # canonical symbol for runtime users. Use `cast(Any, ...)` to avoid type checker
 # assignment errors.
-from typing import cast
 
 LegacyStarlinkSecurityFoundation = StarlinkSecurityFoundation
 StarlinkSecurityFoundation = cast(Any, ModularStarlinkSecurityFoundation)
