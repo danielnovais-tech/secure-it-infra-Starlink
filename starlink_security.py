@@ -876,8 +876,10 @@ while using the new modular architecture.
 # Backward-compatible re-exports.
 # NOTE: This module contains multiple local definitions of some symbols later in the file.
 # Only alias names that are not defined locally to avoid collisions.
-NetworkMonitor = ModularNetworkMonitor
-ThreatDetector = ModularThreatDetector
+if ModularNetworkMonitor:
+    NetworkMonitor = ModularNetworkMonitor
+if ModularThreatDetector:
+    ThreatDetector = ModularThreatDetector
 
 # Re-export for backward compatibility
 __all__ = [
@@ -8265,7 +8267,8 @@ async def demo_main():
 # assignment errors.
 
 LegacyStarlinkSecurityFoundation = StarlinkSecurityFoundation
-StarlinkSecurityFoundation = cast(Any, ModularStarlinkSecurityFoundation)
+if ModularStarlinkSecurityFoundation:
+    StarlinkSecurityFoundation = cast(Any, ModularStarlinkSecurityFoundation)
 
 __all__ = [
     "SecurityLevel",
