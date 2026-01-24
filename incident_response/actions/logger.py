@@ -4,7 +4,7 @@ Logging action implementation.
 Handles logging and SIEM integration during incident response.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime
 import json
 

@@ -6,11 +6,6 @@ Demonstrates basic security module usage for Starlink infrastructure
 
 import sys
 import os
-
-# Add the repository root to the path
-repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, repo_root)
-
 from modules import (
     FirewallRuleManager,
     VPNManager,
@@ -20,6 +15,10 @@ from modules import (
     IntrusionDetectionSystem,
     SecurityMonitor
 )
+
+# Add the repository root to the path
+repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, repo_root)
 
 def main():
     """Basic security setup demonstration"""
@@ -77,7 +76,7 @@ def main():
     
     for user_id, username, role in users:
         mfa.register_user(user_id, username, mfa_method='totp')
-        secret = mfa.generate_totp_secret(user_id)
+        mfa.generate_totp_secret(user_id)
         rbac.assign_role(user_id, role)
         print(f"   ✓ User {username} registered with role {role}")
     print()

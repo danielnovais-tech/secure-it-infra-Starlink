@@ -6,13 +6,12 @@ and multiple output destinations.
 """
 
 import logging
-import json
 import time
 import socket
 import os
 from typing import Dict, List, Any, Optional
 from datetime import datetime
-from collections import defaultdict, deque
+from collections import deque
 from pythonjsonlogger import jsonlogger
 
 
@@ -363,7 +362,7 @@ class StructuredLogger:
                 return int(size_str[:-2]) * 1024 * 1024 * 1024
             else:
                 return int(size_str)
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError):
             # Default to 100MB if parsing fails
             return 100 * 1024 * 1024
     

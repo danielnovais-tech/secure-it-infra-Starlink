@@ -1,7 +1,6 @@
 """Example usage of the Secure IT Infrastructure for Starlink."""
 
 import asyncio
-from datetime import datetime
 
 from secure_it_infra import (
     SecurityLevel,
@@ -278,12 +277,12 @@ def example_integrated_scenario():
         print(f"   Event {event_count}: [{event.security_level.name}] {event.message}")
     
     # Summary
-    print(f"\n7. Summary:")
+    print("\n7. Summary:")
     print(f"   - Current Security Level: {current_level.name}")
     print(f"   - Connection Type: {connection}")
     print(f"   - Events Processed: {event_count}")
     print(f"   - Critical Events: {len(queue.get_history(security_level=SecurityLevel.CRITICAL))}")
-    print(f"   - Credentials Encrypted: Yes")
+    print("   - Credentials Encrypted: Yes")
     print()
 
 

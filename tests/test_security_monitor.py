@@ -410,7 +410,7 @@ class TestSecurityMonitor:
         }
         monitor.anomalies = [{"severity": "critical"}]
         
-        score = monitor.get_security_score()
+        monitor.get_security_score()
         
         # Should have audit trail entries
         assert len(monitor.audit_trail) > 0

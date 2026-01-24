@@ -2,12 +2,10 @@
 Tests for Connection Resilience Module
 """
 
-import pytest
 from starlink_security.resilience import (
     ConnectionResilience,
     ConnectionState,
-    BackupConnection,
-    FailoverEvent
+    BackupConnection
 )
 
 

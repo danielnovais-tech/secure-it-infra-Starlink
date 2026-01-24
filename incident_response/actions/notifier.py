@@ -4,7 +4,7 @@ Notification action implementation.
 Handles notifications to security teams during incident response.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime
 
 

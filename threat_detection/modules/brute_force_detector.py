@@ -6,7 +6,7 @@ Analyzes logs for brute-force attack patterns
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 class BruteForceDetector:

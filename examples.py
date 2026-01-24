@@ -6,8 +6,23 @@ Shows how to integrate VPN management into your own applications
 
 from vpn_manager.vpn_manager import VPNManager as CoreVPNManager
 import time
-import sys
+import os
+import logging
 from typing import Any
+from threat_detection.threat_detection import ThreatDetectionSystem
+from security_modules import (
+    NetworkMonitor,
+    ThreatDetector,
+    PolicyEnforcer,
+    IncidentResponder,
+    VPNManager as SecurityVPNManager,
+    BackupManager
+)
+from security_modules.policy_enforcer import SecurityLevel
+from security_modules.threat_detector import ThreatLevel
+from security_modules.incident_responder import IncidentSeverity
+from security_modules.vpn_manager import VPNProtocol
+from security_modules.backup_manager import BackupType
 
 
 def example_basic_usage():
@@ -26,7 +41,7 @@ def example_basic_usage():
     
     # Get configuration info
     print("2. Configuration details:")
-    print(f"   Status retrieved successfully\n")
+    print("   Status retrieved successfully\n")
 
 
 def example_connection_management():
@@ -121,14 +136,6 @@ def example_health_check():
     """Example usage of the Threat Detection System
     Demonstrates various features and capabilities
     """
-
-import sys
-import os
-
-# Add threat_detection directory to path
-sys.path.insert(0, os.path.dirname(__file__))
-
-from threat_detection.threat_detection import ThreatDetectionSystem
 
 
 def example_anomaly_detection():
@@ -254,7 +261,7 @@ def example_threat_intelligence():
         threats1 = system.analyze_event(event1)
         
         if threats1:
-            print(f"  IP 198.51.100.1: KNOWN THREAT!")
+            print("  IP 198.51.100.1: KNOWN THREAT!")
             for threat in threats1:
                 print(f"    - {threat['description']}")
         
@@ -266,7 +273,7 @@ def example_threat_intelligence():
         threats2 = system.analyze_event(event2)
         
         if not threats2:
-            print(f"  IP 8.8.8.8: Clean (not in threat feeds)")
+            print("  IP 8.8.8.8: Clean (not in threat feeds)")
     
     print()
 
@@ -283,7 +290,7 @@ def example_blocked_ips():
     import tempfile
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
         for i in range(6):
-            f.write(f"Failed password for user from 192.168.1.200 port 22 ssh2\n")
+            f.write("Failed password for user from 192.168.1.200 port 22 ssh2\n")
         temp_log = f.name
     
     try:
@@ -338,21 +345,6 @@ if __name__ == '__main__':
 # Example usage scenarios for Security Modules
 # Demonstrates practical implementations of the security framework
 
-import logging
-from security_modules import (
-    NetworkMonitor,
-    ThreatDetector,
-    PolicyEnforcer,
-    IncidentResponder,
-    VPNManager as SecurityVPNManager,
-    BackupManager
-)
-from security_modules.policy_enforcer import SecurityLevel
-from security_modules.threat_detector import ThreatLevel
-from security_modules.incident_responder import IncidentSeverity
-from security_modules.vpn_manager import VPNProtocol
-from security_modules.backup_manager import BackupType
-
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -371,8 +363,8 @@ def example_security_incident_workflow():
     
     # Step 1: Network monitoring detects anomaly
     logger.info("Step 1: Network monitoring...")
-    devices = network_monitor.discover_devices()
-    anomalies = network_monitor.detect_anomalies()
+    network_monitor.discover_devices()
+    network_monitor.detect_anomalies()
     
     # Step 2: Threat detector analyzes suspicious activity
     logger.info("Step 2: Analyzing threat...")
@@ -458,7 +450,7 @@ def example_vpn_failover_scenario():
     
     # Step 5: Simulate primary VPN failure
     logger.info("Step 5: Simulating primary VPN failure...")
-    incident_id = incident_responder.create_incident(
+    incident_responder.create_incident(
         incident_type="vpn_failure",
         severity=IncidentSeverity.HIGH,
         description="Primary VPN connection lost",
@@ -562,7 +554,7 @@ def example_threat_hunting_workflow():
     
     # Step 2: Scan network for devices
     logger.info("Step 2: Scanning network...")
-    devices = network_monitor.discover_devices()
+    network_monitor.discover_devices()
     
     # Step 3: Check suspicious IPs
     logger.info("Step 3: Checking IP reputations...")

@@ -2,7 +2,6 @@
 Tests for Connection Monitor Module
 """
 
-import pytest
 from starlink_security.connection_monitor import (
     ConnectionMonitor,
     ConnectionQuality,

@@ -9,6 +9,10 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from enum import Enum
+from .structured_logger import StructuredLogger, EventCorrelator
+
+
+__all__ = ["StructuredLogger", "EventCorrelator"]
 
 
 class LogLevel(Enum):
@@ -130,7 +134,7 @@ class SecurityLogger:
             try:
                 with open(self.log_file, "a") as f:
                     f.write(json.dumps(log_entry) + "\n")
-            except Exception as e:
+            except Exception:
                 # Fail silently to avoid breaking the application
                 pass
 
@@ -284,8 +288,3 @@ class AlertManager:
             stats["by_severity"][severity.value] = count
 
         return stats
-"""Logging package for Secure IT Starlink."""
-
-from .structured_logger import StructuredLogger, EventCorrelator
-
-__all__ = ["StructuredLogger", "EventCorrelator"]

@@ -16,8 +16,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from secure_it_starlink.config import ConfigurationManager
 from secure_it_starlink.metrics import MetricsCollector
 from secure_it_starlink.automated_responses import (
-    AutomatedResponseCoordinator,
-    SeverityLevel
+    AutomatedResponseCoordinator
 )
 from secure_it_starlink.logging import StructuredLogger
 
@@ -30,13 +29,13 @@ def example_configuration():
     
     # Load default configuration
     config = ConfigurationManager()
-    print(f"✓ Loaded default configuration")
+    print("✓ Loaded default configuration")
     print(f"  - Security weight: {config.get('metrics.security.weight')}")
     print(f"  - Collection interval: {config.get('metrics.collection.interval')}s")
     
     # Load and merge custom configuration
     config.load_and_merge('configs/development_config.yaml')
-    print(f"\n✓ Merged with development configuration")
+    print("\n✓ Merged with development configuration")
     print(f"  - New collection interval: {config.get('metrics.collection.interval')}s")
     print(f"  - Log level: {config.get('logging.structured.level')}")
 
@@ -95,7 +94,7 @@ def example_metrics():
     
     # Get metrics summary
     summary = collector.get_metrics_summary(3600)
-    print(f"\n✓ Metrics Summary:")
+    print("\n✓ Metrics Summary:")
     print(f"  Sample count: {summary['sample_count']}")
     print(f"  Average composite score: {summary['averages']['composite_score']:.2f}")
 
@@ -253,7 +252,7 @@ def example_integration():
         composite_score=metrics_data['composite_score']
     )
     
-    print(f"\n✓ Monitoring cycle completed")
+    print("\n✓ Monitoring cycle completed")
     print(f"  - Composite score: {metrics_data['composite_score']:.2f}")
     print(f"  - Actions triggered: {len(actions)}")
 

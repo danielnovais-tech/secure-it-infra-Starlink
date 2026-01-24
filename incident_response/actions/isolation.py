@@ -4,7 +4,7 @@ Isolation action implementation.
 Handles network and system isolation during incident response.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime
 
 

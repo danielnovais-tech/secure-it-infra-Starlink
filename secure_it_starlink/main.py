@@ -9,7 +9,6 @@ import sys
 import time
 import signal
 from typing import Dict, Any, Optional
-from pathlib import Path
 
 from secure_it_starlink.config import ConfigurationManager
 from secure_it_starlink.metrics import MetricsCollector

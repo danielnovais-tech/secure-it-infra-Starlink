@@ -1,6 +1,5 @@
 """Tests for SecurityManager class."""
 import unittest
-import asyncio
 from datetime import datetime
 import sys
 from pathlib import Path

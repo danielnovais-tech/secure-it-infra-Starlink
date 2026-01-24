@@ -84,7 +84,6 @@ async def test_vpn_manager():
     print("✓ VPNManager initialized successfully")
     
     # Test status check
-    initial_status = vpn_manager.vpn_status
     await vpn_manager.check_vpn_status()
     print(f"✓ VPN status checked: {vpn_manager.vpn_status}")
     

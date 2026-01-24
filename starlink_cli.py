@@ -19,7 +19,6 @@ import json
 import sys
 import time
 from datetime import datetime
-from typing import Optional
 
 from starlink_metrics import (
     ConnectionMetrics,
@@ -28,7 +27,7 @@ from starlink_metrics import (
     StabilityThresholds,
     AlertThresholds,
 )
-from observability import MetricsExporter, StructuredLogger, PeriodicReporter
+from observability import MetricsExporter, PeriodicReporter
 
 
 def get_current_metrics() -> ConnectionMetrics:
@@ -63,7 +62,7 @@ def cmd_status(args):
         print(f"Service Level:    {status['service_level']}")
         print(f"Quality Score:    {status['quality_score']}/100")
         print(f"Stability Score:  {status['stability_score']:.3f}")
-        print(f"\nMetrics:")
+        print("\nMetrics:")
         print(f"  Packet Loss:    {status['packet_loss']}%")
         print(f"  Latency:        {status['latency']}ms")
         print("=" * 60)
@@ -91,56 +90,56 @@ def cmd_check(args):
     print("\n1. CONNECTION METRICS")
     print(f"   Packet Loss: {status['packet_loss']}%")
     if status['packet_loss'] > 5:
-        print(f"   ⚠️  WARNING: Packet loss above threshold (>5%)")
+        print("   ⚠️  WARNING: Packet loss above threshold (>5%)")
     else:
-        print(f"   ✅ Packet loss within acceptable range")
+        print("   ✅ Packet loss within acceptable range")
     
     print(f"\n   Latency: {status['latency']}ms")
     if status['latency'] > 150:
-        print(f"   ⚠️  WARNING: High latency detected (>150ms)")
+        print("   ⚠️  WARNING: High latency detected (>150ms)")
     else:
-        print(f"   ✅ Latency within acceptable range")
+        print("   ✅ Latency within acceptable range")
     
     # Quality assessment
-    print(f"\n2. QUALITY ASSESSMENT")
+    print("\n2. QUALITY ASSESSMENT")
     print(f"   Quality Score: {status['quality_score']}/100")
     if status['quality_score'] >= 90:
-        print(f"   ✅ Excellent connection quality")
+        print("   ✅ Excellent connection quality")
     elif status['quality_score'] >= 75:
-        print(f"   ✅ Good connection quality")
+        print("   ✅ Good connection quality")
     elif status['quality_score'] >= 50:
-        print(f"   ⚠️  Fair connection quality")
+        print("   ⚠️  Fair connection quality")
     else:
-        print(f"   ❌ Poor connection quality")
+        print("   ❌ Poor connection quality")
     
     # Stability assessment
-    print(f"\n3. STABILITY ASSESSMENT")
+    print("\n3. STABILITY ASSESSMENT")
     print(f"   Stability Score: {status['stability_score']:.3f}")
     print(f"   Service Level: {status['service_level']}")
     
     if status['service_level'] == 'Stable':
-        print(f"   ✅ Connection is stable")
+        print("   ✅ Connection is stable")
     elif status['service_level'] == 'Degraded':
-        print(f"   ⚠️  Connection is degraded")
+        print("   ⚠️  Connection is degraded")
     elif status['service_level'] == 'Critical':
-        print(f"   ❌ Connection is critical")
+        print("   ❌ Connection is critical")
     else:
-        print(f"   ❌ Connection is offline")
+        print("   ❌ Connection is offline")
     
     # Recommendations
-    print(f"\n4. RECOMMENDATIONS")
+    print("\n4. RECOMMENDATIONS")
     if status['packet_loss'] > 10:
-        print(f"   • Check for physical obstructions to satellite dish")
-        print(f"   • Verify dish alignment")
+        print("   • Check for physical obstructions to satellite dish")
+        print("   • Verify dish alignment")
     if status['latency'] > 200:
-        print(f"   • High latency detected - check for network congestion")
-        print(f"   • Consider traffic prioritization")
+        print("   • High latency detected - check for network congestion")
+        print("   • Consider traffic prioritization")
     if status['service_level'] in ['Critical', 'Offline']:
-        print(f"   • Immediate action required")
-        print(f"   • Consider failover to backup connection")
+        print("   • Immediate action required")
+        print("   • Consider failover to backup connection")
     
     if status['quality_score'] >= 90 and status['stability_score'] >= 0.9:
-        print(f"   ✅ No issues detected - connection is performing optimally")
+        print("   ✅ No issues detected - connection is performing optimally")
     
     print("=" * 60)
 
@@ -179,13 +178,13 @@ def cmd_report(args):
         print("=" * 60)
         print(f"Period: Last {args.hours} hour(s)")
         print(f"Measurements: {report['total_measurements']}")
-        print(f"\nQuality Metrics:")
+        print("\nQuality Metrics:")
         print(f"  Avg Quality Score: {report['summary']['quality_score']['avg']:.1f}/100")
         print(f"  Avg Stability: {report['summary']['stability_score']['avg']:.3f}")
         print(f"  Avg Packet Loss: {report['summary']['packet_loss']['avg']:.2f}%")
         print(f"  Avg Latency: {report['summary']['latency']['avg']:.1f}ms")
         
-        print(f"\nService Level Distribution:")
+        print("\nService Level Distribution:")
         for level, count in report['service_level_distribution'].items():
             if count > 0:
                 pct = (count / report['total_measurements']) * 100
@@ -193,7 +192,7 @@ def cmd_report(args):
         
         print(f"\nUptime: {report['uptime_percentage']:.2f}%")
         
-        print(f"\nSLA Compliance:")
+        print("\nSLA Compliance:")
         for metric, compliance in report['sla_compliance'].items():
             icon = "✅" if compliance['compliant'] else "❌"
             print(f"  {icon} {metric}: {compliance['actual']:.2f} (threshold: {compliance['threshold']})")
