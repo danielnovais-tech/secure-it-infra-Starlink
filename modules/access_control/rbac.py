@@ -3,6 +3,11 @@ Access Control Module - Role-Based Access Control (RBAC)
 Enterprise RBAC implementation for managed infrastructure
 """
 
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
 class RBACManager:
     """Manages role-based access control for enterprise infrastructure"""
     
@@ -64,8 +69,23 @@ class RBACManager:
         Args:
             user_id: User identifier
             role_name: Role to assign
+            
+        Returns:
+            True if successful
+            
+        Raises:
+            ValueError: If role does not exist
         """
         if role_name not in self.roles:
+            logger.error(
+                "Failed to assign role to user",
+                extra={
+                    'user_id': user_id,
+                    'role_name': role_name,
+                    'reason': 'role_not_found',
+                    'available_roles': list(self.roles.keys())
+                }
+            )
             raise ValueError(f"Role {role_name} does not exist")
             
         if user_id not in self.user_roles:
@@ -73,6 +93,22 @@ class RBACManager:
             
         if role_name not in self.user_roles[user_id]:
             self.user_roles[user_id].append(role_name)
+            logger.info(
+                "Role assigned successfully",
+                extra={
+                    'user_id': user_id,
+                    'role_name': role_name,
+                    'permissions': self.roles[role_name]['permissions']
+                }
+            )
+        else:
+            logger.warning(
+                "Role already assigned to user",
+                extra={
+                    'user_id': user_id,
+                    'role_name': role_name
+                }
+            )
         return True
     
     def check_permission(self, user_id, permission):
@@ -82,13 +118,43 @@ class RBACManager:
         Args:
             user_id: User identifier
             permission: Permission to check
+            
+        Returns:
+            Boolean indicating if user has permission
         """
         if user_id not in self.user_roles:
+            logger.warning(
+                "Permission check failed - user has no roles",
+                extra={
+                    'user_id': user_id,
+                    'permission': permission,
+                    'reason': 'no_roles_assigned'
+                }
+            )
             return False
             
         for role in self.user_roles[user_id]:
             if permission in self.roles[role]['permissions']:
+                logger.debug(
+                    "Permission check succeeded",
+                    extra={
+                        'user_id': user_id,
+                        'permission': permission,
+                        'granted_by_role': role
+                    }
+                )
                 return True
+        
+        # Permission denied - log for audit trail
+        logger.warning(
+            "Permission check failed - permission denied",
+            extra={
+                'user_id': user_id,
+                'permission': permission,
+                'user_roles': self.user_roles[user_id],
+                'reason': 'permission_not_in_roles'
+            }
+        )
         return False
     
     def get_user_permissions(self, user_id):
