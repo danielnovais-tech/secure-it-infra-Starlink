@@ -30,17 +30,11 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from cryptography.fernet import Fernet
-
-try:
-    from security import (
-        StarlinkSecurityFoundation as ModularStarlinkSecurityFoundation,
-        NetworkMonitor as ModularNetworkMonitor,
-        ThreatDetector as ModularThreatDetector,
-    )
-except ImportError:
-    ModularStarlinkSecurityFoundation = None
-    ModularNetworkMonitor = None
-    ModularThreatDetector = None
+from security import (
+    StarlinkSecurityFoundation as ModularStarlinkSecurityFoundation,
+    NetworkMonitor as ModularNetworkMonitor,
+    ThreatDetector as ModularThreatDetector,
+)
 
 # Constants - use local directories if system directories are not writable
 if os.access("/etc", os.W_OK):
@@ -1182,10 +1176,11 @@ class EnterpriseStarlinkSecurityFoundation:
         # In a real implementation, this would collect actual metrics
         import random
         
-        self.metrics.packet_loss = random.uniform(0, 15)
-        self.metrics.latency = random.uniform(10, 250)
-        self.metrics.connection_stability = random.uniform(40, 100)
-        self.metrics.bandwidth_usage = random.uniform(0, 100)
+        # Using random for simulation purposes only (not security-critical)
+        self.metrics.packet_loss = random.uniform(0, 15)  # nosec B311
+        self.metrics.latency = random.uniform(10, 250)  # nosec B311
+        self.metrics.connection_stability = random.uniform(40, 100)  # nosec B311
+        self.metrics.bandwidth_usage = random.uniform(0, 100)  # nosec B311
         self.metrics.security_score = max(0, 100 - len(self.active_threats) * 10)
         self.metrics.threat_count = len(self.active_threats)
         self.metrics.last_updated = datetime.now()
@@ -2938,8 +2933,8 @@ class DemoStarlinkSecurityFoundation:
                 "unresolved_events_count": len([e for e in self.events if not e.resolved])
             }
             
-            with open(self._state_file, 'wb') as f:
-                pickle.dump(state, f)
+            with open(self._state_file, 'w') as f:
+                json.dump(state, f, indent=2)
             
             self.logger.info(f"State saved to {self._state_file}")
             self.audit_logger.log_audit("state_save", state)
@@ -2959,8 +2954,8 @@ class DemoStarlinkSecurityFoundation:
             return False
         
         try:
-            with open(self._state_file, 'rb') as f:
-                state = pickle.load(f)
+            with open(self._state_file, 'r') as f:
+                state = json.load(f)
             
             # Restore active threats
             with self._lock:
@@ -4115,7 +4110,8 @@ class ChaosTestingFramework:
             
             for fault in self.active_faults:
                 if fault["component"] == component and fault["type"] == "failure":
-                    return random.random() < fault["failure_rate"]
+                    # Using random for fault injection simulation (not security-critical)
+                    return random.random() < fault["failure_rate"]  # nosec B311
         
         return False
     
@@ -4906,7 +4902,8 @@ class PolicySimulationSandbox:
         if not self.historical_events:
             return {"error": "No historical events available"}
         
-        sample = random.sample(self.historical_events, min(sample_size, len(self.historical_events)))
+        # Using random for historical event sampling (not security-critical)
+        sample = random.sample(self.historical_events, min(sample_size, len(self.historical_events)))  # nosec B311
         
         current_scores = []
         new_scores = []
@@ -5276,6 +5273,7 @@ class SecretsManager:
         self.lock = threading.RLock()
         self.refresh_thread = None
         self.running = False
+        self.logger = logging.getLogger('starlink-security.secrets')
     
     def get_secret(self, secret_path: str) -> str:
         """
@@ -5337,7 +5335,8 @@ class SecretsManager:
                             "fetched_at": now,
                             "expires_at": now + timedelta(seconds=self.ttl_seconds)
                         }
-                    except Exception:
+                    except Exception as e:
+                        logging.warning(f"Failed to refresh secret {key}: {e}")
                         pass  # Keep old value on error
     
     def _fetch_from_provider(self, secret_path: str) -> str:
@@ -5890,13 +5889,13 @@ class CanaryDeployment:
                 if tenant_id in self.tenant_assignments:
                     return self.tenant_assignments[tenant_id] == "canary"
                 
-                # New tenant - assign based on percentage
-                use_canary = random.random() * 100 < config["canary_percentage"]
+                # New tenant - assign based on percentage (using secrets for security)
+                use_canary = secrets.SystemRandom().random() * 100 < config["canary_percentage"]
                 self.tenant_assignments[tenant_id] = "canary" if use_canary else "baseline"
                 return use_canary
         
-        # Random percentage-based routing
-        return random.random() * 100 < config["canary_percentage"]
+        # Random percentage-based routing (using secrets for security)
+        return secrets.SystemRandom().random() * 100 < config["canary_percentage"]
     
     def record_canary_result(self, canary_id: str, is_canary: bool,
                             risk_score: float, baseline_risk: Optional[float] = None):
@@ -8080,7 +8079,8 @@ class VPNManager:
         """Check current VPN status."""
         # Simulate VPN status check
         statuses = ["connected", "disconnected", "connecting"]
-        new_status = random.choice(statuses)
+        # Using random for VPN status simulation (not security-critical)
+        new_status = random.choice(statuses)  # nosec B311
         
         if new_status != self.vpn_status:
             old_status = self.vpn_status
@@ -8125,7 +8125,8 @@ class VPNManager:
         # result = subprocess.run(['sudo', 'systemctl', 'start', 'openvpn@client'])
         # return result.returncode == 0
         
-        return random.random() > 0.3  # 70% success rate for simulation
+        # Using random for VPN connection simulation (not security-critical)
+        return random.random() > 0.3  # nosec B311 - 70% success rate for simulation
 
 
 class BackupManager:
@@ -8171,7 +8172,8 @@ class BackupManager:
         for backup_name, info in self.backup_connections.items():
             # Simulate availability check
             was_available = info["available"]
-            info["available"] = random.random() > 0.2  # 80% available
+            # Using random for availability simulation (not security-critical)
+            info["available"] = random.random() > 0.2  # nosec B311 - 80% available
             
             if was_available != info["available"]:
                 status = "available" if info["available"] else "unavailable"

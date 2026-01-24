@@ -12,6 +12,9 @@ from enum import Enum
 from .structured_logger import StructuredLogger, EventCorrelator
 
 
+__all__ = ["StructuredLogger", "EventCorrelator"]
+
+
 class LogLevel(Enum):
     """Security log severity levels."""
     DEBUG = "DEBUG"
@@ -285,6 +288,3 @@ class AlertManager:
             stats["by_severity"][severity.value] = count
 
         return stats
-"""Logging package for Secure IT Starlink."""
-
-__all__ = ["StructuredLogger", "EventCorrelator"]

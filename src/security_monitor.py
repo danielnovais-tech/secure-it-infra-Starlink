@@ -13,7 +13,6 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-"""Security monitoring module for Starlink infrastructure."""
 
 logger = logging.getLogger(__name__)
 
