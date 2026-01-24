@@ -5,7 +5,7 @@ Demonstrates vulnerability scanning and configuration security assessment.
 """
 
 from secure_it_starlink.scanning import VulnerabilityScanner, PortScanner
-from secure_it_starlink.config import SecurityConfig, ConfigScanner
+from secure_it_starlink.config import SecurityConfig
 
 
 def main():

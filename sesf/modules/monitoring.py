@@ -248,7 +248,7 @@ class MonitoringModule:
         open_alerts = len([a for a in self.alerts if a["status"] == "open"])
         critical_events = len([e for e in self.events if e["level"] == "CRITICAL"])
         
-        summary = f"Monitoring Status: "
+        summary = "Monitoring Status: "
         if critical_events > 0 or open_alerts > 0:
             summary += f"ATTENTION REQUIRED - {open_alerts} open alerts, {critical_events} critical events"
         else:

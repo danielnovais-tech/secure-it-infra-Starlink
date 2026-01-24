@@ -3,9 +3,7 @@ Unit tests for the incident response handler.
 """
 
 import unittest
-import os
 import yaml
-from datetime import datetime
 from pathlib import Path
 
 # Import from parent package

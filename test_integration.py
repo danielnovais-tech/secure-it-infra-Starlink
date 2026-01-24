@@ -6,13 +6,10 @@ of the connection metrics system under realistic scenarios.
 """
 
 import pytest
-import time
 from starlink_metrics import (
     ConnectionMetrics,
     StarlinkConnectionQuality,
-    QualityThresholds,
-    StabilityThresholds,
-    AlertThresholds
+    StabilityThresholds
 )
 from observability import MetricsExporter, StructuredLogger, PeriodicReporter
 
@@ -353,7 +350,7 @@ class TestChaosScenarios:
                 metrics = ConnectionMetrics(packet_loss=40.0, latency=500.0)
             
             quality.metrics = metrics
-            status = quality.get_connection_status()
+            quality.get_connection_status()
         
         # Smoothed score should be somewhere in middle
         final_smoothed = quality.calculate_stability_score(use_smoothing=True)

@@ -66,7 +66,7 @@ def main():
     
     admin_token = auth_manager.authenticate("admin", "SecureAdminP@ss123")
     if admin_token:
-        print(f"✓ Admin authenticated successfully")
+        print("✓ Admin authenticated successfully")
         logger.info("Admin login successful", {"username": "admin"})
     
     # Validate session
@@ -78,8 +78,8 @@ def main():
     print("-" * 80)
     
     # Generate encryption keys
-    data_key = key_manager.generate_key("data-encryption-key", "symmetric")
-    comm_key = key_manager.generate_key("communication-key", "symmetric")
+    key_manager.generate_key("data-encryption-key", "symmetric")
+    key_manager.generate_key("communication-key", "symmetric")
     print(f"✓ Generated encryption keys: {len(key_manager.list_keys())} keys")
     
     # Encrypt sensitive data

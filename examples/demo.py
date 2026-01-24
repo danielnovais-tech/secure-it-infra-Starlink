@@ -7,8 +7,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from security_manager import SecurityManager
-from security_modules import SecurityEvent
-from datetime import datetime
 
 
 async def main():

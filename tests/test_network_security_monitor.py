@@ -4,7 +4,6 @@ Tests for Network Security Monitor
 
 import asyncio
 import sys
-import os
 from pathlib import Path
 import importlib.util
 

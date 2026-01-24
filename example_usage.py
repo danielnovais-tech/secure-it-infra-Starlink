@@ -3,6 +3,11 @@ Example usage of Starlink Security Monitoring System
 """
 
 from starlink_monitor import StarlinkMonitor
+from starlink_metrics import (
+    ConnectionMetrics,
+    StarlinkConnectionQuality,
+    monitor_connection
+)
 
 
 def starlink_security_monitor_demo():
@@ -107,12 +112,6 @@ def _starlink_monitor_demo():
 This script demonstrates how to use the metrics module to monitor
 and evaluate Starlink connection quality.
 """
-
-from starlink_metrics import (
-    ConnectionMetrics,
-    StarlinkConnectionQuality,
-    monitor_connection
-)
 
 
 def main():

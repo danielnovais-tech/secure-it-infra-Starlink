@@ -4,9 +4,7 @@ Tests for Starlink Metrics CLI and REST API
 
 import pytest
 import json
-import sys
-from io import StringIO
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 # CLI tests
 from starlink_cli import (

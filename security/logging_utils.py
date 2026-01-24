@@ -5,7 +5,6 @@ Structured logging utilities for Starlink Security Foundation
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any
 
 
 class StructuredLogger:

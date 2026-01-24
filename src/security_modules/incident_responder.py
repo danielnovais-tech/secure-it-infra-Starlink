@@ -1,6 +1,6 @@
 """Incident Responder module for handling security incidents."""
 import logging
-from typing import Dict, Any, List
+from typing import Dict, List
 from .security_event import SecurityEvent
 
 logger = logging.getLogger(__name__)

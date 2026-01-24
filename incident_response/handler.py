@@ -5,7 +5,6 @@ This module provides YAML-based incident response handling for high-severity
 security events such as malware detection and security breaches.
 """
 
-import os
 import yaml
 import logging
 from typing import Dict, List, Any, Optional, Union

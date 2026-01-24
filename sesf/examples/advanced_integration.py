@@ -181,12 +181,12 @@ class StarlinkSecurityManager:
         """
         Analyze event for security threats.
         """
-        print(f"\n--- Analyzing potential security threat ---")
+        print("\n--- Analyzing potential security threat ---")
         
         result = self.network.detect_intrusion(event_data)
         
         if result["threat_detected"]:
-            print(f"⚠ THREAT DETECTED!")
+            print("⚠ THREAT DETECTED!")
             print(f"   Threat score: {result['threat_score']}")
             print(f"   Threats: {', '.join(result['threats'])}")
             print(f"   Action: {result['action_taken']}")

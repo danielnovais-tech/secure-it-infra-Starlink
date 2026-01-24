@@ -13,6 +13,7 @@ import json
 import hashlib
 import subprocess
 import tempfile
+import threading
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional, Tuple
@@ -440,9 +441,6 @@ class PolicyMetrics:
         lines.append(f"audit_chain_breaks {self.metrics['audit_chain_breaks']}")
         
         return "\n".join(lines)
-
-
-import threading
 
 
 if __name__ == '__main__':

@@ -4,7 +4,6 @@ Orchestrates anomaly detection, brute-force detection, and threat intelligence u
 """
 
 import os
-import sys
 import yaml
 import logging
 from logging.handlers import RotatingFileHandler
@@ -235,7 +234,7 @@ class ThreatDetectionSystem:
             interval_seconds: Interval between checks
         """
         import time
-        from datetime import datetime, timedelta
+        from datetime import datetime
         
         self.logger.info("Starting continuous threat monitoring...")
         

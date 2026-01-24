@@ -1,6 +1,5 @@
 """Tests for the network security monitoring module."""
 
-import pytest
 from secure_it_starlink.network import NetworkMonitor, ConnectionValidator
 
 

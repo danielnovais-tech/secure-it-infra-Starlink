@@ -18,7 +18,7 @@ import sys
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import ssl
 import ipaddress
 
@@ -467,7 +467,7 @@ class StarlinkSecurityAuditor:
         
         try:
             # Test SSL Labs API or local SSL check
-            context = ssl.create_default_context()
+            ssl.create_default_context()
             
             # Check for available TLS protocols
             protocols_to_check = []
@@ -488,7 +488,7 @@ class StarlinkSecurityAuditor:
             # Check for weak protocols
             for proto in protocols_to_check:
                 try:
-                    context = ssl.SSLContext(proto)
+                    ssl.SSLContext(proto)
                     result['secure'] = True
                 except (ssl.SSLError, ValueError, OSError):
                     result['issues'].append(f"Protocol {proto} not supported")

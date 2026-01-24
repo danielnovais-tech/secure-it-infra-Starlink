@@ -1,6 +1,5 @@
 """Tests for the vulnerability scanning module."""
 
-import pytest
 from secure_it_starlink.scanning import VulnerabilityScanner, PortScanner
 
 
